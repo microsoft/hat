@@ -1,3 +1,5 @@
+![HAT](https://upload.wikimedia.org/wikipedia/commons/8/80/Crystal_Project_wizard.png)
+
 # HAT file format
 
 HAT is a format for distributing compiled libraries of functions in the C/C++ programming languages. HAT stands for "H-file Annotated with Toml", and implies that we decorate standard C/C++ header files with metadata in the TOML markup language. 
