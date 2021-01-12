@@ -8,7 +8,7 @@ A library in the HAT format is distributed as a pair of files, much like standar
 
 The metadata that accompanies each function describes how that function should be used and provides detail on how it was implemented. The metadata is intended to be human-readable, providing structured and systematic documentation for the library, as well as machine-readable, allowing downstream tools to examine the library contents. 
 
-Additionally, a `.hat` file has the convenient property that it is simultaneously a valid H-file and a valid TOML file. Namely, a standard C/C++ compiler will ignore the TOML metadata and see the file as a standard `.h` file. On the other hand, the `.hat` file is a valid TOML file that can be parsed with any standard TOML parser. 
+Additionally, a `.hat` file has the convenient property that it is simultaneously a valid H-file and a valid TOML file. We accomplish this using a technique we call the HAT trick. Namely, a standard C/C++ compiler will ignore the TOML metadata and see the file as a standard `.h` file. On the other hand, the `.hat` file is a valid TOML file that can be parsed with any standard TOML parser. 
 
 # What problem does the HAT format attempt to solve? 
 
@@ -33,7 +33,7 @@ Some of the information above is typically provided in unstructured human-readab
 
 The HAT format attempts to replace this opacity with transparency, by annotating each declared function with descriptive metadata.
 
-# How is a .hat file simultaneously an H-file and a TOML file?
+# The HAT trick
 
 A `.hat` file is simultaneously a valid H-file and a valid TOML file. It tricks the C/C++ parser into only seeing the valid C/C++ parts of the file, while maintaining the structure of a valid TOML file. This is accomplished with the following file sneaky structure:
 ```
