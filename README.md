@@ -56,6 +56,10 @@ How does a C/C++ handle this file? Assuming that the `TOML` macro is not defined
 
 Why is it important for the TOML and the C/C++ declarations to live in the same file? Why not put the metadata in a separate file? The fact that C/C++ already splits the library code between object files and h-files is already a concern, because the user has to worry about distributing a `.hat` file with an incorrect `.lib` file (just like in C/C++). We don't want to make things worse by adding yet another separate file. Keeping the metadata in the same file as the function declaration ensures that each function declaration is never separated from its metadata. 
 
+# Function name
+
+The HAT format does not specify how functions should be named, but it does disallow function name overloading within any `.hat` file. In other words, each function in any `.hat` file must have a distinct name. The reason is that the HAT format uses the function name to associate the C-style function declaration with its TOML metadata. If multiple functions, declared in the same `.hat` file, share a common name, the mapping between declarations and their metadata would be ambiguous. On the other hand, function name overloading is allowed if the functions are declared in different `.hat` files. This is because the function declaration and its metadata are always located in the same file, so overloading names in two different files does not create any ambiguity. 
+
 # How many files in a library?
 
 As mentioned above, a library in the HAT format includes a single `.lib` file. This file is just a standard C/C++ object file. In may situations, a single object file can contain code that targets different hardware instruction sets. For example, the file can contain a function that uses AVX512 instructions, another function that only uses AVX instructions, and a third function that makes do with SSE instructions.
@@ -64,4 +68,4 @@ A library in the HAT format can contain multiple `.hat` files, just like multipl
 
 # .hat file schema
 
-TODO
+The TOML metadata in each `.hat` file follows a certain TOML schema, defined in XXX. TODO
