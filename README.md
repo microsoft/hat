@@ -2,19 +2,17 @@
 
 # HAT file format
 
-HAT is a format for distributing compiled libraries of functions in the C/C++ programming languages. HAT stands for "h-file Annotated with Toml", and implies that we decorate standard C/C++ header files with useful metadata in the TOML markup language. 
+HAT is a format for distributing compiled libraries of functions in the C programming languages. HAT stands for "h-file Annotated with Toml", and implies that we decorate standard C header files with useful metadata in the [TOML](https://toml.io/) markup language. 
 
-A function library in the HAT format typically includes one `.lib` file and one or more `.hat` files. The `.lib` file contains all the compiled object code that implements the functions in the library. Each of the `.hat` files contains a combination of standard C/C++ function declarations (like a typical C/C++ `.h` file) and metadata in the TOML markup language. 
+A function library in the HAT format typically includes one `.lib` file and one or more `.hat` files. The `.lib` file contains all the compiled object code that implements the functions in the library. Each of the `.hat` files contains a combination of standard C function declarations (like a typical C `.h` file) and metadata in the TOML markup language. 
 
 The metadata that accompanies each function describes how it should be called and how it was implemented. The metadata is intended to be human-readable, providing structured and systematic documentation, as well as machine-readable, allowing downstream tools to examine the library contents. 
 
-Each `.hat` file has the convenient property that it is simultaneously a valid C/C++ h-file and a valid TOML file. We accomplish this using a technique we call *the hat trick*, which is explained below. Namely, a standard C/C++ compiler will ignore the TOML metadata and see the file as a standard `.h` file, while a TOML parser will understand the entire file as a valid TOML file.
+Each `.hat` file has the convenient property that it is simultaneously a valid C h-file and a valid TOML file. We accomplish this using a technique we call *the hat trick*, which is explained below. Namely, a standard C compiler will ignore the TOML metadata and see the file as a standard `.h` file, while a TOML parser will understand the entire file as a valid TOML file.
 
 # What problem does the HAT format attempt to solve? 
 
-C/C++ are among the most popular programming languages, and the low-level control offered by C/C++ make them especially attractive for performance-critical applications. However, C/C++ also come with serious shortcomings compared to other programming languages. One of these shortcomings is that C/C++ libraries are typically opaque and lack mechanisms for systematic documentation and introspection. 
-
-This idea is best explained with an example. Say that we implement a function in C that performs a highly-optimized in-place column-wise normalization of a 10x10 matrix. Namely, the function takes a 10x10 matrix `A` and divides each column by the Euclidean norm of that column. A highly-optimized implementation of this function would take advantage of the target computer's specific hardware properties, such as the structure of its cache hierarchy, its multiple CPU cores, or perhaps even the presence of GPU cores. The declaration of this function in the h-file would look something like this:
+C is among the most popular programming languages, but it also has some serious shortcomings compared to other programming languages. One of those is that C libraries are typically opaque and lack mechanisms for systematic documentation and introspection. This is best explained with an example. Say that we implement a function in C that performs a highly-optimized in-place column-wise normalization of a 10x10 matrix. Namely, the function takes a 10x10 matrix `A` and divides each column by the Euclidean norm of that column. A highly-optimized implementation of this function would take advantage of the target computer's specific hardware properties, such as the structure of its cache hierarchy, its multiple CPU cores, or perhaps even the presence of GPU cores. The declaration of this function in the h-file would look something like this:
 ```
 void normalize(float* A);
 ```
@@ -31,11 +29,11 @@ The accompanying object file would contain the compiled machine code for our fun
 
 Some of the information above is typically provided in unstructured human-readable documentation, provided in h-file comments, in a `README.txt` file, in a `man` manual page, or in a web page that describes the library. Some of the information may be implied by the library name or the function name (e.g., imagine that the function is named "singleCoreNormalize") or by common sense (e.g., if a GPU is not mentioned anywhere, the function probably doesn't use one). Some of these questions may simply remain unanswered. Moreover, none of this information is exposed to downstream programming tools. For example, imagine a downstream tool that executes each function in a library and measures its running time - how would it provide the function with reasonable arguments?
 
-The HAT format attempts to replace this opacity with transparency, by annotating each declared function with descriptive metadata.
+The HAT library format attempts to replace this opacity with transparency, by annotating each declared function with descriptive metadata in TOML.
 
 # The HAT trick
 
-A `.hat` file is simultaneously a valid h-file and a valid TOML file. It tricks the C/C++ parser into only seeing the valid C/C++ parts of the file, while maintaining the structure of a valid TOML file. This is accomplished with the following file sneaky structure:
+A `.hat` file is simultaneously a valid h-file and a valid TOML file. It tricks the C parser into only seeing the valid C parts of the file, while maintaining the structure of a valid TOML file. This is accomplished with the following file sneaky structure:
 ```
 #ifdef TOML
 
@@ -45,26 +43,28 @@ A `.hat` file is simultaneously a valid h-file and a valid TOML file. It tricks 
     code = '''
 #endif // TOML
 
-// Add C/C++ declarations here
+// Add C declarations here
 
 #ifdef TOML
     '''
 #endif // TOML
 ```
 
-How does a C/C++ handle this file? Assuming that the `TOML` macro is not defined, the parser ignores everything that appears between `#ifdef` and `#endif`. This leaves whatever is added instead of `// Add C/C++ declarations here`. How does a TOML parser handle this file? First note that `#` is a comment escape character in TOML, so the `#ifdef` and `#endif` lines are simply ignored. Any TOML code that is places instead of `// Add TOML here` is parsed normally. Finally, a special TOML table named `[declaration]` is defined, and in it a key named `code` that contains all of the C/C++ code as a multiline string.
+How does a C compiler handle this file? Assuming that the `TOML` macro is not defined, the parser ignores everything that appears between `#ifdef TOML` and `#endif`. This leaves whatever is added instead of `// Add C declarations here`. 
 
-Why is it important for the TOML and the C/C++ declarations to live in the same file? Why not put the metadata in a separate file? The fact that C/C++ already splits the library code between object files and h-files is already a concern, because the user has to worry about distributing a `.hat` file with an incorrect `.lib` file (just like in C/C++). We don't want to make things worse by adding yet another separate file. Keeping the metadata in the same file as the function declaration ensures that each function declaration is never separated from its metadata. 
+How does a TOML parser handle this file? First note that `#` is a comment escape character in TOML, so the `#ifdef` and `#endif` lines are simply ignored. Any TOML code that is places instead of `// Add TOML here` is parsed normally. Finally, a special TOML table named `[declaration]` is defined, and in it a key named `code` that contains all of the C code as a multiline string.
+
+Why is it important for the TOML and the C declarations to live in the same file? Why not put the metadata in a separate file? The fact that C already splits the library code between object files and h-files is already a concern, because the user has to worry about distributing a `.hat` file with an incorrect `.lib` file (just like in C). We don't want to make things worse by adding yet another separate file. Keeping the metadata in the same file as the function declaration ensures that each function declaration is never separated from its metadata. 
 
 # Function name
 
-The HAT format does not specify how functions should be named, but it does disallow function name overloading within any `.hat` file. In other words, each function in any `.hat` file must have a distinct name. The reason is that the HAT format uses the function name to associate the C-style function declaration with its TOML metadata. If multiple functions, declared in the same `.hat` file, share a common name, the mapping between declarations and their metadata would be ambiguous. On the other hand, function name overloading is allowed if the functions are declared in different `.hat` files. This is because the function declaration and its metadata are always located in the same file, so overloading names in two different files does not create any ambiguity. 
+The HAT format does not specify how functions should be named, but as an enhancement of the C programming language, it does not support function name overloading. In particular, the HAT format uses the function name to associate its C-style function declaration with its TOML metadata. If multiple functions share the same name, the mapping between declarations and their metadata become ambiguous. 
 
 # How many files in a library?
 
-As mentioned above, a library in the HAT format includes a single `.lib` file. This file is just a standard C/C++ object file. In may situations, a single object file can contain code that targets different hardware instruction sets. For example, the file can contain a function that uses AVX512 instructions, another function that only uses AVX instructions, and a third function that makes do with SSE instructions.
+As mentioned above, a library in the HAT format includes a single `.lib` file. This file is just a standard C object file. In may situations, a single object file can contain code that targets different hardware instruction sets. For example, the file can contain a function that uses AVX512 instructions, another function that only uses AVX instructions, and a third function that makes do with SSE instructions.
 
-A library in the HAT format can contain multiple `.hat` files, just like multiple `.h` files can correspond to a single object file in C/C++. Once constraint it that a `.hat` file can only contain declaration of functions compiled for the same target. This is because the metadata that describes the hardware target is given for an entire `.hat` file, and not per function. More generally, any metadata that is provided at the file level applies to all the functions declared in that file. This influences the number `.hat` files in the library. 
+A library in the HAT format can contain multiple `.hat` files, just like multiple `.h` files can correspond to a single object file in C. Once constraint it that a `.hat` file can only contain declaration of functions compiled for the same target. This is because the metadata that describes the hardware target is given for an entire `.hat` file, and not per function. More generally, any metadata that is provided at the file level applies to all the functions declared in that file. This influences the number `.hat` files in the library. 
 
 # .hat file schema
 
