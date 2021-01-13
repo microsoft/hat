@@ -58,13 +58,13 @@ Why is it important for the TOML and the C declarations to live in the same file
 
 # Function name
 
-The HAT format does not specify how functions should be named, but as an enhancement of the C programming language, it does not support function name overloading. In particular, the HAT format uses the function name to associate its C-style function declaration with its TOML metadata. If multiple functions share the same name, the mapping between declarations and their metadata become ambiguous. 
+The HAT format does not specify how functions should be named, but as an enhancement of the C programming language, it does not support function name overloading. In particular, the HAT format replies on the function name to match a function declaration with its metadata. Therefore, if multiple functions were to share the same name, the mapping between declarations and metadata would become ambiguous. 
 
 # How many files in a library?
 
-As mentioned above, a library in the HAT format includes a single `.lib` file. This file is just a standard C object file. In may situations, a single object file can contain code that targets different hardware instruction sets. For example, the file can contain a function that uses AVX512 instructions, another function that only uses AVX instructions, and a third function that makes do with SSE instructions.
+As mentioned above, a library in the HAT format includes a single `.lib` file. This file is just a standard C object file. In many situations, a single object file can contain code that targets different hardware instruction sets. For example, the file can contain a function that uses AVX512 instructions, another function that only uses AVX instructions, and a third function that makes do with SSE instructions.
 
-A library in the HAT format can contain multiple `.hat` files, just like multiple `.h` files can correspond to a single object file in C. Once constraint it that a `.hat` file can only contain declaration of functions compiled for the same target. This is because the metadata that describes the hardware target is given for an entire `.hat` file, and not per function. More generally, any metadata that is provided at the file level applies to all the functions declared in that file. This influences the number `.hat` files in the library. 
+A library in the HAT format can contain multiple `.hat` files, just like multiple `.h` files can correspond to a single object file in C. However, each `.hat` file can only contain functions that are compiled for the same target. This is because the metadata that describes the hardware target is defined for an entire `.hat` file, and not per function. More generally, any metadata that is defined at the file level applies to all the functions declared in that file, which could influence how functions are split among different `.hat` files.
 
 # .hat file schema
 
