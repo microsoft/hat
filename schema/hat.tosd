@@ -1,0 +1,336 @@
+# HAT TOML Schema
+[toml-schema]
+version = "0.0.0.1"
+
+# Types to be used elsewhere in this schema
+[types]
+
+    # Layout type associated with "affine_array" logical parameter types
+    # "affine_array" logical parameters have fully compile-time-known sizes that are encoded in this metadata
+    [types.affineArrayLayoutType]
+    type = "table"
+
+        # Array giving the logical shape of the buffer, e.g. [256, 256]
+        [types.affineArrayLayoutType.shape]
+        type = "array"
+        arraytype = "integer"
+
+        # Array giving the affine map coefficients used to map from multi-dimensional coordinates to an offset in the C-style array buffer.
+        # e.g. [256, 1] would indicate that for index (i, j), the position in the buffer is (256 * i) + (1 * j)
+        # Should have the same number of elements as the shape array
+        [types.affineArrayLayoutType.affine_map]
+        type = "array"
+        arraytype = "integer"
+
+        # Offset from the buffer pointer where the logical affine array begins.
+        [types.affineArrayLayoutType.affine_offset]
+        type = "integer"
+    
+    # Layout type associated with "runtime_array" logical parameter types
+    # "runtime_array" logical parameters have a runtime-determined size that is given by other parameters to the function.
+    [types.runtimeArrayLayoutType]
+    type = "table"
+
+        # A string describing the number of elements in the buffer, typically expected to reference other parameters in the function.
+        # e.g. "N", "lda * K"
+        [types.runtimeArrayLayoutType.size]
+        type = "string"
+
+    # Parameter type of arguments and return values
+    [types.paramType]
+    type = "table"
+
+        # Name of the parameter
+        [types.paramType.name]
+        type = "string"
+
+        # Friendly string describing the parameter
+        [types.paramType.description]
+        type = "string"
+
+        # The logical type of the parameter, such as if it's really a multi-dimensional array
+        [types.paramType.logical_type]
+        type = "string"
+        allowedvalues = ["affine_array", "runtime_array", "void", "element"]
+
+        # The declared type of the parameter as a valid C type declaration
+        [types.paramType.declared_type]
+        type = "string"
+
+        # The type of elements in the parameter. E.g. "float" if the declared type is "const float*", "float*", or "float"
+        [types.paramType.element_type]
+        type = "string"
+
+        # The usage of the parameter in the context of the function
+        [types.paramType.usage]
+        type = "string"
+        allowedvalues = [ "input_output", "input", "output" ]
+
+        # The layout of the parameter, if applicable. Only array logical types have a layout.
+        # TOML schema only supports 'oneof' constraints on collections, so we use a collection and have a single dummy key in it
+        [types.paramType.layout]
+        type = "collection"
+        oneof = [ "types.affineArrayLayoutType", "types.runtimeArrayLayoutType" ]
+        minlength = 1
+        maxlength = 1
+        optional = true
+
+    # Type for a function described by TOML data and declared in the C declaration later in the HAT file
+    [types.functionType]
+    type = "table"
+
+        # The name of the function
+        [types.functionType.name]
+        type = "string"
+
+        # A friendly description of what the function does
+        [types.functionType.description]
+        type = "string"
+    
+        # An array of arguments to the function
+        [types.functionType.arguments]
+        type = "array"
+        arraytype = "types.paramType"
+
+        # The return type description of the function
+        [types.functionType.return]
+        typeof = "paramType"
+
+        # Optional additional usage-specific information about the function that isn't part of this schema
+        [types.functionType.auxiliary]
+        type = "table"
+        optional = true
+
+    # Type of an external library referenced by this metadata, such as a library that was linked into this one or a dependency a user must link
+    [types.referencedLibraryType]
+    type = "table"
+
+        # Friendly name of the library
+        [types.referencedLibraryType.name]
+        type = "string"
+
+        # Friendly version string of the library
+        [types.referencedLibraryType.version]
+        type = "string"
+
+        # The name of the library that is linked or a flag to link it with, as could be used by a build system.
+        # E.g. "ucrtbase.dll" or "/openmp"
+        [types.referencedLibraryType.link_lib]
+        type = "string"
+
+
+# Definition of the well-known tables/keys/etc in HAT TOML data
+[elements]
+
+    # Description of the HAT contents
+    [elements.description]
+    type = "table"
+
+        # Optional user-specified comment about the HAT file or library
+        [elements.description.comment]
+        type = "string"
+        optional = true
+
+        # Optional user-specified author name
+        [elements.description.author]
+        type = "string"
+        optional = true
+
+        # Version number of the library this HAT data represents
+        [elements.description.version]
+        type = "string"
+
+        # Url to the full license text for this library
+        [elements.description.license_url]
+        type = "string"
+
+    # Collection of functions declared within the HAT file and their metadata
+    # The keys in a collection are not prescribed by the schema, and in this case are the names of the functions as the HAT format does not support function overloading.
+    [elements.functions]
+    type = "collection"
+    typeof = "functionType"
+
+    # Table of information about the target device the functions described in this HAT file are intended to be used with
+    [elements.target]
+    type = "table"
+
+        # Required target features in order to run these functions without error
+        [elements.target.required]
+        type = "table"
+
+            # The OS that this HAT library is built for
+            [elements.target.required.os]
+            type = "string"
+            allowedvalues = [ "windows", "macos", "linux" ]
+
+            # Required CPU characteristics
+            [elements.target.required.CPU]
+            type = "table"
+
+                # Instruction set architecture, e.g. "x86_64"
+                [elements.target.required.CPU.architecture]
+                type = "string"
+
+                # Instruction set extensions used by these functions, e.g. "AVX2", "AVX512", etc
+                [elements.target.required.CPU.extensions]
+                type = "array"
+                arraytype = "string"
+
+                # Optional additional information not defined in this schema
+                [elements.target.required.CPU.auxiliary]
+                type = "table"
+                optional = true
+            
+            # Required GPU characteristics if there are GPU functions in this HAT library
+            [elements.target.required.GPU]
+            type = "table"
+            optional = true
+
+                # Required GPU runtime library
+                [elements.target.required.GPU.runtime]
+                type = "string"
+                allowedvalues = [ "cuda", "rocm", "vulkan" ]
+
+                # Minimum GPU instruction set version
+                [elements.target.required.GPU.instruction_set_version]
+                type = "string"
+
+                # Minimum number of GPU threads this library will attempt to use
+                [elements.target.required.GPU.min_threads]
+                type = "integer"
+
+                # Minimum global memory in KB that will be allocated
+                [elements.target.required.GPU.min_global_memory_KB]
+                type = "integer"
+                
+                # Minimum shared memory in KB that will be allocated
+                [elements.target.required.GPU.min_shared_memory_KB]
+                type = "integer"
+
+                # Optional additional requirements not specified in this schema
+                [elements.target.required.GPU.auxiliary]
+                type = "table"
+                optional = true
+
+        # Target characteristics that these functions are optimized for, but are not required in order to function
+        [elements.target.optimized_for]
+        type = "table"
+        optional = true
+
+            # Optimized CPU target information
+            [elements.target.optimized_for.CPU]
+            type = "table"
+            optional = true
+
+                # Full name and version of the CPU, e.g. "Intel Xeon E5-4669 v4"
+                [elements.target.optimized_for.CPU.name]
+                type = "string"
+
+                # Processor family, e.g. "Broadwell"
+                [elements.target.optimized_for.CPU.family]
+                type = "string"
+
+                # Base processor clock speed
+                [elements.target.optimized_for.CPU.clock_frequency]
+                type = "integer"
+
+                # Number of CPU cores
+                [elements.target.optimized_for.CPU.cores]
+                type = "integer"
+
+                # Number of CPU threads
+                [elements.target.optimized_for.CPU.threads]
+                type = "integer"
+
+                # Optimized cache characteristics
+                [elements.target.optimized_for.CPU.cache]
+                type = "table"
+                optional = true
+
+                    # Cache line size in bytes
+                    [elements.target.optimized_for.CPU.cache.cache_line]
+                    type = "integer"
+
+                    # Instruction cache size in KB
+                    [elements.target.optimized_for.CPU.cache.instruction_KB]
+                    type = "integer"
+
+                    # TODO : discussion - do we instead want this to be an array of cache sizes so 'l1', 'l2', 'l3' aren't baked into the schema?
+                    # Cache sizes in KB
+                    [elements.target.optimized_for.CPU.cache.l1_KB]
+                    type = "integer"
+                    [elements.target.optimized_for.CPU.cache.l2_KB]
+                    type = "integer"
+                    [elements.target.optimized_for.CPU.cache.l3_KB]
+                    type = "integer"
+                
+                # Optional additional optimized target characteristics not specified in this schema
+                [elements.target.optimized_for.CPU.auxiliary]
+                type = "table"
+                optional = true
+
+            # Optimized GPU target information
+            [elements.target.optimized_for.GPU]
+            type = "table"
+            optional = true
+                # Best optimized GPU core count
+                [elements.target.optimized_for.GPU.cores]
+                type = "integer"
+
+                # Best optimized GPU thread count
+                [elements.target.optimized_for.GPU.threads]
+                type = "integer"
+
+                # Optimized instruction set version
+                [elements.target.optimized_for.GPU.instruction_set_version]
+                type = "string"
+
+                # Optional additional optimized target characteristics not specified in this schema
+                [elements.target.optimized_for.GPU.auxiliary]
+                type = "table"
+                optional = true
+
+    # Table describing dependencies that projects using this HAT library must supply
+    [elements.dependencies]
+    type = "table"
+        # Dynamic libraries that must be linked
+        [elements.dependencies.dynamic]
+        type = "array"
+        arraytype = "types.referencedLibraryType"
+
+        # Optonal additonal dependency information not specified in this schema
+        [elements.dependencies.auxiliary]
+        type = "table"
+        optional = true
+
+    # Table giving information about how this HAT library was built
+    [elements.compiled_with]
+    type = "table"
+        # Compiler name and version, e.g. "MSVC141"
+        [elements.compiled_with.compiler]
+        type = "string"
+
+        # Compilation flags, e.g. "-std=c++14 -ffast-math"
+        [elements.compiled_with.flags]
+        type = "string"
+
+        # C Runtime linked against, e.g. "ucrt"
+        [elements.compiled_with.crt]
+        type = "string"
+
+        # Statically linked libraries in this HAT library
+        [elements.compiled_with.libraries]
+        type = "array"
+        arraytype = "types.referencedLibraryType"
+
+        # Optional additional compilation information not specified in this schema
+        [elements.compiled_with.auxiliary]
+        type = "table"
+        optional = true
+
+    # Table containing the C header code in this HAT file
+    [elements.declaration]
+    type = "table"
+        # String containing the entirety of the C header code
+        [elements.declaration.code]
+        type = "string"
