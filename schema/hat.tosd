@@ -1,5 +1,4 @@
 # HAT TOML Schema 
-# -- to review --
 [toml-schema]
 version = "0.0.0.1"
 
@@ -52,7 +51,7 @@ version = "0.0.0.1"
         # The logical type of the parameter, such as if it's really a multi-dimensional array
         [types.paramType.logical_type]
         type = "string"
-        allowedvalues = ["affine_array", "runtime_array", "void", "element"] 
+        allowedvalues = ["affine_array", "runtime_array", "void", "element"] # Q: what does a void logical parameter type represent (not an array? or no parameter?) Do we need an "other" catch-all type to say "just ignore this parameter"?
 
         # The declared type of the parameter as a valid C type declaration
         [types.paramType.declared_type]
@@ -256,7 +255,7 @@ version = "0.0.0.1"
                     [elements.target.optimized_for.CPU.cache.instruction_KB]
                     type = "integer"
 
-                    # TODO : discussion - do we instead want this to be an array of cache sizes so 'l1', 'l2', 'l3' aren't baked into the schema?
+                    # TODO : discussion - do we instead want this to be an array of cache sizes so 'l1', 'l2', 'l3' aren't baked into the schema? Agreed.
                     # Cache sizes in KB
                     [elements.target.optimized_for.CPU.cache.l1_KB]
                     type = "integer"
@@ -291,10 +290,10 @@ version = "0.0.0.1"
                 type = "table"
                 optional = true
 
-    # Table describing dependencies that projects using this HAT library must supply
+    # Table describing dependencies that projects using this HAT library must supply at runtime
     [elements.dependencies]
     type = "table"
-        # Dynamic libraries that must be linked
+        # Dynamic libraries that must be linked 
         [elements.dependencies.dynamic]
         type = "array"
         arraytype = "types.referencedLibraryType"
@@ -304,7 +303,7 @@ version = "0.0.0.1"
         type = "table"
         optional = true
 
-    # Table giving information about how this HAT library was built
+    # Table giving information about how this HAT library was built.
     [elements.compiled_with]
     type = "table"
         # Compiler name and version, e.g. "MSVC141"
@@ -312,14 +311,14 @@ version = "0.0.0.1"
         type = "string"
 
         # Compilation flags, e.g. "-std=c++14 -ffast-math"
-        [elements.compiled_with.flags]
+        [elements.compiled_with.flags] # Q: do we make a distinction between compiler and linker flags? The answer would depends on the intended use case for this section
         type = "string"
 
         # C Runtime linked against, e.g. "ucrt"
         [elements.compiled_with.crt]
         type = "string"
 
-        # Statically linked libraries in this HAT library
+        # Statically linked libraries in this HAT library # NIT: I find it a bit odd that dynamic and static dependencies are split across 2 sections, but I can live with it
         [elements.compiled_with.libraries]
         type = "array"
         arraytype = "types.referencedLibraryType"
