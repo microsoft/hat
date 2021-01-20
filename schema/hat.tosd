@@ -1,4 +1,5 @@
-# HAT TOML Schema
+# HAT TOML Schema 
+# -- to review --
 [toml-schema]
 version = "0.0.0.1"
 
@@ -51,7 +52,7 @@ version = "0.0.0.1"
         # The logical type of the parameter, such as if it's really a multi-dimensional array
         [types.paramType.logical_type]
         type = "string"
-        allowedvalues = ["affine_array", "runtime_array", "void", "element"]
+        allowedvalues = ["affine_array", "runtime_array", "void", "element"] 
 
         # The declared type of the parameter as a valid C type declaration
         [types.paramType.declared_type]
