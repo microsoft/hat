@@ -1,4 +1,4 @@
-# HAT TOML Schema 
+# HAT TOML Schema
 [toml-schema]
 version = "0.0.0.1"
 
