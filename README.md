@@ -62,9 +62,9 @@ The HAT format does not specify how functions should be named. In particular, th
 
 # How many files in a library?
 
-As mentioned above, a library in the HAT format *usually* includes a single static library file, but support for multiple static libraries within a HAT library is available. In many situations, a single object file can contain code that targets different hardware instruction sets. For example, the file can contain a function that uses AVX512 instructions, another function that only uses AVX instructions, and a third function that makes do with SSE instructions.
+As mentioned above, a library in the HAT format *usually* includes a single static library file, but support for multiple static libraries within a HAT library is available. In many situations, a single static library can contain code that targets different hardware instruction sets. For example, the static library can contain a function that uses AVX512 instructions, another function that only uses AVX instructions, and a third function that makes do with SSE instructions.
 
-A library in the HAT format can contain multiple `.hat` files, just like multiple `.h` files can correspond to a single object file in C. However, each `.hat` file can only contain functions that are compiled for the same target. This is because the metadata that describes the hardware target is defined for an entire `.hat` file, and not per function. More generally, any metadata that is defined at the file level applies to all the functions declared in that file, which could influence how functions are split among different `.hat` files.
+A library in the HAT format can contain multiple `.hat` files, just like multiple `.h` files can correspond to a single object file in C. However, each `.hat` file can only contain functions that are compiled for the same target. This is because the metadata that describes the hardware target is defined for an entire `.hat` file, and not per function. More generally, any metadata that is defined at the file level in a `.hat` file applies to all the functions declared in that file, which could influence how functions are split among different `.hat` files.
 
 # .hat file schema
 
