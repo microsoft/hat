@@ -2,9 +2,9 @@
 
 # HAT file format
 
-HAT is a format for distributing compiled libraries of functions in the C programming languages. HAT stands for "h-file Annotated with Toml", and implies that we decorate standard C header files with useful metadata in the [TOML](https://toml.io/) markup language. 
+HAT is a format for distributing compiled libraries of functions in the C programming languages. HAT stands for "C **H**eader **A**nnotated with **T**OML", and implies that we decorate standard C header files with useful metadata in the [TOML](https://toml.io/) markup language. 
 
-A function library in the HAT format typically includes one `.lib` file and one or more `.hat` files. The `.lib` file contains all the compiled object code that implements the functions in the library. Each of the `.hat` files contains a combination of standard C function declarations (like a typical C `.h` file) and metadata in the TOML markup language. 
+A function library in the HAT format typically includes one static library file (`.a` or `.lib`) and one or more `.hat` files. The static library contains all the compiled object code that implements the functions in the library. Each of the `.hat` files contains a combination of standard C function declarations (like a typical C `.h` file) and metadata in the TOML markup language. 
 
 The metadata that accompanies each function describes how it should be called and how it was implemented. The metadata is intended to be human-readable, providing structured and systematic documentation, as well as machine-readable, allowing downstream tools to examine the library contents. 
 
@@ -22,10 +22,10 @@ The accompanying object file would contain the compiled machine code for our fun
 * Does the function expect the matrix elements to appear in row-major order, column-major order, Z-order, or something else?
 * What is the size of the array `A`? We may have auxiliary knowledge that the array is 100 elements long, but this information is not given explicitly. 
 * We can see that `A` is not `const`, so we know that its elements can be changed by the function, but is it an "output-only" array (its initial values are overwritten) or is it an "input-output" array? We have auxiliary knowledge that `A` is both an input and an output, but this is not given explicitly. 
-* Who created this library? It is a newer version of a previous library? Is it distributed under an open-source license?
+* Who created this library? Is it a newer version of a previous library? Is it distributed under an open-source license?
 * Is this function compiled for Windows or Linux? Does it need to be linked to a C runtime library or other library?
 * For which instruction set is the function compiled? x86_64? With SSE extensions? AVX? AVX512?
-* Does the function assume a fixed number of CPU cores? Does the function implementation rely on GPU hardware?  
+* Does the function assume a fixed number of CPU cores? Does the function implementation rely on GPU hardware?
 
 Some of the information above is typically provided in unstructured human-readable documentation, provided in h-file comments, in a `README.txt` file, in a `man` manual page, or in a web page that describes the library. Some of the information may be implied by the library name or the function name (e.g., imagine that the function is named "singleCoreNormalize") or by common sense (e.g., if a GPU is not mentioned anywhere, the function probably doesn't use one). Some of these questions may simply remain unanswered. Moreover, none of this information is exposed to downstream programming tools. For example, imagine a downstream tool that executes each function in a library and measures its running time - how would it provide the function with reasonable arguments?
 
@@ -33,7 +33,7 @@ The HAT library format attempts to replace this opacity with transparency, by an
 
 # The HAT trick
 
-A `.hat` file is simultaneously a valid h-file and a valid TOML file. It tricks the C parser into only seeing the valid C parts of the file, while maintaining the structure of a valid TOML file. This is accomplished with the following file sneaky structure:
+A `.hat` file is simultaneously a valid h-file and a valid TOML file. It tricks the C parser into only seeing the valid C parts of the file, while maintaining the structure of a valid TOML file. This is accomplished with the following file structure:
 ```
 #ifdef TOML
 
@@ -58,11 +58,11 @@ Why is it important for the TOML and the C declarations to live in the same file
 
 # Function name
 
-The HAT format does not specify how functions should be named, but as an enhancement of the C programming language, it does not support function name overloading. In particular, the HAT format replies on the function name to match a function declaration with its metadata. Therefore, if multiple functions were to share the same name, the mapping between declarations and metadata would become ambiguous. 
+The HAT format does not specify how functions should be named. In particular, the HAT format replies on the function name to match a function declaration with its metadata. Since HAT files are really C based headers, function overloading is not supported. All function names must be globally unique within the final binary. If multiple functions were to share the same name, the mapping between declarations and metadata would become ambiguous. 
 
 # How many files in a library?
 
-As mentioned above, a library in the HAT format includes a single `.lib` file. This file is just a standard C object file. In many situations, a single object file can contain code that targets different hardware instruction sets. For example, the file can contain a function that uses AVX512 instructions, another function that only uses AVX instructions, and a third function that makes do with SSE instructions.
+As mentioned above, a library in the HAT format *usually* includes a single static library file, but support for multiple static libraries within a HAT library is available. In many situations, a single object file can contain code that targets different hardware instruction sets. For example, the file can contain a function that uses AVX512 instructions, another function that only uses AVX instructions, and a third function that makes do with SSE instructions.
 
 A library in the HAT format can contain multiple `.hat` files, just like multiple `.h` files can correspond to a single object file in C. However, each `.hat` file can only contain functions that are compiled for the same target. This is because the metadata that describes the hardware target is defined for an entire `.hat` file, and not per function. More generally, any metadata that is defined at the file level applies to all the functions declared in that file, which could influence how functions are split among different `.hat` files.
 
