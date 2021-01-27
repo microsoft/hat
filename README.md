@@ -2,9 +2,11 @@
 
 # HAT file format
 
-HAT is a format for distributing compiled libraries in the C programming language. HAT stands for "C **H**eader **A**nnotated with **T**OML", and implies that standard C header files are decorated with useful metadata in the [TOML](https://toml.io/) markup language.
+HAT is a format for packaging compiled libraries in the C programming language. HAT stands for "**H**eader **A**nnotated with **T**OML", and implies that standard C header files are decorated with useful metadata in the [TOML](https://toml.io/) markup language.
 
-A library in the HAT format typically includes one static library file (`.a` or `.lib`) and one or more `.hat` files. The static library contains all the compiled object code that implements the library functions. Each `.hat` file contains a combination of standard C function declarations (like a typical `.h` file) and metadata in the TOML markup language. The metadata that accompanies each function declaration describes how the function should be called and how it was implemented. The metadata is intended to be both human-readable and machine-readable, providing structured and systematic documentation and allowing downstream tools to examine the library contents. 
+A HAT package includes one library file and one or more `.hat` files. The library file can be a static library (a `.a` file on Posix systems or a `.lib` file on Windows systems) or a dynamic library (a `.so` file on Posix systems or a `.dll` file and its accompanying `.lib` import library file on Windows systems). For simplicity of documentation, when discussing the "library file" as a unit in a HAT package we are referring to either the single static library file (`.a` or `.lib`), the single dynamic library file (`.so`) on Posix, or the pair of library files that comprise a dynamic library on Windows (`.dll` and `.lib` import library file). Note that since a HAT package includes only one "library file" it cannot contain both a static and dynamic library, so in the case of a HAT package containing a Windows dynamic library, the `.lib` file in the package is always the import library and there is no ambiguity in which file (or pair of files) is being referenced by "library file".
+
+The library file contains all the compiled object code that implements the functions in the HAT package. Each `.hat` file contains a combination of standard C function declarations (like a typical `.h` file) and metadata in the TOML markup language. The metadata that accompanies each function declaration describes how the function should be called and how it was implemented. The metadata is intended to be both human-readable and machine-readable, providing structured and systematic documentation and allowing downstream tools to examine the package contents. 
 
 Each `.hat` file has the convenient property that it is simultaneously a valid h-file and a valid TOML file. In other words, the file is structured such that a C compiler will ignore the TOML metadata, while a TOML parser will understand the entire file as a valid TOML file. We accomplish this using a technique we call *the hat trick*, which is explained below. 
 
@@ -16,7 +18,7 @@ Say that we use C to implement an in-place column-wise normalization of a 10x10 
 ```
 void normalize(float* A);
 ```
-The accompanying object file would contain the compiled machine code for this function. The object/header file pair is opaque, as it provides very little information on how the function should be used, its dependencies, and how it was implemented. Specifically:
+The accompanying library file would contain the compiled machine code for this function. The library/header file pair is opaque, as it provides very little information on how the function should be used, its dependencies, and how it was implemented. Specifically:
 
 * What does the pointer `float* A` point to? By convention, it is reasonable to assume that `A` points to the first element of an array that contains the 100 matrix elements, but this is not stated explicitly.
 * Does the function expect the matrix elements to appear in row-major order, column-major order, Z-order, or something else?
@@ -31,7 +33,7 @@ The accompanying object file would contain the compiled machine code for this fu
 
 Some of the questions above can be answered by reading the human-readable documentation provided in h-file comments, in `README.txt` or `LICENSE.txt` files, or in a web page that describes the library. Some of the information may be implied by the library name or the function name (e.g., imagine that the function was named "normalize_10x10_singlecore") or by common sense (e.g., if a GPU is not mentioned anywhere, the function probably doesn't require one). Nevertheless, C does not have a schematized systematic way to express all of this important information. Moreover, human-readable documentation does not expose this information to downstream programming tools. For example, imagine a downstream tool that examines a library and automatically creates tests that measure the performance of each function. 
 
-The HAT library format attempts to replace this opacity with transparency, by annotating each declared function with descriptive metadata in TOML.
+The HAT package format attempts to replace this opacity with transparency, by annotating each declared function with descriptive metadata in TOML.
 
 # The HAT trick
 
@@ -56,13 +58,13 @@ What does a C compiler see? Assuming that the `TOML` macro is not defined, the p
 
 What does a TOML parser see? First note that `#` is a comment escape character in TOML, so the `#ifdef` and `#endif` lines are ignored as comments. Any TOML code that appears instead of `// Add TOML here` is parsed normally. Finally, a special TOML table named `[declaration]` is defined, and inside it a key named `code` with all of the C declarations as a multiline string.
 
-Why is it important for the TOML and the C declarations to live in the same file? Why not put the TOML metadata in a separate file? The fact that C already splits the library code between object files and h-files is already a concern, because the user has to worry about distributing the an hfile with an incorrect version of the `.lib` file. We don't want to make things worse by adding yet another separate file. Keeping the metadata in the same file as the function declaration ensures that each declaration is never separated from its metadata. 
+Why is it important for the TOML and the C declarations to live in the same file? Why not put the TOML metadata in a separate file? The fact that C already splits the package code between library files and h-files is already a concern, because the user has to worry about distributing a `.h` file with an incorrect version of the library file. We don't want to make things worse by adding yet another separate file. Keeping the metadata in the same file as the function declaration ensures that each declaration is never separated from its metadata. 
 
 # Multiple `.hat` files
 
-The HAT format defines different types of metadata. Some types of metadata (such as the targeted operating system and the license) apply to all of the functions in the file, while other types of metadata (such as the specification of input and output arguments) are defined per function. Therefore, if two functions require different metadata, and that type of metadata is defined at the file scope, then those functions must be declared in separate `.hat` files. For example, if the first function is compiled with AVX512 instructions and the second function makes do with SSE instructions, then these functions must be defined in separate `.hat` files. On the other hand, both functions can co-exist in a single `.lib` file (recall that a HAT library has a single `.lib` file).
+The HAT format defines different types of metadata. Some types of metadata (such as the targeted operating system and the license) apply to all of the functions in the packaged library file, while other types of metadata (such as the specification of input and output arguments) are defined per function. Therefore, if two functions require different metadata, and that type of metadata is defined at the file scope, then those functions must be declared in separate `.hat` files. For example, if the first function is compiled with AVX512 instructions and the second function makes do with SSE instructions, then these functions must be defined in separate `.hat` files. On the other hand, both functions can co-exist in a single library file (recall that a HAT package has a single library file).
 
-The constraint above influences the number of `.hat` files in a library. Additionally, the author of the library may decide to split functions up into separate `.hat` files to improve readability or organization.
+The constraint above influences the number of `.hat` files in a package. Additionally, the author of the package may decide to split functions up into separate `.hat` files to improve readability or organization.
 
 # HAT schema
 

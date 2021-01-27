@@ -77,11 +77,7 @@ version = "0.0.0.2"
         # The calling convention for this function
         [types.functionType.calling_convention]
         type = "string"
-        allowedvalues = [ "__stdcall", "__cdecl", "__fastcall", "__vectorcall" ]
-
-        # Whether or not this function can assert based on arguments given
-        [types.functionType.can_assert]
-        type = "boolean"
+        allowedvalues = [ "stdcall", "cdecl", "fastcall", "vectorcall" ]
     
         # An array of arguments to the function
         [types.functionType.arguments]
@@ -111,7 +107,7 @@ version = "0.0.0.2"
 
         # The name of the library that is linked or a flag to link it with, as could be used by a build system.
         # E.g. "ucrtbase.dll" or "/openmp"
-        [types.referencedLibraryType.link_lib]
+        [types.referencedLibraryType.target_file]
         type = "string"
 
 
@@ -122,7 +118,7 @@ version = "0.0.0.2"
     [elements.description]
     type = "table"
 
-        # Optional user-specified comment about the HAT file or library
+        # Optional user-specified comment about the HAT file or package
         [elements.description.comment]
         type = "string"
         optional = true
@@ -132,20 +128,12 @@ version = "0.0.0.2"
         type = "string"
         optional = true
 
-        # Version number of the library this HAT data represents
+        # Version number of the HAT package
         [elements.description.version]
         type = "string"
 
-        # Url to the full license text for this library
+        # Url to the full license text for this package
         [elements.description.license_url]
-        type = "string"
-
-        # Library file name
-        [elements.description.library_name]
-        type = "string"
-
-        # MD5 hash of the library file this .hat file is associated with
-        [elements.description.library_md5]
         type = "string"
 
     # Collection of functions declared within the HAT file and their metadata
@@ -162,7 +150,7 @@ version = "0.0.0.2"
         [elements.target.required]
         type = "table"
 
-            # The OS that this HAT library is built for
+            # The OS that this HAT package is built for
             [elements.target.required.os]
             type = "string"
             allowedvalues = [ "windows", "macos", "linux" ]
@@ -185,7 +173,7 @@ version = "0.0.0.2"
                 type = "table"
                 optional = true
             
-            # Required GPU characteristics if there are GPU functions in this HAT library
+            # Required GPU characteristics if there are GPU functions in this HAT package
             [elements.target.required.GPU]
             type = "table"
             optional = true
@@ -199,7 +187,7 @@ version = "0.0.0.2"
                 [elements.target.required.GPU.instruction_set_version]
                 type = "string"
 
-                # Minimum number of GPU threads this library will attempt to use
+                # Minimum number of GPU threads functions declared in this .hat file will attempt to use
                 [elements.target.required.GPU.min_threads]
                 type = "integer"
 
@@ -209,6 +197,10 @@ version = "0.0.0.2"
                 
                 # Minimum shared memory in KB that will be allocated
                 [elements.target.required.GPU.min_shared_memory_KB]
+                type = "integer"
+
+                # Minimum texture memory in KB that will be allocated
+                [elements.target.required.GPU.min_texture_memory_KB]
                 type = "integer"
 
                 # Optional additional requirements not specified in this schema
@@ -264,7 +256,7 @@ version = "0.0.0.2"
                     [elements.target.optimized_for.CPU.cache.line_sizes]
                     type = "array"
                     arraytype = "integer"
-                
+
                 # Optional additional optimized target characteristics not specified in this schema
                 [elements.target.optimized_for.CPU.auxiliary]
                 type = "table"
@@ -274,6 +266,18 @@ version = "0.0.0.2"
             [elements.target.optimized_for.GPU]
             type = "table"
             optional = true
+
+                # Full name and version of the GPU, e.g. "NVIDIA GTX 3090"
+                [elements.target.optimized_for.GPU.name]
+                type = "string"
+
+                # Architecture family, e.g. "Ampere"
+                [elements.target.optimized_for.GPU.family]
+                type = "string"
+
+                # Base GPU clock speed
+                [elements.target.optimized_for.GPU.clock_frequency]
+                type = "integer"
 
                 # Best optimized GPU core count
                 [elements.target.optimized_for.GPU.cores]
@@ -287,16 +291,44 @@ version = "0.0.0.2"
                 [elements.target.optimized_for.GPU.instruction_set_version]
                 type = "string"
 
+                # Optimized global memory size in KB
+                [elements.target.optimized_for.GPU.global_memory_KB]
+                type = "integer"
+
+                # Optimized shared memory size in KB
+                [elements.target.optimized_for.GPU.shared_memory_KB]
+                type = "integer"
+
+                # Optimized shared memory cache line size in bytes
+                [elements.target.optimized_for.GPU.shared_memory_line_size]
+                type = "integer"
+
+                # Optimized texture memory size in KB
+                [elements.target.optimized_for.GPU.texture_memory_KB]
+                type = "integer"
+
                 # Optional additional optimized target characteristics not specified in this schema
                 [elements.target.optimized_for.GPU.auxiliary]
                 type = "table"
                 optional = true
 
-    # Table describing dependencies that projects using this HAT library must supply at runtime
+    # Table describing dependencies that consumers of this HAT package will need to
+    # provide or otherwise satisfy in order to properly consume the package, such as library
+    # files in the package to link and dynamic libraries to make available at runtime
     [elements.dependencies]
     type = "table"
 
-        # Dynamic libraries that must be linked
+        # Name of the library file in this HAT package that the consumer should link
+        [elements.description.link_target]
+        type = "string"
+
+        # Names of files in this HAT package that must be deployed with a built binary that consumes this package,
+        # such as dynamic library files
+        [elements.description.deploy_files]
+        type = "array"
+        arraytype = "string"
+
+        # Dynamic libraries outside of this HAT package that must be made available at runtime
         [elements.dependencies.dynamic]
         type = "array"
         arraytype = "types.referencedLibraryType"
@@ -306,7 +338,9 @@ version = "0.0.0.2"
         type = "table"
         optional = true
 
-    # Table giving information about how this HAT library was built
+    # Table giving information about how this HAT package was built. It is expected
+    # that a consumer of the package may find this information useful but may not
+    # necessarily need to act on in order to successfully consume this package
     [elements.compiled_with]
     type = "table"
 
@@ -322,7 +356,7 @@ version = "0.0.0.2"
         [elements.compiled_with.crt]
         type = "string"
 
-        # Statically linked libraries in this HAT library
+        # Libraries that were statically linked into the library files in this HAT package
         [elements.compiled_with.libraries]
         type = "array"
         arraytype = "types.referencedLibraryType"
