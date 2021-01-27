@@ -1,40 +1,9 @@
 # HAT TOML Schema
 [toml-schema]
-version = "0.0.0.1"
+version = "0.0.0.2"
 
 # Types to be used elsewhere in this schema
 [types]
-
-    # Layout type associated with "affine_array" logical parameter types
-    # "affine_array" logical parameters have fully compile-time-known sizes that are encoded in this metadata
-    [types.affineArrayLayoutType]
-    type = "table"
-
-        # Array giving the logical shape of the buffer, e.g. [256, 256]
-        [types.affineArrayLayoutType.shape]
-        type = "array"
-        arraytype = "integer"
-
-        # Array giving the affine map coefficients used to map from multi-dimensional coordinates to an offset in the C-style array buffer.
-        # e.g. [256, 1] would indicate that for index (i, j), the position in the buffer is (256 * i) + (1 * j)
-        # Should have the same number of elements as the shape array
-        [types.affineArrayLayoutType.affine_map]
-        type = "array"
-        arraytype = "integer"
-
-        # Offset from the buffer pointer where the logical affine array begins.
-        [types.affineArrayLayoutType.affine_offset]
-        type = "integer"
-    
-    # Layout type associated with "runtime_array" logical parameter types
-    # "runtime_array" logical parameters have a runtime-determined size that is given by other parameters to the function.
-    [types.runtimeArrayLayoutType]
-    type = "table"
-
-        # A string describing the number of elements in the buffer, typically expected to reference other parameters in the function.
-        # e.g. "N", "lda * K"
-        [types.runtimeArrayLayoutType.size]
-        type = "string"
 
     # Parameter type of arguments and return values
     [types.paramType]
@@ -66,13 +35,31 @@ version = "0.0.0.1"
         type = "string"
         allowedvalues = [ "input_output", "input", "output" ]
 
-        # The layout of the parameter, if applicable. Only array logical types have a layout.
-        # TOML schema only supports 'oneof' constraints on collections, so we use a collection and have a single dummy key in it
-        [types.paramType.layout]
-        type = "collection"
-        oneof = [ "types.affineArrayLayoutType", "types.runtimeArrayLayoutType" ]
-        minlength = 1
-        maxlength = 1
+        # Optional array giving the logical shape of the buffer for an affine_array logical type, e.g. [256, 256]
+        [types.paramType.shape]
+        type = "array"
+        arraytype = "integer"
+        optional = true
+
+        # Optional array giving the affine map coefficients used to map from multi-dimensional coordinates to an
+        # offset in the C-style array buffer for an affine_array logical type.
+        # e.g. [256, 1] would indicate that for index (i, j), the position in the buffer is (256 * i) + (1 * j)
+        # Should have the same number of elements as the shape array
+        [types.paramType.affine_map]
+        type = "array"
+        arraytype = "integer"
+        optional = true
+
+        # Offset from the buffer pointer where the array data begins for an affine_array logical type.
+        [types.paramType.affine_offset]
+        type = "integer"
+        optional = true
+
+        # A string describing the number of elements in the buffer for a runtime_array logical type.
+        # Typically expected to reference other parameters in the function.
+        # e.g. "N", "lda * K"
+        [types.paramType.size]
+        type = "string"
         optional = true
 
     # Type for a function described by TOML data and declared in the C declaration later in the HAT file
@@ -86,6 +73,11 @@ version = "0.0.0.1"
         # A friendly description of what the function does
         [types.functionType.description]
         type = "string"
+
+        # The calling convention for this function
+        [types.functionType.calling_convention]
+        type = "string"
+        allowedvalues = [ "stdcall", "cdecl", "fastcall", "vectorcall" ]
     
         # An array of arguments to the function
         [types.functionType.arguments]
@@ -115,7 +107,7 @@ version = "0.0.0.1"
 
         # The name of the library that is linked or a flag to link it with, as could be used by a build system.
         # E.g. "ucrtbase.dll" or "/openmp"
-        [types.referencedLibraryType.link_lib]
+        [types.referencedLibraryType.target_file]
         type = "string"
 
 
@@ -126,7 +118,7 @@ version = "0.0.0.1"
     [elements.description]
     type = "table"
 
-        # Optional user-specified comment about the HAT file or library
+        # Optional user-specified comment about the HAT file or package
         [elements.description.comment]
         type = "string"
         optional = true
@@ -136,11 +128,11 @@ version = "0.0.0.1"
         type = "string"
         optional = true
 
-        # Version number of the library this HAT data represents
+        # Version number of the HAT package
         [elements.description.version]
         type = "string"
 
-        # Url to the full license text for this library
+        # Url to the full license text for this package
         [elements.description.license_url]
         type = "string"
 
@@ -158,7 +150,7 @@ version = "0.0.0.1"
         [elements.target.required]
         type = "table"
 
-            # The OS that this HAT library is built for
+            # The OS that this HAT package is built for
             [elements.target.required.os]
             type = "string"
             allowedvalues = [ "windows", "macos", "linux" ]
@@ -181,7 +173,7 @@ version = "0.0.0.1"
                 type = "table"
                 optional = true
             
-            # Required GPU characteristics if there are GPU functions in this HAT library
+            # Required GPU characteristics if there are GPU functions in this HAT package
             [elements.target.required.GPU]
             type = "table"
             optional = true
@@ -195,7 +187,7 @@ version = "0.0.0.1"
                 [elements.target.required.GPU.instruction_set_version]
                 type = "string"
 
-                # Minimum number of GPU threads this library will attempt to use
+                # Minimum number of GPU threads functions declared in this .hat file will attempt to use
                 [elements.target.required.GPU.min_threads]
                 type = "integer"
 
@@ -205,6 +197,10 @@ version = "0.0.0.1"
                 
                 # Minimum shared memory in KB that will be allocated
                 [elements.target.required.GPU.min_shared_memory_KB]
+                type = "integer"
+
+                # Minimum texture memory in KB that will be allocated
+                [elements.target.required.GPU.min_texture_memory_KB]
                 type = "integer"
 
                 # Optional additional requirements not specified in this schema
@@ -247,23 +243,20 @@ version = "0.0.0.1"
                 type = "table"
                 optional = true
 
-                    # Cache line size in bytes
-                    [elements.target.optimized_for.CPU.cache.cache_line]
-                    type = "integer"
-
                     # Instruction cache size in KB
                     [elements.target.optimized_for.CPU.cache.instruction_KB]
                     type = "integer"
 
-                    # TODO : discussion - do we instead want this to be an array of cache sizes so 'l1', 'l2', 'l3' aren't baked into the schema?
-                    # Cache sizes in KB
-                    [elements.target.optimized_for.CPU.cache.l1_KB]
-                    type = "integer"
-                    [elements.target.optimized_for.CPU.cache.l2_KB]
-                    type = "integer"
-                    [elements.target.optimized_for.CPU.cache.l3_KB]
-                    type = "integer"
-                
+                    # Ordered cache sizes in KB
+                    [elements.target.optimized_for.CPU.cache.sizes_KB]
+                    type = "array"
+                    arraytype = "integer"
+
+                    # Ordered cache line sizes in bytes
+                    [elements.target.optimized_for.CPU.cache.line_sizes]
+                    type = "array"
+                    arraytype = "integer"
+
                 # Optional additional optimized target characteristics not specified in this schema
                 [elements.target.optimized_for.CPU.auxiliary]
                 type = "table"
@@ -273,6 +266,19 @@ version = "0.0.0.1"
             [elements.target.optimized_for.GPU]
             type = "table"
             optional = true
+
+                # Full name and version of the GPU, e.g. "NVIDIA GTX 3090"
+                [elements.target.optimized_for.GPU.name]
+                type = "string"
+
+                # Architecture family, e.g. "Ampere"
+                [elements.target.optimized_for.GPU.family]
+                type = "string"
+
+                # Base GPU clock speed
+                [elements.target.optimized_for.GPU.clock_frequency]
+                type = "integer"
+
                 # Best optimized GPU core count
                 [elements.target.optimized_for.GPU.cores]
                 type = "integer"
@@ -285,15 +291,44 @@ version = "0.0.0.1"
                 [elements.target.optimized_for.GPU.instruction_set_version]
                 type = "string"
 
+                # Optimized global memory size in KB
+                [elements.target.optimized_for.GPU.global_memory_KB]
+                type = "integer"
+
+                # Optimized shared memory size in KB
+                [elements.target.optimized_for.GPU.shared_memory_KB]
+                type = "integer"
+
+                # Optimized shared memory cache line size in bytes
+                [elements.target.optimized_for.GPU.shared_memory_line_size]
+                type = "integer"
+
+                # Optimized texture memory size in KB
+                [elements.target.optimized_for.GPU.texture_memory_KB]
+                type = "integer"
+
                 # Optional additional optimized target characteristics not specified in this schema
                 [elements.target.optimized_for.GPU.auxiliary]
                 type = "table"
                 optional = true
 
-    # Table describing dependencies that projects using this HAT library must supply
+    # Table describing dependencies that consumers of this HAT package will need to
+    # provide or otherwise satisfy in order to properly consume the package, such as library
+    # files in the package to link and dynamic libraries to make available at runtime
     [elements.dependencies]
     type = "table"
-        # Dynamic libraries that must be linked
+
+        # Name of the library file in this HAT package that the consumer should link
+        [elements.description.link_target]
+        type = "string"
+
+        # Names of files in this HAT package that must be deployed with a built binary that consumes this package,
+        # such as dynamic library files
+        [elements.description.deploy_files]
+        type = "array"
+        arraytype = "string"
+
+        # Dynamic libraries outside of this HAT package that must be made available at runtime
         [elements.dependencies.dynamic]
         type = "array"
         arraytype = "types.referencedLibraryType"
@@ -303,9 +338,12 @@ version = "0.0.0.1"
         type = "table"
         optional = true
 
-    # Table giving information about how this HAT library was built
+    # Table giving information about how this HAT package was built. It is expected
+    # that a consumer of the package may find this information useful but may not
+    # necessarily need to act on in order to successfully consume this package
     [elements.compiled_with]
     type = "table"
+
         # Compiler name and version, e.g. "MSVC141"
         [elements.compiled_with.compiler]
         type = "string"
@@ -318,7 +356,7 @@ version = "0.0.0.1"
         [elements.compiled_with.crt]
         type = "string"
 
-        # Statically linked libraries in this HAT library
+        # Libraries that were statically linked into the library files in this HAT package
         [elements.compiled_with.libraries]
         type = "array"
         arraytype = "types.referencedLibraryType"
@@ -331,6 +369,7 @@ version = "0.0.0.1"
     # Table containing the C header code in this HAT file
     [elements.declaration]
     type = "table"
+
         # String containing the entirety of the C header code
         [elements.declaration.code]
         type = "string"
