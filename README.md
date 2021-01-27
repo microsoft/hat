@@ -2,9 +2,9 @@
 
 # HAT file format
 
-HAT is a format for distributing compiled libraries in the C programming language. HAT stands for "h-file Annotated with Toml", and implies that standard C header files are decorated with useful metadata in the [TOML](https://toml.io/) markup language. 
+HAT is a format for distributing compiled libraries in the C programming language. HAT stands for "C **H**eader **A**nnotated with **T**OML", and implies that standard C header files are decorated with useful metadata in the [TOML](https://toml.io/) markup language.
 
-A library in the HAT format typically includes one `.lib` file and one or more `.hat` files. The `.lib` file contains all the compiled object code that implements the library functions. Each `.hat` file contains a combination of standard C function declarations (like a typical `.h` file) and metadata in the TOML markup language. The metadata that accompanies each function declaration describes how the function should be called and how it was implemented. The metadata is intended to be both human-readable and machine-readable, providing structured and systematic documentation and allowing downstream tools to examine the library contents. 
+A library in the HAT format typically includes one static library file (`.a` or `.lib`) and one or more `.hat` files. The static library contains all the compiled object code that implements the library functions. Each `.hat` file contains a combination of standard C function declarations (like a typical `.h` file) and metadata in the TOML markup language. The metadata that accompanies each function declaration describes how the function should be called and how it was implemented. The metadata is intended to be both human-readable and machine-readable, providing structured and systematic documentation and allowing downstream tools to examine the library contents. 
 
 Each `.hat` file has the convenient property that it is simultaneously a valid h-file and a valid TOML file. In other words, the file is structured such that a C compiler will ignore the TOML metadata, while a TOML parser will understand the entire file as a valid TOML file. We accomplish this using a technique we call *the hat trick*, which is explained below. 
 
@@ -60,7 +60,7 @@ Why is it important for the TOML and the C declarations to live in the same file
 
 # Multiple `.hat` files
 
-The HAT format defines different types of metadata. Some types of metadata (such as the targeted operating system and the license) apply to all of the functions in the file, while other types of metadata (such as the specification of input and output arguments) are defined per function. Therefore, if two functions require different metadata, and that type of metadata is defined at the file scope, then those functions must be declared in separate `.hat` files. For example, if the first function is compiled with AVX512 instructions and the second functions makes do with SSE instructions, then these functions must be defined in separate `.hat` files. On the other hand, both functions can co-exist in a single `.lib` file (recall that a HAT library has a single `.lib` file).
+The HAT format defines different types of metadata. Some types of metadata (such as the targeted operating system and the license) apply to all of the functions in the file, while other types of metadata (such as the specification of input and output arguments) are defined per function. Therefore, if two functions require different metadata, and that type of metadata is defined at the file scope, then those functions must be declared in separate `.hat` files. For example, if the first function is compiled with AVX512 instructions and the second function makes do with SSE instructions, then these functions must be defined in separate `.hat` files. On the other hand, both functions can co-exist in a single `.lib` file (recall that a HAT library has a single `.lib` file).
 
 The constraint above influences the number of `.hat` files in a library. Additionally, the author of the library may decide to split functions up into separate `.hat` files to improve readability or organization.
 
