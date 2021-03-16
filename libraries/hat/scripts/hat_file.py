@@ -23,7 +23,7 @@ def _read_toml_file(filepath):
 def _check_required_table_entry(table, key):
     if key not in table:
         # TODO : add more context to this error message
-        raise ValueError("Invalid HAT file: missing required key {}".format(key))
+        raise ValueError(f"Invalid HAT file: missing required key {key}")
 
 def _check_required_table_entries(table, keys):
     for key in keys:
