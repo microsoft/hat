@@ -21,6 +21,6 @@ class HATPackage:
             hat_file = self.hat_file_map[hat_file_path]
             link_target_path = os.path.join(dirpath, hat_file.dependencies.link_target)
             if not os.path.isfile(link_target_path):
-                raise ValueError("HAT file {} references link_target {} which is not part of the HAT package at {}".format(hat_file.name, hat_file.dependencies.link_target, dirpath))
+                raise ValueError(f"HAT file {hat_file_path} references link_target {hat_file.dependencies.link_target} which is not part of the HAT package at {dirpath}")
             self.hat_file_to_link_target_mapping[hat_file_path] = link_target_path
             self.link_targets.append(link_target_path)
