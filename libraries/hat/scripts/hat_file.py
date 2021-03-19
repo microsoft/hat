@@ -439,7 +439,7 @@ class HATFile:
     @staticmethod
     def Deserialize(filepath):
         hat_toml = _read_toml_file(filepath)
-        name = os.path.basename(os.path.splitext(filepath)[0])
+        name = os.path.splitext(os.path.basename(filepath))[0]
         required_entries = [Description.TableName,
                             FunctionTable.TableName,
                             Target.TableName,
