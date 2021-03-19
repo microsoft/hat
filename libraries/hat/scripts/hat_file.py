@@ -406,6 +406,7 @@ class Declaration:
 
 @dataclass
 class HATFile:
+    name: str = ""
     description: Description = None
     _function_table: FunctionTable = None
     functions: list = field(default_factory=list)
@@ -415,8 +416,8 @@ class HATFile:
     compiled_with: CompiledWith = None
     declaration: Declaration = None
 
-    HATPrologue = "\n#ifdef TOML\n"
-    HATEpilogue = "\n#endif // TOML\n"
+    HATPrologue = "\n#ifndef __{0}__\n#define __{0}__\n\n#ifdef TOML\n"
+    HATEpilogue = "\n#endif // TOML\n\n#endif // __{0}__"
 
     def __post_init__(self):
         self.functions = self._function_table.functions
@@ -431,13 +432,14 @@ class HATFile:
         root_table.add(CompiledWith.TableName, self.compiled_with.to_table())
         root_table.add(Declaration.TableName, self.declaration.to_table())
         with open(filepath, "w") as out_file:
-            out_file.write(self.HATPrologue)
+            out_file.write(self.HATPrologue.format(self.name))
             out_file.write(tomlkit.dumps(root_table))
-            out_file.write(self.HATEpilogue)
+            out_file.write(self.HATEpilogue.format(self.name))
 
     @staticmethod
     def Deserialize(filepath):
         hat_toml = _read_toml_file(filepath)
+        name = os.path.basename(os.path.splitext(filepath)[0])
         required_entries = [Description.TableName,
                             FunctionTable.TableName,
                             Target.TableName,
@@ -445,7 +447,8 @@ class HATFile:
                             CompiledWith.TableName,
                             Declaration.TableName]
         _check_required_table_entries(hat_toml, required_entries)
-        hat_file = HATFile(description=Description.parse_from_table(hat_toml[Description.TableName]),
+        hat_file = HATFile(name=name,
+                           description=Description.parse_from_table(hat_toml[Description.TableName]),
                            _function_table=FunctionTable.parse_from_table(hat_toml[FunctionTable.TableName]),
                            target=Target.parse_from_table(hat_toml[Target.TableName]),
                            dependencies=Dependencies.parse_from_table(hat_toml[Dependencies.TableName]),
