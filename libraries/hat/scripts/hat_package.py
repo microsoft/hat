@@ -12,14 +12,14 @@ class HATPackage:
         assert(os.path.isdir(dirpath))
         self.path = Path(dirpath).resolve()
         self.name = self.path.name
-        self.hat_files = [HATFile.Deserialize(hat_file_path) for hat_file_path in self.path.glob("**/*.hat")]
+        self.hat_files = [HATFile.Deserialize(hat_file_path) for hat_file_path in self.path.glob("*.hat")]
 
         # Find all referenced link targets and ensure they are also part of the package
         self.link_targets = []
         for hat_file in self.hat_files:
             link_target_path = self.path / hat_file.dependencies.link_target
             if not os.path.isfile(link_target_path):
-                raise ValueError(f"HAT file {hat_file_path} references link_target {hat_file.dependencies.link_target} which is not part of the HAT package at {self.path}")
+                raise ValueError(f"HAT file {hat_file.path} references link_target {hat_file.dependencies.link_target} which is not part of the HAT package at {self.path}")
             self.link_targets.append(link_target_path)
 
     def get_functions(self):
