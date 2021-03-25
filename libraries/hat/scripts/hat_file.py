@@ -6,6 +6,7 @@ import argparse
 import os
 from enum import Enum
 from dataclasses import dataclass, field
+from pathlib import Path
 
 # Requires tomlkit: pip install tomlkit
 import tomlkit
@@ -164,6 +165,8 @@ class Function(AuxiliarySupportedTable):
     calling_convention: CallingConventionType = None
     arguments: list = field(default_factory=list)
     return_info: Parameter = None
+    hat_file: any = None
+    link_target: Path = None
 
     def to_table(self):
         table = tomlkit.table()
@@ -188,11 +191,11 @@ class Function(AuxiliarySupportedTable):
         arguments = [Parameter.parse_from_table(param_table) for param_table in function_table["arguments"]]
         return_info = Parameter.parse_from_table(function_table["return"])
         return Function(name=function_table["name"],
-                           description=function_table["description"],
-                           calling_convention=CallingConventionType(function_table["calling_convention"]),
-                           arguments=arguments,
-                           return_info=return_info,
-                           auxiliary=AuxiliarySupportedTable.parse_auxiliary(function_table))
+                        description=function_table["description"],
+                        calling_convention=CallingConventionType(function_table["calling_convention"]),
+                        arguments=arguments,
+                        return_info=return_info,
+                        auxiliary=AuxiliarySupportedTable.parse_auxiliary(function_table))
 
 
 class FunctionTable:
@@ -415,6 +418,7 @@ class HATFile:
     dependencies: Dependencies = None
     compiled_with: CompiledWith = None
     declaration: Declaration = None
+    path: Path = None
 
     HATPrologue = "\n#ifndef __{0}__\n#define __{0}__\n\n#ifdef TOML\n"
     HATEpilogue = "\n#endif // TOML\n\n#endif // __{0}__"
@@ -422,8 +426,13 @@ class HATFile:
     def __post_init__(self):
         self.functions = self._function_table.functions
         self.function_map = self._function_table.function_map
+        for func in self.functions:
+            func.hat_file = self
+            func.link_target = self.path / self.dependencies.link_target
 
-    def Serialize(self, filepath):
+    def Serialize(self, filepath=None):
+        if filepath is None:
+            filepath = self.path
         root_table = tomlkit.table()
         root_table.add(Description.TableName, self.description.to_table())
         root_table.add(FunctionTable.TableName, self._function_table.to_table())
@@ -453,5 +462,6 @@ class HATFile:
                            target=Target.parse_from_table(hat_toml[Target.TableName]),
                            dependencies=Dependencies.parse_from_table(hat_toml[Dependencies.TableName]),
                            compiled_with=CompiledWith.parse_from_table(hat_toml[CompiledWith.TableName]),
-                           declaration=Declaration.parse_from_table(hat_toml[Declaration.TableName]))
+                           declaration=Declaration.parse_from_table(hat_toml[Declaration.TableName]),
+                           path=Path(filepath).resolve())
         return hat_file
