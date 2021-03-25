@@ -5,12 +5,16 @@
 from .hat_file import HATFile
 
 import os
+import pathlib
 
 class HATPackage:
     def __init__(self, dirpath):
         assert(os.path.isdir(dirpath))
+        self.path = pathlib.Path(os.path.abspath(dirpath))
+        self.name = self.path.name
+
         self.hat_file_map = {}
-        for entry in os.scandir(dirpath):
+        for entry in os.scandir(self.path):
             if entry.path.endswith(".hat"):
                 self.hat_file_map[entry.path] = HATFile.Deserialize(entry.path)
 
@@ -19,8 +23,8 @@ class HATPackage:
         self.hat_file_to_link_target_mapping = {}
         for hat_file_path in self.hat_file_map:
             hat_file = self.hat_file_map[hat_file_path]
-            link_target_path = os.path.join(dirpath, hat_file.dependencies.link_target)
+            link_target_path = os.path.join(self.path, hat_file.dependencies.link_target)
             if not os.path.isfile(link_target_path):
-                raise ValueError(f"HAT file {hat_file_path} references link_target {hat_file.dependencies.link_target} which is not part of the HAT package at {dirpath}")
+                raise ValueError(f"HAT file {hat_file_path} references link_target {hat_file.dependencies.link_target} which is not part of the HAT package at {self.path}")
             self.hat_file_to_link_target_mapping[hat_file_path] = link_target_path
             self.link_targets.append(link_target_path)
