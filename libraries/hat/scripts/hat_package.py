@@ -9,8 +9,9 @@ from pathlib import Path
 
 class HATPackage:
     def __init__(self, dirpath):
-        assert(os.path.isdir(dirpath))
         self.path = Path(dirpath).resolve()
+        assert self.path.is_dir()
+
         self.name = self.path.name
         self.hat_files = [HATFile.Deserialize(hat_file_path) for hat_file_path in self.path.glob("*.hat")]
 
