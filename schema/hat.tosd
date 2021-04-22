@@ -1,6 +1,6 @@
 # HAT TOML Schema
 [toml-schema]
-version = "0.0.0.1"
+version = "0.0.0.2"
 
 # Types to be used elsewhere in this schema
 [types]
@@ -143,6 +143,11 @@ version = "0.0.0.1"
         # Url to the full license text for this library
         [elements.description.license_url]
         type = "string"
+
+        # Optional additional description that isn't part of this schema
+        [elements.description.auxiliary]
+        type = "table"
+        optional = true
 
     # Collection of functions declared within the HAT file and their metadata
     # The keys in a collection are not prescribed by the schema, and in this case are the names of the functions as the HAT format does not support function overloading.
