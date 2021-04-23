@@ -126,11 +126,6 @@ version = "0.0.0.2"
     [elements.description]
     type = "table"
 
-        # Optional user-specified comment about the HAT file or library
-        [elements.description.comment]
-        type = "string"
-        optional = true
-
         # Optional user-specified author name
         [elements.description.author]
         type = "string"
