@@ -74,7 +74,7 @@ class AuxiliarySupportedTable:
             return {}
 
 @dataclass
-class Description:
+class Description(AuxiliarySupportedTable):
     TableName: str = "description"
     comment: str = ""
     author: str = ""
@@ -83,16 +83,20 @@ class Description:
 
     def to_table(self):
         description_table = tomlkit.table()
-        description_table.add("comment", self.comment)
         description_table.add("author", self.author)
         description_table.add("version", self.version)
         description_table.add("license_url", self.license_url)
+
+        self.add_auxiliary_table(description_table)
+
         return description_table
 
     @staticmethod
     def parse_from_table(table):
-        return Description(comment=table["comment"], author=table["author"], version=table["version"], license_url=table["license_url"])
-
+        return Description(author=table["author"],
+                           version=table["version"],
+                           license_url=table["license_url"],
+                           auxiliary=AuxiliarySupportedTable.parse_auxiliary(table))
 
 @dataclass
 class Parameter:
