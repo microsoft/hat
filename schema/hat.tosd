@@ -118,11 +118,6 @@ version = "0.0.0.2"
     [elements.description]
     type = "table"
 
-        # Optional user-specified comment about the HAT file or package
-        [elements.description.comment]
-        type = "string"
-        optional = true
-
         # Optional user-specified author name
         [elements.description.author]
         type = "string"
@@ -135,6 +130,11 @@ version = "0.0.0.2"
         # Url to the full license text for this package
         [elements.description.license_url]
         type = "string"
+
+        # Optional additional description that isn't part of this schema
+        [elements.description.auxiliary]
+        type = "table"
+        optional = true
 
     # Collection of functions declared within the HAT file and their metadata
     # The keys in a collection are not prescribed by the schema, and in this case are the names of the functions as the HAT format does not support function overloading.
