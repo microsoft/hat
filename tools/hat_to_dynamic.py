@@ -12,6 +12,8 @@ Dependencies on Linux:
 * the g++ command-line compiler
 """
 
+#!/usr/bin/env python3
+
 import sys
 import os
 import argparse
@@ -55,10 +57,9 @@ def windows_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_d
     
     # Create a C source file for the DLL entry point and compile in into an obj
     if not os.path.exists("dllmain.cpp"):
-        file = open("dllmain.cpp", "w")
-        file.write("#include <windows.h>\n")
-        file.write("BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }\n")
-        file.close()
+        with open("dllmain.cpp", "w") as f:
+            f.write("#include <windows.h>\n")
+            f.write("BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }\n")
     os.system("cl /Fodllmain.obj /c dllmain.cpp")
 
     # create the new HAT binary dll

@@ -21,6 +21,8 @@ For example:
     package.my_func_698b5e5c(A, B, D, E)
 """
 
+#!/usr/bin/env python3
+
 import sys
 import toml
 import ctypes
@@ -62,6 +64,10 @@ class ArgInfo:
             self.numpy_dtype = np.int16
             self.element_num_bytes = 2
             self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_int16)
+        elif self.hat_declared_type == "int8_t*":
+            self.numpy_dtype = np.int8
+            self.element_num_bytes = 1
+            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_int8)
 
         else:
             raise NotImplementedError("Unsupported declared_type {} in hat file".format(self.hat_declared_type))
@@ -137,7 +143,7 @@ def load(hat_path):
     hat_binary_path = os.path.join(os.path.dirname(hat_path), hat_binary_filename)
 
     # check that the HAT library has a supported file extension
-    supported_extensions = [".dll"]
+    supported_extensions = [".dll", ".so"]
     _, extension = os.path.splitext(hat_binary_path)
     if extension not in supported_extensions:
         sys.exit("Unsupported HAT library extension: {}".format(extension))
