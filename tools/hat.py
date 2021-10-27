@@ -70,7 +70,7 @@ class ArgInfo:
             self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_int8)
 
         else:
-            raise NotImplementedError("Unsupported declared_type {} in hat file".format(self.hat_declared_type))
+            raise NotImplementedError(f"Unsupported declared_type {self.hat_declared_type} in hat file")
 
         self.numpy_strides = tuple([self.element_num_bytes * x for x in param_description["affine_map"]])
 
@@ -80,7 +80,7 @@ def verify_args(args, arg_infos, function_name):
     """
     # check number of args
     if len(args) != len(arg_infos):
-        sys.exit("Error calling {}(...): expected {} arguments but received {}".format(function_name, len(arg_infos), len(args)))
+        sys.exit(f"Error calling {function_name}(...): expected {len(arg_infos)} arguments but received {len(args)}")
 
     # for each arg
     for i in range(len(args)):
@@ -89,19 +89,19 @@ def verify_args(args, arg_infos, function_name):
 
         # confirm that the arg is a numpy ndarray
         if not isinstance(arg, np.ndarray): 
-            sys.exit("Error calling {}(...): expected argument {} to be <class 'numpy.ndarray'> but received {}".format(function_name, i, type(arg)))
+            sys.exit("Error calling {function_name}(...): expected argument {i} to be <class 'numpy.ndarray'> but received {type(arg)}")
 
         # confirm that the arg dtype matches the dexcription in the hat package
         if arg_info.numpy_dtype != arg.dtype:
-            sys.exit("Error calling {}(...): expected argument {} to have dtype={} but received dtype={}".format(function_name, i, arg_info.numpy_dtype, arg.dtype))
+            sys.exit(f"Error calling {function_name}(...): expected argument {i} to have dtype={arg_info.numpy_dtype} but received dtype={arg.dtype}")
 
         # confirm that the arg shape is correct
         if arg_info.numpy_shape != arg.shape:
-            sys.exit("Error calling {}(...): expected argument {} to have shape={} but received shape={}".format(function_name, i, arg_info.numpy_shape, arg.shape))
+            sys.exit(f"Error calling {function_name}(...): expected argument {i} to have shape={arg_info.numpy_shape} but received shape={arg.shape}")
 
         # confirm that the arg strides are correct
         if arg_info.numpy_strides != arg.strides:
-                sys.exit("Error calling {}(...): expected argument {} to have strides={} but received strides={}".format(function_name, i, arg_info.numpy_strides, arg.strides))
+                sys.exit(f"Error calling {function_name}(...): expected argument {i} to have strides={arg_info.numpy_strides} but received strides={arg.strides}")
 
 
 def hat_description_to_python_function(hat_description, hat_library):
@@ -146,7 +146,7 @@ def load(hat_path):
     supported_extensions = [".dll", ".so"]
     _, extension = os.path.splitext(hat_binary_path)
     if extension not in supported_extensions:
-        sys.exit("Unsupported HAT library extension: {}".format(extension))
+        sys.exit(f"Unsupported HAT library extension: {extension}")
 
     # load the hat_library: 
     hat_library = ctypes.cdll.LoadLibrary(hat_binary_path)

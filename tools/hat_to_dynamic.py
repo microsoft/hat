@@ -30,7 +30,7 @@ def get_platform():
     if sys.platform == "darwin":
         return "OS X"
 
-    sys.exit("ERROR: Unsupported operating system: {}".format(sys.platform))
+    sys.exit(f"ERROR: Unsupported operating system: {sys.platform}")
 
 
 def linux_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_description):
@@ -38,12 +38,12 @@ def linux_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_des
     # Confirm that this is a static hat library
     _, extension = os.path.splitext(input_hat_binary_path)
     if extension not in [".o", ".a"]:
-        sys.exit("ERROR: Expected input library to have extension .o or .a, but received {} instead".format(input_hat_binary_path))
+        sys.exit(f"ERROR: Expected input library to have extension .o or .a, but received {input_hat_binary_path} instead")
 
     # create new HAT binary
     prefix, _ = os.path.splitext(output_hat_path)
     output_hat_binary_path = prefix + ".so"
-    os.system("g++ -shared -fPIC -o {} {}".format(output_hat_binary_path, input_hat_binary_path))
+    os.system(f"g++ -shared -fPIC -o {output_hat_binary_path} {input_hat_binary_path}")
 
     # create new HAT file
     hat_description["dependencies"]["link_target"] = os.path.basename(output_hat_binary_path)
@@ -56,7 +56,7 @@ def windows_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_d
     # Confirm that this is a static hat library
     _, extension = os.path.splitext(input_hat_binary_path)
     if extension not in [".obj", ".lib"]:
-        sys.exit("ERROR: Expected input library to have extension .obj or .lib, but received {} instead".format(input_hat_binary_path))
+        sys.exit(f"ERROR: Expected input library to have extension .obj or .lib, but received {input_hat_binary_path} instead")
 
     # Create all file in a directory named build
     if not os.path.exists("build"):
@@ -98,18 +98,18 @@ def parse_args():
 
     # check args
     if not os.path.exists(args.input_hat_path):
-        sys.exit("ERROR: File {} not found".format(args.input_hat_path))
+        sys.exit(f"ERROR: File {args.input_hat_path} not found")
 
     if os.path.abspath(args.input_hat_path) == os.path.abspath(args.output_hat_path):
         sys.exit("ERROR: Output file must be different from input file")
 
     _, extension = os.path.splitext(args.input_hat_path)
     if extension != ".hat":
-        sys.exit("ERROR: Expected input file to have extension .hat, but received {} instead".format(extension))
+        sys.exit(f"ERROR: Expected input file to have extension .hat, but received {extension} instead")
 
     _, extension = os.path.splitext(args.output_hat_path)
     if extension != ".hat":
-        sys.exit("ERROR: Expected output file to have extension .hat, but received {} instead".format(extension))
+        sys.exit(f"ERROR: Expected output file to have extension .hat, but received {extension} instead")
 
     return args
 
