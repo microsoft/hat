@@ -4,7 +4,7 @@ HAT packages come in two varieties: statically-linked and dynamically-linked. A 
 
 To use the tool, point it to the '.hat' file associated with the statically-linked package (the '.hat' file knows where to find the associated binary file), and provide a filename for the new '.hat' file.
 
-Dependencies on Windows:
+Dependencies on Windows (add these to your console by running 'vcvarsall.bat x64', avaliable with Microsoft Visual Studio)
 * the cl.exe command-line compiler, available with Microsoft Visual Studio  
 * the link.exe linker, available with Microsoft Visual Studio
 
@@ -22,20 +22,23 @@ import shutil
 
 def get_platform():
     """Returns the current platform: Linux, Windows, or OS X"""
-    platforms = {
-        "linux1" : "Linux",
-        "linux2" : "Linux",
-        "darwin" : "OS X",
-        "win32" : "Windows"
-    }
-    if sys.platform not in platforms:
-        sys.exit("ERROR: Unsupported operating system: {}".format(sys.platform))
     
-    return platforms[sys.platform]
+    if sys.platform.startswith("linux"):
+        return "Linux"
+    if sys.platform == "win32":
+        return "Windows"
+    if sys.platform == "darwin":
+        return "OS X"
+
+    sys.exit("ERROR: Unsupported operating system: {}".format(sys.platform))
 
 
 def linux_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_description):
     """Creates a dynamic HAT (.so) from a static HAT (.obj) on a Linux platform"""
+    # Confirm that this is a static hat library
+    _, extension = os.path.splitext(input_hat_binary_path)
+    if extension not in [".o", ".a"]:
+        sys.exit("ERROR: Expected input library to have extension .o or .a, but received {} instead".format(input_hat_binary_path))
 
     # create new HAT binary
     prefix, _ = os.path.splitext(output_hat_path)
@@ -49,7 +52,12 @@ def linux_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_des
 
 
 def windows_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_description):
-    """Creates a Windows dynamic HAT package (.dll) from a static HAT package (.obj)"""
+    """Creates a Windows dynamic HAT package (.dll) from a static HAT package (.obj/.lib)"""
+    # Confirm that this is a static hat library
+    _, extension = os.path.splitext(input_hat_binary_path)
+    if extension not in [".obj", ".lib"]:
+        sys.exit("ERROR: Expected input library to have extension .obj or .lib, but received {} instead".format(input_hat_binary_path))
+
     # Create all file in a directory named build
     if not os.path.exists("build"):
         os.mkdir("build")
@@ -114,13 +122,8 @@ def main():
     input_hat_path = os.path.abspath(args.input_hat_path)
     hat_description = toml.load(input_hat_path)
 
-    # confirm that this is a static hat library
+    # get the absolute path to the input binary
     input_hat_binary_filename = hat_description["dependencies"]["link_target"]
-    _, extension = os.path.splitext(input_hat_binary_filename)
-    if extension != ".obj":
-        sys.exit("ERROR: Expected input library to have extension .obj, but received {} instead".format(input_hat_binary_filename))
-
-    # find the absolute path to the input binary
     input_hat_binary_path = os.path.join(os.path.dirname(input_hat_path), input_hat_binary_filename)
 
     # create the dynamic package

@@ -80,7 +80,7 @@ def verify_args(args, arg_infos, function_name):
     """
     # check number of args
     if len(args) != len(arg_infos):
-        sys.exit("Error calling {}(...): expected {} arguments but received {}".format(function_name, len(hat_arg_descriptions), len(args)))
+        sys.exit("Error calling {}(...): expected {} arguments but received {}".format(function_name, len(arg_infos), len(args)))
 
     # for each arg
     for i in range(len(args)):
