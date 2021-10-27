@@ -1,10 +1,16 @@
 """Converts a statically-linked HAT package into a Dynamically-linked HAT package
 
-HAT packages come in two varieties: statically-linked and dynamically-linked. A statically-linked HAT package contains a binary file with the extension '.obj', '.a', or `.lib`. A dynamically-linked HAT package contains a binary file with the extension '.dll' or '.so'. This tool converts a statically-linked HAT package into a dynamically-linked HAT package.
+HAT packages come in two varieties: statically-linked and dynamically-linked. A statically-linked
+HAT package contains a binary file with the extension '.obj', '.a', or `.lib`. A dynamically-linked
+HAT package contains a binary file with the extension '.dll' or '.so'. This tool converts a
+statically-linked HAT package into a dynamically-linked HAT package.
 
-To use the tool, point it to the '.hat' file associated with the statically-linked package (the '.hat' file knows where to find the associated binary file), and provide a filename for the new '.hat' file.
+To use the tool, point it to the '.hat' file associated with the statically-linked package (the 
+'.hat' file knows where to find the associated binary file), and provide a filename for the new 
+'.hat' file.
 
-Dependencies on Windows (add these to your console by running 'vcvarsall.bat x64', avaliable with Microsoft Visual Studio)
+Dependencies on Windows (add these to your console by running 'vcvarsall.bat x64', avaliable with
+Microsoft Visual Studio):
 * the cl.exe command-line compiler, available with Microsoft Visual Studio  
 * the link.exe linker, available with Microsoft Visual Studio
 

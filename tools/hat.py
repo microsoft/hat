@@ -1,6 +1,8 @@
 """Loads a dynamically-linked HAT package in Python
 
-Call 'load' to load a HAT package in Python. After loading, call the HAT functions using numpy arrays as arguments. The shape, element type, and order of each numpy array should exactly match the requirements of the HAT function. 
+Call 'load' to load a HAT package in Python. After loading, call the HAT functions using numpy
+arrays as arguments. The shape, element type, and order of each numpy array should exactly match
+the requirements of the HAT function. 
 
 For example:
 
