@@ -24,12 +24,15 @@ class HATPackage:
             self.link_targets.append(link_target_path)
 
     def get_functions(self):
-        functions = []
+        """Returns a dictionary containing function name to function object mapping."""
+        functions = {}
         for hat_file in self.hat_files:
-            functions += hat_file.functions
+            functions.update(hat_file.functions)
         return functions
 
     def get_functions_for_target(self, os: str, arch: str, required_extensions:list = []):
+        """Returns a dictionary containing function name to function object mapping for
+           all functions whose Target matches the os, architecture and required_extensions."""
         all_functions = self.get_functions()
         def matches_target(hat_function):
             hat_file = hat_function.hat_file
@@ -40,4 +43,6 @@ class HATPackage:
                     return False
             return True
 
-        return list(filter(matches_target, all_functions))
+
+
+        return dict(filter(matches_target, all_functions))

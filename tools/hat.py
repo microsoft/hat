@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """Loads a dynamically-linked HAT package in Python
 
 Call 'load' to load a HAT package in Python. After loading, call the HAT functions using numpy
@@ -22,8 +24,6 @@ For example:
     # call a package function named 'my_func_698b5e5c'
     package.my_func_698b5e5c(A, B, D, E)
 """
-
-#!/usr/bin/env python3
 
 import sys
 import toml

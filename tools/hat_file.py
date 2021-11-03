@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 
 # Utility to parse the TOML metadata from HAT files
-
 import argparse
-import os
 from enum import Enum
 from dataclasses import dataclass, field
+import os
 from pathlib import Path
+import unittest
 
-# Requires tomlkit: pip install tomlkit
 import tomlkit
 
 # TODO : type-checking on leaf node values
@@ -83,6 +82,7 @@ class Description(AuxiliarySupportedTable):
 
     def to_table(self):
         description_table = tomlkit.table()
+        description_table.add("comment", self.comment)
         description_table.add("author", self.author)
         description_table.add("version", self.version)
         description_table.add("license_url", self.license_url)
@@ -93,7 +93,8 @@ class Description(AuxiliarySupportedTable):
 
     @staticmethod
     def parse_from_table(table):
-        return Description(author=table["author"],
+        return Description(comment=table["comment"],
+                           author=table["author"],
                            version=table["version"],
                            license_url=table["license_url"],
                            auxiliary=AuxiliarySupportedTable.parse_auxiliary(table))
@@ -204,21 +205,21 @@ class Function(AuxiliarySupportedTable):
 
 class FunctionTable:
     TableName = "functions"
-    def __init__(self, function_map):
-        self.function_map = function_map
-        self.functions = self.function_map.values()
+    def __init__(self, functions):
+        self.functions = functions
+        #self.functions = self.functions.values()
 
     def to_table(self):
-        serialized_map = { function_key : self.function_map[function_key].to_table() for function_key in self.function_map }
+        serialized_map = { function_key : self.functions[function_key].to_table() for function_key in self.functions }
         func_table = tomlkit.table()
-        for function_key in self.function_map:
-            func_table.add(function_key, self.function_map[function_key].to_table())
+        for function_key in self.functions:
+            func_table.add(function_key, self.functions[function_key].to_table())
         return func_table
 
     @staticmethod
     def parse_from_table(all_functions_table):
-        function_map = {function_key: Function.parse_from_table(all_functions_table[function_key]) for function_key in all_functions_table}
-        return FunctionTable(function_map)
+        functions = {function_key: Function.parse_from_table(all_functions_table[function_key]) for function_key in all_functions_table}
+        return FunctionTable(functions)
 
 
 @dataclass
@@ -416,8 +417,7 @@ class HATFile:
     name: str = ""
     description: Description = None
     _function_table: FunctionTable = None
-    functions: list = field(default_factory=list)
-    function_map: dict = field(default_factory=dict)
+    functions: dict = field(default_factory=dict)
     target: Target = None
     dependencies: Dependencies = None
     compiled_with: CompiledWith = None
@@ -429,9 +429,8 @@ class HATFile:
 
     def __post_init__(self):
         self.functions = self._function_table.functions
-        self.function_map = self._function_table.function_map
-        for func in self.functions:
-            func.hat_file = self
+        for func in self.functions.values():
+            func.hat_file = self.path
             func.link_target = self.path.parent / self.dependencies.link_target
 
     def Serialize(self, filepath=None):
