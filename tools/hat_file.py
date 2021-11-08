@@ -414,6 +414,14 @@ class Declaration:
 
 @dataclass
 class HATFile:
+    """Encapsulates a HAT file. An instance of this class can be created by calling the 
+    Deserialize class method e.g.:
+        some_hat_file = Deserialize('someFile.hat') 
+    Similarly, HAT files can be serialized but creating/modifying a HATFile instance
+    and then calling Serilize e.g.:
+        some_hat_file.name = 'some new name'
+        some_hat_file.Serialize(`someFile.hat`)
+    """
     name: str = ""
     description: Description = None
     _function_table: FunctionTable = None
@@ -434,6 +442,8 @@ class HATFile:
             func.link_target = self.path.parent / self.dependencies.link_target
 
     def Serialize(self, filepath=None):
+        """Serilizes the HATFile to disk using the file location specified by `filepath`.
+        If `filepath` is not specified then the object's `path` attribute is used."""
         if filepath is None:
             filepath = self.path
         root_table = tomlkit.table()
@@ -450,6 +460,7 @@ class HATFile:
 
     @staticmethod
     def Deserialize(filepath):
+        """Creates an instance of A HATFile class by deserializing the contents of the file at `filepath`"""
         hat_toml = _read_toml_file(filepath)
         name = os.path.splitext(os.path.basename(filepath))[0]
         required_entries = [Description.TableName,
