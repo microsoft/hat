@@ -1,19 +1,12 @@
 #!/usr/bin/env python3
 
-# Utility to parse the TOML metadata from HAT files
-import argparse
-from enum import Enum
-from dataclasses import dataclass, field
-import os
 from pathlib import Path
-#from typing_extensions import Required
 import unittest
 
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from hat_file import CallingConventionType, CompiledWith, Declaration, Dependencies, Description, Function, FunctionTable, HATFile, OperatingSystem, Parameter, ParameterType, Target, UsageType
-import tomlkit
 
 class HATFile_test(unittest.TestCase):
     def test_file_basic_serialize(self):

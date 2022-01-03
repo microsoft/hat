@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
 # Utility to parse the TOML metadata from HAT files
-import argparse
 from enum import Enum
 from dataclasses import dataclass, field
 import os
 from pathlib import Path
-import unittest
 
 import tomlkit
 

@@ -67,31 +67,35 @@ def windows_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_d
     # Create all file in a directory named build
     if not os.path.exists("build"):
         os.mkdir("build")
-    os.chdir("build")
-    
-    # Create a C source file for the DLL entry point and compile in into an obj
-    if not os.path.exists("dllmain.cpp"):
-        with open("dllmain.cpp", "w") as f:
-            f.write("#include <windows.h>\n")
-            f.write("BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }\n")
-    os.system("cl /Fodllmain.obj /c dllmain.cpp")
 
-    # create the new HAT binary dll
-    prefix, _ = os.path.splitext(output_hat_path)
-    output_hat_binary_path = prefix + ".dll"
+    cwd = os.getcwd()
+    try:
+        os.chdir("build")
+        
+        # Create a C source file for the DLL entry point and compile in into an obj
+        if not os.path.exists("dllmain.cpp"):
+            with open("dllmain.cpp", "w") as f:
+                f.write("#include <windows.h>\n")
+                f.write("BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }\n")
+        os.system("cl /Fodllmain.obj /c dllmain.cpp")
 
-    function_descriptions = hat_description["functions"]
-    function_names = list(function_descriptions.keys())
-    linker_command_line = "link -dll -FORCE:MULTIPLE -EXPORT:{} -out:out.dll dllmain.obj {}".format(" -EXPORT:".join(function_names), input_hat_binary_path)
-    os.system(linker_command_line)
-    shutil.copyfile("out.dll", output_hat_binary_path)
+        # create the new HAT binary dll
+        prefix, _ = os.path.splitext(output_hat_path)
+        output_hat_binary_path = prefix + ".dll"
 
-    # create new HAT file
-    hat_description["dependencies"]["link_target"] = os.path.basename(output_hat_binary_path)
-    with open("out.hat", "w") as f:
-        toml.dump(hat_description, f)
-    shutil.copyfile("out.hat", output_hat_path)
+        function_descriptions = hat_description["functions"]
+        function_names = list(function_descriptions.keys())
+        linker_command_line = "link -dll -FORCE:MULTIPLE -EXPORT:{} -out:out.dll dllmain.obj {}".format(" -EXPORT:".join(function_names), input_hat_binary_path)
+        os.system(linker_command_line)
+        shutil.copyfile("out.dll", output_hat_binary_path)
 
+        # create new HAT file
+        hat_description["dependencies"]["link_target"] = os.path.basename(output_hat_binary_path)
+        with open("out.hat", "w") as f:
+            toml.dump(hat_description, f)
+        shutil.copyfile("out.hat", output_hat_path)
+    finally:
+        os.chdir(cwd) # restore the current working directory
 
 def parse_args():
     """Parses and checks the command line arguments"""
@@ -120,12 +124,11 @@ def parse_args():
     return args
 
 
-def main():
-    args = parse_args()
+def create_dynamic_package(input_hat_path, output_hat_path):
     platform = get_platform()
 
     # load the function decscriptions and the library path from the hat file
-    input_hat_path = os.path.abspath(args.input_hat_path)
+    input_hat_path = os.path.abspath(input_hat_path)
     hat_description = toml.load(input_hat_path)
 
     # get the absolute path to the input binary
@@ -133,11 +136,16 @@ def main():
     input_hat_binary_path = os.path.join(os.path.dirname(input_hat_path), input_hat_binary_filename)
 
     # create the dynamic package
-    output_hat_path = os.path.abspath(args.output_hat_path)
+    output_hat_path = os.path.abspath(output_hat_path)
     if platform == "Windows":
         windows_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_description)
     elif platform in ["Linux", "OS X"]:
         linux_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_description)
+
+
+def main():
+    args = parse_args()
+    create_dynamic_package(args.input_hat_path, args.output_hat_path)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,6 @@
 from hat_file import HATFile
 
 import os
-from pathlib import Path
 
 class HATPackage:
     def __init__(self, hat_file_path):
