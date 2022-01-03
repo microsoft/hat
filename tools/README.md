@@ -1,5 +1,9 @@
 # HAT Package tools 
 
+## Requirements
+- Python 3.7+
+- pip install -r <path_to_repo>/tools/requirements.txt
+
 ## hat.py
 Loads a dynamically-linked HAT package in Python
 
@@ -21,13 +25,6 @@ This tool will take a given HAT file and perform the following actions:
 - Store the results, either in a __.csv__ file or write it back to the function's __.hat__ file in the package as meta-data
 
 NOTE: The results should only be used to compare relative performance of functions measured using this tool. It is not accurate to compare duration measurents from this tool with duration measured from another tool.
-
-### Requirements
-- Python 3.7+
-- Pandas installed:
-    - `pip install pandas`
-- Numpy installed:
-    - `pip install numpy`
 
 ### Usage
 ```
