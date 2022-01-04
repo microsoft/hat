@@ -69,7 +69,7 @@ class HATFile_test(unittest.TestCase):
         
         # Do basic verification of known values in the file        
         # Verify the description has entries we expect
-        self.assertDictContainsSubset(description, hat_file1.description.to_table())        
+        self.assertLessEqual(description.items(), hat_file1.description.to_table().items())
         # Verify the list of functions        
         self.assertTrue(len(hat_file1.functions) == 2)
         self.assertTrue("GEMM_B94D27B9934D3E08" in hat_file1.function_map)
