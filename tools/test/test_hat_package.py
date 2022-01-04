@@ -75,4 +75,5 @@ class HATFile_test(unittest.TestCase):
         self.assertTrue("GEMM_B94D27B9934D3E08" in hat_file1.function_map)
         self.assertTrue("blas_sgemm_row_major" in hat_file1.function_map)
 
-
+if __name__ == '__main__':
+    unittest.main()
