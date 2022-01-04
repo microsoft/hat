@@ -103,7 +103,7 @@ def verify_args(args, arg_infos, function_name):
 
         # confirm that the arg strides are correct
         if arg_info.numpy_strides != arg.strides:
-                sys.exit(f"Error calling {function_name}(...): expected argument {i} to have strides={arg_info.numpy_strides} but received strides={arg.strides}")
+            sys.exit(f"Error calling {function_name}(...): expected argument {i} to have strides={arg_info.numpy_strides} but received strides={arg.strides}")
 
 
 def hat_description_to_python_function(hat_description, hat_library):
