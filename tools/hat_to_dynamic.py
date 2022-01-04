@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """Converts a statically-linked HAT package into a Dynamically-linked HAT package
 
 HAT packages come in two varieties: statically-linked and dynamically-linked. A statically-linked
@@ -17,8 +19,6 @@ Microsoft Visual Studio):
 Dependencies on Linux:
 * the g++ command-line compiler
 """
-
-#!/usr/bin/env python3
 
 import sys
 import os
