@@ -16,18 +16,19 @@ Tool used to benchmark functions in a HAT package.
 It is common to produce a HAT package with Accera that includes multiple functions that have the same logic but have different schedules. This tool can be used to find the best performing function on a given target.
 
 ### Description
-This tool will take a given HAT file and perform the following actions:
+This tool will take a given HAT package and perform the following actions:
+
 - Introspect the function data to find input and output arguments
 - Pre-allocate a set of input and output buffers. The set will be large enough to ensure that data is not kept in any caches (e.g. L1, L2 or L3 of a CPU)
 - Generate random input data
 - Call the function in a loop running through input sets until a minimum amount of time and minimum number of iterations has passed
 - Calculate the mean duration for the function
-- Store the results, either in a __.csv__ file or write it back to the function's __.hat__ file in the package as meta-data
+- Store the results, either in a __.csv__ file or in the HAT package as the function metadata
 
 NOTE: The results should only be used to compare relative performance of functions measured using this tool. It is not accurate to compare duration measurents from this tool with duration measured from another tool.
 
 ### Usage
-```
+```shell
 > python benchmark_hat_package.py --help
 usage: benchmark_hat_package.py [-h] [--store_in_hat]
                                 [--results_file RESULTS_FILE]
@@ -36,8 +37,7 @@ usage: benchmark_hat_package.py [-h] [--store_in_hat]
                                 [--input_sets_minimum_size_MB INPUT_SETS_MINIMUM_SIZE_MB]
                                 path_to_hat_package
 
-Runs a simple benchmark for the HAT package to get a mean duration of each
-function. Example: benchmark_hat_package.py <hat_path>
+Benchmarks each function in a HAT package and estimates its duration. Example: benchmark_hat_package.py <hat_path>
 
 positional arguments:
   hat_path   Path to the HAT file
@@ -59,15 +59,15 @@ optional arguments:
 ```
 
 For example:
-```
+```shell
 python benchmark_hat_package.py C:\myProject\my_package.hat --min_time_in_sec=15
 ```
 
 #### --store_in_hat
-When using `--store_in_hat` flag, the .hat file will be updated with an `auxiliary` data section like:
+When using `--store_in_hat` flag, the HAT package will be updated with an `auxiliary` data section like:
 ```
 [functions.myfunction_py_c3723b5f.auxiliary]
-duration_in_sec = 1.5953456437541567e-06
+mean_duration_in_sec = 1.5953456437541567e-06
 ```
 
 
