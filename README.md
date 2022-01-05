@@ -68,5 +68,5 @@ The constraint above influences the number of `.hat` files in a package. Additio
 
 # HAT schema
 
-The TOML metadata in each `.hat` file follows the [TOML schema](https://github.com/brunoborges/toml-schema), defined in [`schema/hat.tosd`](/schema/hat.tosd). `.hat` file samples can be found in the [samples directory](/samples).
+The TOML metadata in each `.hat` file follows the [TOML schema](https://github.com/brunoborges/toml-schema), defined in [`schema/hat.tosd`](https://github.com/microsoft/hat/blob/main/schema/hat.tosd). `.hat` file samples can be found in the [samples directory](https://github.com/microsoft/hat/tree/main/samples).
 
