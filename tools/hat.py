@@ -7,13 +7,15 @@ arrays as arguments. The shape, element type, and order of each numpy array shou
 the requirements of the HAT function. 
 
 For example:
+    import numpy as np
+    from hatlib import load
 
     # load the package
     package = load("my_package.hat") 
 
     # print the function names
     for name in package.names():
-        print name
+        print(name)
 
     # create numpy arguments with the correct shape, dtype, and order
     A = np.ones([256,32], dtype=np.float32, order="C") 

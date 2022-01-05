@@ -2,7 +2,7 @@
 
 # Utility to parse and validate a HAT package
 
-from hat_file import HATFile
+from .hat_file import HATFile
 
 import os
 

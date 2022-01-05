@@ -1,16 +1,74 @@
-# HAT Package tools 
+# HAT Package Tools
 
-## Requirements
-- Python 3.7+
-- pip install -r <path_to_repo>/tools/requirements.txt
+## Installation
 
-## hat.py
+### PyPI
+
+Requirements: Python 3.7 and above
+
+```shell
+pip install hat-lib
+```
+
+### Build and install
+
+Requirements: Python 3.7 and above
+
+```shell
+cd <path_to_repo>
+pip install build setuptools
+python -m build
+pip install dist/hat_lib-0.0.1-py3-none-any.whl
+```
+
+## hatlib.load
 Loads a dynamically-linked HAT package in Python
 
-## hat_to_dynamic.py
+Usage:
+
+```python
+    import numpy as np
+    from hatlib import load
+
+    # load the package
+    package = load("my_package.hat") 
+
+    # print the function names
+    for name in package.names():
+        print(name)
+
+    # create numpy arguments with the correct shape, dtype, and order
+    A = np.ones([256,32], dtype=np.float32, order="C") 
+    B = np.ones([32,256], dtype=np.float32, order="C")
+    D = np.ones([256,32], dtype=np.float32, order="C")
+    E = np.ones([256,32], dtype=np.float32, order="C")
+
+    # call a package function named 'my_func_698b5e5c'
+    package.my_func_698b5e5c(A, B, D, E)
+```
+
+
+## hatlib.hat_to_dynamic
 A tool that converts a statically-linked HAT package into a dynamically-linked HAT package
 
-## benchmark_hat_package.py
+Usage:
+
+```shell
+> hatlib.hat_to_dynamic --help
+
+usage: hatlib.hat_to_dynamic [-h] input_hat_path output_hat_path
+
+Creates a dynamically-linked HAT package from a statically-linked HAT package. Example: python hat_to_dynamic.py input.hat output.hat
+
+positional arguments:
+  input_hat_path   Path to the existing HAT file, which represents a statically-linked HAT package
+  output_hat_path  Path to the new HAT file, which will represent a dynamically-linked HAT package
+
+optional arguments:
+  -h, --help       show this help message and exit
+```
+
+## hatlib.benchmark_hat
 Tool used to benchmark functions in a HAT package.
 
 It is common to produce a HAT package with Accera that includes multiple functions that have the same logic but have different schedules. This tool can be used to find the best performing function on a given target.
@@ -28,8 +86,9 @@ This tool will take a given HAT package and perform the following actions:
 NOTE: The results should only be used to compare relative performance of functions measured using this tool. It is not accurate to compare duration measurents from this tool with duration measured from another tool.
 
 ### Usage
+
 ```shell
-> python benchmark_hat_package.py --help
+> hatlib.benchmark_hat --help
 usage: benchmark_hat_package.py [-h] [--store_in_hat]
                                 [--results_file RESULTS_FILE]
                                 [--min_iterations MIN_ITERATIONS]
@@ -60,11 +119,13 @@ optional arguments:
 
 For example:
 ```shell
-python benchmark_hat_package.py C:\myProject\my_package.hat --min_time_in_sec=15
+hatlib.benchmark_hat C:\myProject\my_package.hat --min_time_in_sec=15
 ```
 
 #### --store_in_hat
+
 When using `--store_in_hat` flag, the HAT package will be updated with an `auxiliary` data section like:
+
 ```
 [functions.myfunction_py_c3723b5f.auxiliary]
 mean_duration_in_sec = 1.5953456437541567e-06
@@ -72,7 +133,6 @@ mean_duration_in_sec = 1.5953456437541567e-06
 
 
 ## Unit tests
-To run unittests:
 
 ```shell
 python -m unittest discover <path_to_repo>/tools/test

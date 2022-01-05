@@ -11,10 +11,14 @@ from functools import reduce
 from pathlib import Path
 from typing import List
 
-from hat_file import HATFile
-from hat_to_dynamic import create_dynamic_package
-from hat import load, ArgInfo
-
+if __package__:
+    from .hat_file import HATFile
+    from .hat_to_dynamic import create_dynamic_package
+    from .hat import load, ArgInfo
+else:
+    from hat_file import HATFile
+    from hat_to_dynamic import create_dynamic_package
+    from hat import load, ArgInfo
 
 class Benchmark:
     """A basic python-based benchmark.
