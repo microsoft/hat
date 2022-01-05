@@ -1,19 +1,12 @@
 #!/usr/bin/env python3
 
-# Utility to parse the TOML metadata from HAT files
-import argparse
-from enum import Enum
-from dataclasses import dataclass, field
-import os
 from pathlib import Path
-#from typing_extensions import Required
 import unittest
 
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from hat_file import CallingConventionType, CompiledWith, Declaration, Dependencies, Description, Function, FunctionTable, HATFile, OperatingSystem, Parameter, ParameterType, Target, UsageType
-import tomlkit
 
 class HATFile_test(unittest.TestCase):
     def test_file_basic_serialize(self):
@@ -33,10 +26,9 @@ class HATFile_test(unittest.TestCase):
         functions = FunctionTable({"my_function" : my_function})
         # Create the HATFile object
         hat_file1 = HATFile(name="test_file",
-                           description=Description(comment="Some comment",
-                                                    version="0.0.1",
-                                                    author="me",
-                                                    license_url="https://www.apache.org/licenses/LICENSE-2.0.html"),
+                           description=Description(version="0.0.1",
+                                                   author="me",
+                                                   license_url="https://www.apache.org/licenses/LICENSE-2.0.html"),
                            _function_table=functions,
                            target=Target(
                                required=Target.Required(os=OperatingSystem.Windows,
@@ -64,13 +56,12 @@ class HATFile_test(unittest.TestCase):
         self.assertEqual(hat_file1.description, hat_file2.description)
         self.assertEqual(hat_file1.dependencies, hat_file2.dependencies)
         self.assertEqual(hat_file1.compiled_with.to_table(), hat_file2.compiled_with.to_table())
-        self.assertTrue("my_function" in hat_file2.functions)
+        self.assertTrue("my_function" in hat_file2.function_map)
 
     def test_file_basic_deserialize(self):
         # Load a HAT file from the samples directory
         hat_file1 = HATFile.Deserialize(os.path.join(os.path.dirname(__file__), "..", "..", "samples", "sample_gemm_library.hat"))
         description = {
-            "comment": "John Doe's GEMM Library",
             "author": "John Doe",
             "version": "1.2.3.5",
             "license_url": "https://www.apache.org/licenses/LICENSE-2.0.html",
@@ -78,10 +69,11 @@ class HATFile_test(unittest.TestCase):
         
         # Do basic verification of known values in the file        
         # Verify the description has entries we expect
-        self.assertDictContainsSubset(description, hat_file1.description.to_table())        
+        self.assertLessEqual(description.items(), hat_file1.description.to_table().items())
         # Verify the list of functions        
         self.assertTrue(len(hat_file1.functions) == 2)
-        self.assertTrue("GEMM_B94D27B9934D3E08" in hat_file1.functions)
-        self.assertTrue("blas_sgemm_row_major" in hat_file1.functions)
+        self.assertTrue("GEMM_B94D27B9934D3E08" in hat_file1.function_map)
+        self.assertTrue("blas_sgemm_row_major" in hat_file1.function_map)
 
-
+if __name__ == '__main__':
+    unittest.main()
