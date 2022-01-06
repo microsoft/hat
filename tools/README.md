@@ -7,7 +7,7 @@
 Requirements: Python 3.7 and above
 
 ```shell
-pip install hat-lib
+pip install hatlib
 ```
 
 ### Build and install
@@ -16,9 +16,9 @@ Requirements: Python 3.7 and above
 
 ```shell
 cd <path_to_repo>
-pip install build setuptools
+pip install build
 python -m build
-pip install dist/hat_lib-0.0.1-py3-none-any.whl
+pip install dist/hatlib-<version>-py3-none-any.whl
 ```
 
 ## hatlib.load
@@ -28,10 +28,10 @@ Usage:
 
 ```python
     import numpy as np
-    from hatlib import load
+    import hatlib as hat
 
     # load the package
-    package = load("my_package.hat") 
+    package = hat.load("my_package.hat") 
 
     # print the function names
     for name in package.names():
