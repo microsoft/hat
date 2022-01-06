@@ -8,10 +8,10 @@ the requirements of the HAT function.
 
 For example:
     import numpy as np
-    from hatlib import load
+    import hatlib as hat
 
     # load the package
-    package = load("my_package.hat") 
+    package = hat.load("my_package.hat") 
 
     # print the function names
     for name in package.names():
