@@ -135,5 +135,8 @@ mean_duration_in_sec = 1.5953456437541567e-06
 ## Unit tests
 
 ```shell
+pip install -r <path_to_repo>/tools/requirements.txt
 python -m unittest discover <path_to_repo>/tools/test
 ```
+
+Note that some tests will require a C++ compiler (e.g. MSVC for windows, gcc for linux) in the PATH.
