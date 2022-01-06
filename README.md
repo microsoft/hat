@@ -1,5 +1,7 @@
 ![HAT](https://upload.wikimedia.org/wikipedia/commons/8/80/Crystal_Project_wizard.png)
 
+<a href="https://pypi.org/accera"><img src="https://badge.fury.io/py/hatlib.svg" alt="PyPI package version"/></a> <a href="https://pypi.org/hatlib"><img src="https://img.shields.io/pypi/pyversions/hatlib" alt="Python versions"/></a> ![MIT License](https://img.shields.io/pypi/l/hatlib)
+
 # HAT file format
 
 HAT is a format for packaging compiled libraries in the C programming language. HAT stands for "**H**eader **A**nnotated with **T**OML", and implies that standard C header files are decorated with useful metadata in the [TOML](https://toml.io/) markup language.
@@ -70,3 +72,23 @@ The constraint above influences the number of `.hat` files in a package. Additio
 
 The TOML metadata in each `.hat` file follows the [TOML schema](https://github.com/brunoborges/toml-schema), defined in [`schema/hat.tosd`](https://github.com/microsoft/hat/blob/main/schema/hat.tosd). `.hat` file samples can be found in the [samples directory](https://github.com/microsoft/hat/tree/main/samples).
 
+# HAT Tools
+
+Tools for working with HAT packages are available as a [Python wheel](https://pypi.org/project/hatlib).
+
+Requirements: Python 3.7 and above.
+
+```shell
+pip install hatlib
+```
+
+[Documentation](https://github.com/microsoft/hat/tree/main/tools#readme)
+
+You can also clone this repository and build a package locally:
+
+```shell
+cd <path_to_repo>
+pip install build
+python -m build
+pip install dist/hatlib-<version>-py3-none-any.whl
+```

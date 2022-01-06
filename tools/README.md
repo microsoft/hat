@@ -1,26 +1,5 @@
 # HAT Package Tools
 
-## Installation
-
-### PyPI
-
-Requirements: Python 3.7 and above
-
-```shell
-pip install hatlib
-```
-
-### Build and install
-
-Requirements: Python 3.7 and above
-
-```shell
-cd <path_to_repo>
-pip install build
-python -m build
-pip install dist/hatlib-<version>-py3-none-any.whl
-```
-
 ## hatlib.load
 Loads a dynamically-linked HAT package in Python
 
