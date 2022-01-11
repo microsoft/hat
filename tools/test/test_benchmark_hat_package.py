@@ -7,10 +7,10 @@ from pathlib import Path
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from benchmark_hat_package import run_benchmark
-from hat_to_dynamic import get_platform
 
 class BenchmarkHATPackage_test(unittest.TestCase):
-    def setUp(self) -> None:
+    def setUp(self):
+        from hat_to_dynamic import get_platform
         self.hatfile_path = Path(os.path.dirname(__file__)) / "data" / get_platform().lower() / "optimized_matmul.hat"
 
     def test_benchmark(self):

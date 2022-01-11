@@ -33,7 +33,7 @@ class Benchmark:
         create_dynamic_package(str(hat_path), self.hat_path)
 
         self.hat_package = load(self.hat_path)
-        self.hat_functions = self.hat_package.names()
+        self.hat_functions = self.hat_package.names
 
         # create dictionary of function descriptions defined in the hat file
         t = toml.load(self.hat_path)
@@ -59,7 +59,7 @@ class Benchmark:
             Mean duration in seconds,
             Vector of timings in seconds for each batch that was run
         """
-        if function_name not in self.hat_package.names():
+        if function_name not in self.hat_package.names:
             raise ValueError(f"{function_name} is not found")
 
         # TODO: support packing and unpacking functions

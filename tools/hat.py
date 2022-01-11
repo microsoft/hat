@@ -14,7 +14,7 @@ For example:
     package = hat.load("my_package.hat") 
 
     # print the function names
-    for name in package.names():
+    for name in package.names:
         print(name)
 
     # create numpy arguments with the correct shape, dtype, and order
@@ -128,11 +128,14 @@ def hat_description_to_python_function(hat_description, hat_library):
     return f
 
 
-class AttributeDict (dict):
+class AttributeDict(dict):
     """ Dictionary that allows entries to be accessed like attributes
     """
     __getattr__ = dict.__getitem__
-    names = dict.keys
+
+    @property
+    def names(self):
+        return list(self.keys())
 
 
 def load(hat_path):
