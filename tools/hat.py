@@ -7,13 +7,15 @@ arrays as arguments. The shape, element type, and order of each numpy array shou
 the requirements of the HAT function. 
 
 For example:
+    import numpy as np
+    import hatlib as hat
 
     # load the package
-    package = load("my_package.hat") 
+    package = hat.load("my_package.hat") 
 
     # print the function names
-    for name in package.names():
-        print name
+    for name in package.names:
+        print(name)
 
     # create numpy arguments with the correct shape, dtype, and order
     A = np.ones([256,32], dtype=np.float32, order="C") 
@@ -126,11 +128,14 @@ def hat_description_to_python_function(hat_description, hat_library):
     return f
 
 
-class AttributeDict (dict):
+class AttributeDict(dict):
     """ Dictionary that allows entries to be accessed like attributes
     """
     __getattr__ = dict.__getitem__
-    names = dict.keys
+
+    @property
+    def names(self):
+        return list(self.keys())
 
 
 def load(hat_path):

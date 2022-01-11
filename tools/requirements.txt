@@ -1,4 +1,4 @@
-pandas
 numpy
+pandas
 toml
 tomlkit

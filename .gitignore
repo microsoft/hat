@@ -358,3 +358,7 @@ results.csv
 
 # test data
 tools/test/data/
+
+# setuptools
+dist/
+*.egg-info/
