@@ -10,7 +10,6 @@ from benchmark_hat_package import run_benchmark
 from hat_to_dynamic import get_platform
 
 class BenchmarkHATPackage_test(unittest.TestCase):
-    @unittest.skipIf(get_platform().lower() == "macos", "macOS is not supported by test yet")
     def test_benchmark(self):
         A = acc.Array(role=acc.Array.Role.INPUT, shape=(256, 256))
         B = acc.Array(role=acc.Array.Role.INPUT, shape=(256, 256))

@@ -10,7 +10,6 @@ from hat_to_dynamic import get_platform, create_dynamic_package
 
 class HAT_test(unittest.TestCase):
 
-    @unittest.skipIf(get_platform().lower() == "macos", "macOS is not supported by test yet")
     def test_load(self):
         import numpy as np
         import accera as acc
