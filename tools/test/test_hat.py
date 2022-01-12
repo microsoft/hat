@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import unittest
 import sys, os
-from pathlib import Path
+import accera as acc
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -9,30 +9,41 @@ from hat import load
 from hat_to_dynamic import get_platform, create_dynamic_package
 
 class HAT_test(unittest.TestCase):
-    def setUp(self):
-        self.hatfile_path = Path(os.path.dirname(__file__)) / "data" / get_platform().lower() / "optimized_matmul.hat"
-        self.dyn_hatfile_path = Path(os.path.dirname(__file__)) / "data" / get_platform().lower() / "optimized_matmul.HAT_test.hat"
 
-    @unittest.skipIf(get_platform().lower() == "macos", "macOS is not supported by test")
+    @unittest.skipIf(get_platform().lower() == "macos", "macOS is not supported by test yet")
     def test_load(self):
         import numpy as np
+        import accera as acc
 
-        create_dynamic_package(self.hatfile_path, self.dyn_hatfile_path)
-        package = load(self.dyn_hatfile_path)
+        # Generate a HAT package
+        A = acc.Array(role=acc.Array.Role.INPUT, shape=(16, 16))
+        B = acc.Array(role=acc.Array.Role.INPUT_OUTPUT, shape=(16, 16))
+
+        nest = acc.Nest(shape=(16, 16))
+        i, j = nest.get_indices()
+
+        @nest.iteration_logic
+        def _():
+            B[i, j] += A[i, j]
+
+        package = acc.Package()
+        package.add_function(nest, args=(A, B), base_name="test_function")
+        package.build(name="HAT_test_load", output_dir="test_acccgen")
+
+        create_dynamic_package("test_acccgen/HAT_test_load.hat", "test_acccgen/HAT_test_load.dyn.hat")
+        package = load("test_acccgen/HAT_test_load.dyn.hat")
 
         for name in package.names:
             print(name)
 
         # create numpy arguments with the correct shape and dtype
-        A = np.random.rand(784, 128).astype(np.float32) 
-        B = np.random.rand(128, 512).astype(np.float32)
-        C = np.random.rand(784, 512).astype(np.float32)
-        C_ref = C + A @ B
+        A = np.random.rand(16, 16).astype(np.float32) 
+        B = np.random.rand(16, 16).astype(np.float32)
+        B_ref = B + A
 
-        # call the function
         name = package.names[0]
-        optimized_matmul = package[name]
-        optimized_matmul(A, B, C)
+        test_function = package[name]
+        test_function(A, B)
 
         # check for correctness
-        np.testing.assert_allclose(C, C_ref)
+        np.testing.assert_allclose(B, B_ref)
