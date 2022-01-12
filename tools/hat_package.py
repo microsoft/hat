@@ -9,7 +9,7 @@ import os
 class HATPackage:
     def __init__(self, hat_file_path):
         """A HAT Package is defined to be a HAT file and corresponding binary file, located in the same directory.
-        The binary file (which can be a shared or static library) is specified in the HAT file's link_target attribute.
+        The binary file is specified in the HAT file's link_target attribute.
         The same binary file can be referenced by many HAT files.
         Many HAT packages can exist in the same directory.
         An instance of HATPackage is created by giving HATPackage the file path to the .hat file."""
