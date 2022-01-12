@@ -22,6 +22,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
+    - uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: amd64
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
@@ -41,5 +44,4 @@ jobs:
     - name: Test whl
       run: |
         cd ${{ matrix.test-dir }}
-        hatlib.hat_to_dynamic optimized_matmul.hat optimized_matmul.dll.hat
-        hatlib.benchmark_hat optimized_matmul.dll.hat
+        hatlib.benchmark_hat optimized_matmul.hat
