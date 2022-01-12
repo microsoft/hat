@@ -45,5 +45,5 @@ jobs:
         python -m pip install --force-reinstall $WHL
     - name: Test whl
       run: |
-        cd tools/test/test_acccgen
+        cd test_acccgen
         hatlib.benchmark_hat BenchmarkHATPackage_test_benchmark.hat
