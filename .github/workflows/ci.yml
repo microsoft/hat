@@ -48,4 +48,4 @@ jobs:
     - name: Test whl
       run: |
         cd ${{ matrix.test-dir }}
-        hatlib.benchmark_hat optimized_matmul.hat
+        hatlib.hat_to_dynamic optimized_matmul.hat optimized_matmul.test.hat
