@@ -61,14 +61,12 @@ def windows_ensure_compiler_in_path():
     import vswhere
     vs_path = vswhere.get_latest_path()
     if not vs_path:
-        sys.exit("ERROR: Could not detect an installation of Visual Studio, please ensure that you have installed Visual Studio")
+        sys.exit("ERROR: Could not find Visual Studio, please ensure that you have Visual Studio installed")
 
-    # Check if cl.exe is in the path
-    try:
-        os.system("cl.exe")
-    except:
+    # Check if cl.exe is in PATH
+    if os.system("cl.exe"): # returns 0 if found, !0 otherwise
         vcvars_script_path = os.path.join(vs_path, r"VC\Auxiliary\Build\vcvars64.bat")
-        sys.exit(f'ERROR: Could not find cl.exe, please run "{vcvars_script_path}" before proceeding')
+        sys.exit(f'ERROR: Could not find cl.exe, please run "{vcvars_script_path}" (including quotes) to setup your command prompt')
 
 
 def windows_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_description):
