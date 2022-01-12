@@ -55,25 +55,26 @@ def linux_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_des
         toml.dump(hat_description, f)
 
 
-def windows_find_compiler_path():
-    """Returns the path containing the cl.exe compiler from Microsoft Visual Studio, if present"""
+def windows_ensure_compiler_in_path():
+    """Ensures that PATH contains the cl.exe compiler from Microsoft Visual Studio.
+    Prompts the user if not found."""
     import vswhere
-    import glob
     vs_path = vswhere.get_latest_path()
-    if vs_path:
-        search_result = glob.glob(f"{vs_path}/**/Hostx64/x64/cl.exe", recursive=True)
-        if search_result:
-            return search_result[0]
+    if not vs_path:
+        sys.exit("ERROR: Could not detect an installation of Visual Studio, please ensure that you have installed Visual Studio")
 
-    return None
+    # Check if cl.exe is in the path
+    try:
+        os.system("cl.exe")
+    except:
+        vcvars_script_path = os.path.join(vs_path, r"VC\Auxiliary\Build\vcvars64.bat")
+        sys.exit(f'ERROR: Could not find cl.exe, please run "{vcvars_script_path}" before proceeding')
 
 
 def windows_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_description):
     """Creates a Windows dynamic HAT package (.dll) from a static HAT package (.obj/.lib)"""
 
-    cl_exe = windows_find_compiler_path()
-    if not cl_exe:
-        sys.exit("ERROR: Could not find cl.exe, please ensure you have Visual Studio installed")
+    windows_ensure_compiler_in_path()
 
     # Confirm that this is a static hat library
     _, extension = os.path.splitext(input_hat_binary_path)
@@ -93,7 +94,7 @@ def windows_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_d
             with open("dllmain.cpp", "w") as f:
                 f.write("#include <windows.h>\n")
                 f.write("BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }\n")
-        os.system(f'"{cl_exe}" /Fodllmain.obj /c dllmain.cpp')
+        os.system("cl.exe /Fodllmain.obj /c dllmain.cpp")
 
         # create the new HAT binary dll
         prefix, _ = os.path.splitext(output_hat_path)
@@ -101,7 +102,7 @@ def windows_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_d
 
         function_descriptions = hat_description["functions"]
         function_names = list(function_descriptions.keys())
-        linker_command_line = '"{}" /link -dll -FORCE:MULTIPLE -EXPORT:{} -out:out.dll dllmain.obj {}'.format(cl_exe, ' -EXPORT:'.join(function_names), input_hat_binary_path)
+        linker_command_line = "link.exe -dll -FORCE:MULTIPLE -EXPORT:{} -out:out.dll dllmain.obj {}".format(" -EXPORT:".join(function_names), input_hat_binary_path)
         os.system(linker_command_line)
         shutil.copyfile("out.dll", output_hat_binary_path)
 
