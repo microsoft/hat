@@ -9,8 +9,8 @@ version = ""
 license_url = ""
 
 [functions]
-[functions.optimized_matmul_py_66985f63]
-name = 'optimized_matmul_py_66985f63'
+[functions.optimized_matmul_py_3b2be15f]
+name = 'optimized_matmul_py_3b2be15f'
 description = ''
 calling_convention = "cdecl"
 arguments = [{name = '', description = '', logical_type = "affine_array", declared_type = 'float*', element_type = 'float', usage = "input_output", shape = [ 784, 128 ], affine_map = [ 128, 1 ], affine_offset = 0}, {name = '', description = '', logical_type = "affine_array", declared_type = 'float*', element_type = 'float', usage = "input_output", shape = [ 128, 512 ], affine_map = [ 512, 1 ], affine_offset = 0}, {name = '', description = '', logical_type = "affine_array", declared_type = 'float*', element_type = 'float', usage = "input_output", shape = [ 784, 512 ], affine_map = [ 512, 1 ], affine_offset = 0}]
@@ -53,11 +53,11 @@ extern "C"
 // Functions
 //
 
-void optimized_matmul_py_66985f63(float*, float*, float*);
+void optimized_matmul_py_3b2be15f(float*, float*, float*);
 
 #ifndef __optimized_matmul_py_DEFINED__
 #define __optimized_matmul_py_DEFINED__
-void (*optimized_matmul_py)(float*, float*, float*) = optimized_matmul_py_66985f63;
+void (*optimized_matmul_py)(float*, float*, float*) = optimized_matmul_py_3b2be15f;
 #endif
 
 

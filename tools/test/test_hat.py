@@ -13,7 +13,7 @@ class HAT_test(unittest.TestCase):
         self.hatfile_path = Path(os.path.dirname(__file__)) / "data" / get_platform().lower() / "optimized_matmul.hat"
         self.dyn_hatfile_path = Path(os.path.dirname(__file__)) / "data" / get_platform().lower() / "optimized_matmul.HAT_test.hat"
 
-    @unittest.skipUnless(get_platform().lower() == "windows", "Flaky on non-windows")
+    @unittest.skipUnless(get_platform().lower() == "macos", "macOS is not supported by test")
     def test_load(self):
         import numpy as np
 
