@@ -24,10 +24,7 @@ class HATPackage:
         self.functions = self.hat_file.functions
 
     def get_functions(self):
-        functions = []
-        for hat_file in self.hat_files:
-            functions += hat_file.functions
-        return functions
+        return self.hat_file.functions
 
     def get_functions_for_target(self, os: str, arch: str, required_extensions:list = []):
         all_functions = self.get_functions()
