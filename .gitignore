@@ -356,9 +356,9 @@ MigrationBackup/
 build/
 results.csv
 
-# test data
-tools/test/data/
-
 # setuptools
 dist/
 *.egg-info/
+
+# test
+test_acccgen

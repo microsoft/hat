@@ -12,12 +12,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.7", "3.8", "3.9"]
-        os: ['windows-latest', 'ubuntu-latest']
-        include:
-          - os: 'windows-latest'
-            test-dir: 'tools/test/data/windows'
-          - os: 'ubuntu-latest'
-            test-dir: 'tools/test/data/linux'
+        os: ['windows-latest', 'ubuntu-latest', 'macos-latest']
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -35,7 +30,10 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install -r tools/requirements.txt
     - name: Unittest
-      run: python -m unittest discover tools/test
+      run: |
+        python -m pip install -r tools/test/requirements.txt
+        python -m pip uninstall hatlib
+        python -m unittest discover tools/test
     - name: Build whl
       run: |
         python -m pip install build
@@ -44,8 +42,8 @@ jobs:
       shell: pwsh
       run: |
         $WHL = Get-ChildItem -Path dist -Filter "*.whl" | %{$_.FullName}
-        python -m pip install $WHL
+        python -m pip install --force-reinstall $WHL
     - name: Test whl
       run: |
-        cd ${{ matrix.test-dir }}
-        hatlib.hat_to_dynamic optimized_matmul.hat optimized_matmul.test.hat
+        cd test_acccgen
+        hatlib.benchmark_hat BenchmarkHATPackage_test_benchmark.hat
