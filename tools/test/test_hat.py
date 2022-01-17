@@ -2,17 +2,16 @@
 import unittest
 import sys, os
 import accera as acc
+import numpy as np
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from hat import load
-from hat_to_dynamic import get_platform, create_dynamic_package
+from hat_to_dynamic import create_dynamic_package
 
 class HAT_test(unittest.TestCase):
 
     def test_load(self):
-        import numpy as np
-        import accera as acc
 
         # Generate a HAT package
         A = acc.Array(role=acc.Array.Role.INPUT, shape=(16, 16))
