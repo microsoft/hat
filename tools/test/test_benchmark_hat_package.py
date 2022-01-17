@@ -7,7 +7,6 @@ import accera as acc
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from benchmark_hat_package import run_benchmark
-from hat_to_dynamic import get_platform
 
 class BenchmarkHATPackage_test(unittest.TestCase):
     def test_benchmark(self):
