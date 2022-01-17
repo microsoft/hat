@@ -32,6 +32,7 @@ import toml
 import ctypes
 import os
 import numpy as np
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any, Tuple
 
@@ -128,10 +129,10 @@ def hat_description_to_python_function(hat_description, hat_library):
     return f
 
 
-class AttributeDict(dict):
+class AttributeDict(OrderedDict):
     """ Dictionary that allows entries to be accessed like attributes
     """
-    __getattr__ = dict.__getitem__
+    __getattr__ = OrderedDict.__getitem__
 
     @property
     def names(self):

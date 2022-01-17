@@ -22,7 +22,7 @@ class BenchmarkHATPackage_test(unittest.TestCase):
             C[i, j] += A[i, k] * B[k, j]
 
         package = acc.Package()
-        package.add_function(nest, args=(A, B, C), base_name="test_function")
+        package.add(nest, args=(A, B, C), base_name="test_function")
         package.build(name="BenchmarkHATPackage_test_benchmark", output_dir="test_acccgen")
 
         run_benchmark("test_acccgen/BenchmarkHATPackage_test_benchmark.hat", store_in_hat=False, batch_size=2, min_time_in_sec=1, input_sets_minimum_size_MB=1)

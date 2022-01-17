@@ -25,9 +25,9 @@ class HAT_test(unittest.TestCase):
             B[i, j] += A[i, j]
 
         package = acc.Package()
-        package.add_function(nest, args=(A, B), base_name="test_function")
+        package.add(nest, args=(A, B), base_name="test_function")
 
-        for mode in [acc.Package.Mode.DEBUG, acc.Package.Mode.RELEASE]:
+        for mode in [acc.Package.Mode.RELEASE, acc.Package.Mode.DEBUG]:
             print(mode)
             package.build(name="HAT_test_load", output_dir="test_acccgen", mode=mode)
 
