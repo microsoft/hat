@@ -46,14 +46,14 @@ def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_h
 
     # resolve any inline functions defined within input_hat_path
     include_path = os.path.dirname(input_hat_binary_path)
-    inline_cpp_path = os.path.join(include_path, "inline.cpp")
-    with open(inline_cpp_path, "w") as f:
+    inline_c_path = os.path.join(include_path, "inline.c")
+    with open(inline_c_path, "w") as f:
         print("#include <{}>".format(os.path.basename(input_hat_path)), file=f)
 
     # create new HAT binary
     prefix, _ = os.path.splitext(output_hat_path)
     output_hat_binary_path = prefix + ".so"
-    os.system(f'g++ -shared -fPIC -o "{output_hat_binary_path}" -I"{include_path}" "{inline_cpp_path}" "{input_hat_binary_path}"')
+    os.system(f'gcc -shared -fPIC -o "{output_hat_binary_path}" -I"{include_path}" "{inline_c_path}" "{input_hat_binary_path}"')
 
     # create new HAT file
     hat_description["dependencies"]["link_target"] = os.path.basename(output_hat_binary_path)
