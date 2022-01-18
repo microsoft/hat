@@ -45,7 +45,6 @@ def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_h
         sys.exit(f"ERROR: Expected input library to have extension .o or .a, but received {input_hat_binary_path} instead")
 
     # Create a C source file to resolve inline functions defined in the static HAT package
-    # TODO: fold this into the static HAT package instead
     include_path = os.path.dirname(input_hat_binary_path)
     inline_c_path = os.path.join(include_path, "inline.c")
     inline_obj_path = os.path.join(include_path, "inline.obj")
@@ -101,7 +100,6 @@ def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output
         with open("dllmain.cpp", "w") as f:
             f.write("#include <windows.h>\n")
             # Resolve inline functions defined in the static HAT package
-            # TODO: fold this into the static HAT package instead
             f.write("#include <{}>\n".format(os.path.basename(input_hat_path)))
             f.write("BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }\n")
         os.system('cl.exe /I"{}" /Fodllmain.obj /c dllmain.cpp'.format(os.path.dirname(input_hat_path)))
