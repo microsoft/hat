@@ -44,7 +44,8 @@ def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_h
     if extension not in [".o", ".a"]:
         sys.exit(f"ERROR: Expected input library to have extension .o or .a, but received {input_hat_binary_path} instead")
 
-    # resolve any inline functions defined within input_hat_path
+    # Create a C source file to resolve inline functions defined in the static HAT package
+    # TODO: fold this into the static HAT package instead
     include_path = os.path.dirname(input_hat_binary_path)
     inline_c_path = os.path.join(include_path, "inline.c")
     with open(inline_c_path, "w") as f:
@@ -75,7 +76,7 @@ def windows_ensure_compiler_in_path():
         sys.exit(f'ERROR: Could not find cl.exe, please run "{vcvars_script_path}" (including quotes) to setup your command prompt')
 
 
-def windows_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_description):
+def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_description):
     """Creates a Windows dynamic HAT package (.dll) from a static HAT package (.obj/.lib)"""
 
     windows_ensure_compiler_in_path()
@@ -94,11 +95,13 @@ def windows_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_d
         os.chdir("build")
         
         # Create a C source file for the DLL entry point and compile in into an obj
-        if not os.path.exists("dllmain.cpp"):
-            with open("dllmain.cpp", "w") as f:
-                f.write("#include <windows.h>\n")
-                f.write("BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }\n")
-        os.system("cl.exe /Fodllmain.obj /c dllmain.cpp")
+        with open("dllmain.cpp", "w") as f:
+            f.write("#include <windows.h>\n")
+            # Resolve inline functions defined in the static HAT package
+            # TODO: fold this into the static HAT package instead
+            f.write("#include <{}>\n".format(os.path.basename(input_hat_path)))
+            f.write("BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }\n")
+        os.system('cl.exe /I"{}" /Fodllmain.obj /c dllmain.cpp'.format(os.path.dirname(input_hat_path)))
 
         # create the new HAT binary dll
         prefix, _ = os.path.splitext(output_hat_path)
@@ -159,7 +162,7 @@ def create_dynamic_package(input_hat_path, output_hat_path):
     # create the dynamic package
     output_hat_path = os.path.abspath(output_hat_path)
     if platform == "Windows":
-        windows_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_description)
+        windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_description)
     elif platform in ["Linux", "OS X"]:
         linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_description)
 
