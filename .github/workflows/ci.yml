@@ -32,7 +32,7 @@ jobs:
     - name: Unittest
       run: |
         python -m pip install -r tools/test/requirements.txt
-        python -m pip uninstall hatlib
+        python -m pip uninstall -y hatlib
         python -m unittest discover tools/test
     - name: Build whl
       run: |
