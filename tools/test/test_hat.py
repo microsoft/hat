@@ -28,11 +28,11 @@ class HAT_test(unittest.TestCase):
         package.add(nest, args=(A, B), base_name="test_function")
 
         for mode in [acc.Package.Mode.RELEASE, acc.Package.Mode.DEBUG]:
-            print(mode)
-            package.build(name="HAT_test_load", output_dir="test_acccgen", mode=mode)
+            package_name = f"HAT_test_load_{mode.value}"
+            package.build(name=package_name, output_dir="test_acccgen", mode=mode)
 
-            create_dynamic_package("test_acccgen/HAT_test_load.hat", "test_acccgen/HAT_test_load.dyn.hat")
-            hat_package = load("test_acccgen/HAT_test_load.dyn.hat")
+            create_dynamic_package(f"test_acccgen/{package_name}.hat", f"test_acccgen/{package_name}.dyn.hat")
+            hat_package = load(f"test_acccgen/{package_name}.dyn.hat")
 
             for name in hat_package.names:
                 print(name)
