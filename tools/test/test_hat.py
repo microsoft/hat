@@ -25,7 +25,7 @@ class HAT_test(unittest.TestCase):
             B[i, j] += A[i, j]
 
         package = acc.Package()
-        package.add(nest, args=(A, B), base_name="test_function")
+        function = package.add(nest, args=(A, B), base_name="test_function")
 
         for mode in [acc.Package.Mode.RELEASE, acc.Package.Mode.DEBUG]:
             package_name = f"HAT_test_load_{mode.value}"
@@ -42,8 +42,7 @@ class HAT_test(unittest.TestCase):
             B = np.random.rand(16, 16).astype(np.float32)
             B_ref = B + A
 
-            name = hat_package.names[0]
-            test_function = hat_package[name]
+            test_function = hat_package[function.name]
             test_function(A, B)
 
             # check for correctness

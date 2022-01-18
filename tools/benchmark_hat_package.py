@@ -150,7 +150,7 @@ def run_benchmark(hat_path, store_in_hat=False, batch_size=10, min_time_in_sec=1
     functions = benchmark.hat_functions
     for function_name in functions:
         print(f"\nBenchmarking function: {function_name}")
-        if "Initialize" in function_name: # Skip init functions
+        if "Initialize" in function_name or "_debug_check_allclose" in function_name : # Skip init and debug functions
             continue
 
         try:

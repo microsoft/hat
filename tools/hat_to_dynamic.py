@@ -37,17 +37,23 @@ def get_platform():
     sys.exit(f"ERROR: Unsupported operating system: {sys.platform}")
 
 
-def linux_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_description):
+def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_description):
     """Creates a dynamic HAT (.so) from a static HAT (.obj) on a Linux platform"""
     # Confirm that this is a static hat library
     _, extension = os.path.splitext(input_hat_binary_path)
     if extension not in [".o", ".a"]:
         sys.exit(f"ERROR: Expected input library to have extension .o or .a, but received {input_hat_binary_path} instead")
 
+    # resolve any inline functions defined within input_hat_path
+    include_path = os.path.dirname(input_hat_binary_path)
+    inline_cpp_path = os.path.join(include_path, "inline.cpp")
+    with open(inline_cpp_path, "w") as f:
+        print("#include <{}>".format(os.path.basename(input_hat_path)), file=f)
+
     # create new HAT binary
     prefix, _ = os.path.splitext(output_hat_path)
     output_hat_binary_path = prefix + ".so"
-    os.system(f'g++ -shared -fPIC -o "{output_hat_binary_path}" "{input_hat_binary_path}"')
+    os.system(f'g++ -shared -fPIC -o "{output_hat_binary_path}" -I"{include_path}" "{inline_cpp_path}" "{input_hat_binary_path}"')
 
     # create new HAT file
     hat_description["dependencies"]["link_target"] = os.path.basename(output_hat_binary_path)
@@ -155,7 +161,7 @@ def create_dynamic_package(input_hat_path, output_hat_path):
     if platform == "Windows":
         windows_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_description)
     elif platform in ["Linux", "OS X"]:
-        linux_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_description)
+        linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_description)
 
 
 def main():
