@@ -48,13 +48,16 @@ def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_h
     # TODO: fold this into the static HAT package instead
     include_path = os.path.dirname(input_hat_binary_path)
     inline_c_path = os.path.join(include_path, "inline.c")
+    inline_obj_path = os.path.join(include_path, "inline.obj")
     with open(inline_c_path, "w") as f:
         print("#include <{}>".format(os.path.basename(input_hat_path)), file=f)
+    # compile it separately so that we can suppress the warnings about the missing terminating ' character
+    os.system(f'gcc -c -w -fPIC -o "{inline_obj_path}" -I"{include_path}" "{inline_c_path}"')
 
     # create new HAT binary
     prefix, _ = os.path.splitext(output_hat_path)
     output_hat_binary_path = prefix + ".so"
-    os.system(f'gcc -shared -fPIC -o "{output_hat_binary_path}" -I"{include_path}" "{inline_c_path}" "{input_hat_binary_path}"')
+    os.system(f'gcc -shared -fPIC -o "{output_hat_binary_path}" "{inline_obj_path}" "{input_hat_binary_path}"')
 
     # create new HAT file
     hat_description["dependencies"]["link_target"] = os.path.basename(output_hat_binary_path)
