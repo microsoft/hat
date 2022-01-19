@@ -1,6 +1,6 @@
 ![HAT](https://upload.wikimedia.org/wikipedia/commons/8/80/Crystal_Project_wizard.png)
 
-<a href="https://pypi.org/hatlib"><img src="https://badge.fury.io/py/hatlib.svg" alt="PyPI package version"/></a> <a href="https://pypi.org/hatlib"><img src="https://img.shields.io/pypi/pyversions/hatlib" alt="Python versions"/></a> ![MIT License](https://img.shields.io/pypi/l/hatlib)
+<a href="https://pypi.org/project/hatlib/"><img src="https://badge.fury.io/py/hatlib.svg" alt="PyPI package version"/></a> <a href="https://pypi.org/project/hatlib/"><img src="https://img.shields.io/pypi/pyversions/hatlib" alt="Python versions"/></a> ![MIT License](https://img.shields.io/pypi/l/hatlib)
 
 # HAT file format
 
