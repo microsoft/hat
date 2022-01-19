@@ -37,17 +37,26 @@ def get_platform():
     sys.exit(f"ERROR: Unsupported operating system: {sys.platform}")
 
 
-def linux_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_description):
+def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_description):
     """Creates a dynamic HAT (.so) from a static HAT (.obj) on a Linux platform"""
     # Confirm that this is a static hat library
     _, extension = os.path.splitext(input_hat_binary_path)
     if extension not in [".o", ".a"]:
         sys.exit(f"ERROR: Expected input library to have extension .o or .a, but received {input_hat_binary_path} instead")
 
+    # Create a C source file to resolve inline functions defined in the static HAT package
+    include_path = os.path.dirname(input_hat_binary_path)
+    inline_c_path = os.path.join(include_path, "inline.c")
+    inline_obj_path = os.path.join(include_path, "inline.obj")
+    with open(inline_c_path, "w") as f:
+        f.write(f"#include <{os.path.basename(input_hat_path)}>")
+    # compile it separately so that we can suppress the warnings about the missing terminating ' character
+    os.system(f'gcc -c -w -fPIC -o "{inline_obj_path}" -I"{include_path}" "{inline_c_path}"')
+
     # create new HAT binary
     prefix, _ = os.path.splitext(output_hat_path)
     output_hat_binary_path = prefix + ".so"
-    os.system(f'g++ -shared -fPIC -o "{output_hat_binary_path}" "{input_hat_binary_path}"')
+    os.system(f'gcc -shared -fPIC -o "{output_hat_binary_path}" "{inline_obj_path}" "{input_hat_binary_path}"')
 
     # create new HAT file
     hat_description["dependencies"]["link_target"] = os.path.basename(output_hat_binary_path)
@@ -69,7 +78,7 @@ def windows_ensure_compiler_in_path():
         sys.exit(f'ERROR: Could not find cl.exe, please run "{vcvars_script_path}" (including quotes) to setup your command prompt')
 
 
-def windows_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_description):
+def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_description):
     """Creates a Windows dynamic HAT package (.dll) from a static HAT package (.obj/.lib)"""
 
     windows_ensure_compiler_in_path()
@@ -88,11 +97,12 @@ def windows_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_d
         os.chdir("build")
         
         # Create a C source file for the DLL entry point and compile in into an obj
-        if not os.path.exists("dllmain.cpp"):
-            with open("dllmain.cpp", "w") as f:
-                f.write("#include <windows.h>\n")
-                f.write("BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }\n")
-        os.system("cl.exe /Fodllmain.obj /c dllmain.cpp")
+        with open("dllmain.cpp", "w") as f:
+            f.write("#include <windows.h>\n")
+            # Resolve inline functions defined in the static HAT package
+            f.write("#include <{}>\n".format(os.path.basename(input_hat_path)))
+            f.write("BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }\n")
+        os.system(f'cl.exe /I"{os.path.dirname(input_hat_path)}" /Fodllmain.obj /c dllmain.cpp')
 
         # create the new HAT binary dll
         prefix, _ = os.path.splitext(output_hat_path)
@@ -153,9 +163,9 @@ def create_dynamic_package(input_hat_path, output_hat_path):
     # create the dynamic package
     output_hat_path = os.path.abspath(output_hat_path)
     if platform == "Windows":
-        windows_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_description)
+        windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_description)
     elif platform in ["Linux", "OS X"]:
-        linux_create_dynamic_package(input_hat_binary_path, output_hat_path, hat_description)
+        linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_description)
 
 
 def main():

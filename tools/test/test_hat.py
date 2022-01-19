@@ -25,23 +25,25 @@ class HAT_test(unittest.TestCase):
             B[i, j] += A[i, j]
 
         package = acc.Package()
-        package.add_function(nest, args=(A, B), base_name="test_function")
-        package.build(name="HAT_test_load", output_dir="test_acccgen")
+        function = package.add(nest, args=(A, B), base_name="test_function")
 
-        create_dynamic_package("test_acccgen/HAT_test_load.hat", "test_acccgen/HAT_test_load.dyn.hat")
-        package = load("test_acccgen/HAT_test_load.dyn.hat")
+        for mode in [acc.Package.Mode.RELEASE, acc.Package.Mode.DEBUG]:
+            package_name = f"HAT_test_load_{mode.value}"
+            package.build(name=package_name, output_dir="test_acccgen", mode=mode)
 
-        for name in package.names:
-            print(name)
+            create_dynamic_package(f"test_acccgen/{package_name}.hat", f"test_acccgen/{package_name}.dyn.hat")
+            hat_package = load(f"test_acccgen/{package_name}.dyn.hat")
 
-        # create numpy arguments with the correct shape and dtype
-        A = np.random.rand(16, 16).astype(np.float32) 
-        B = np.random.rand(16, 16).astype(np.float32)
-        B_ref = B + A
+            for name in hat_package.names:
+                print(name)
 
-        name = package.names[0]
-        test_function = package[name]
-        test_function(A, B)
+            # create numpy arguments with the correct shape and dtype
+            A = np.random.rand(16, 16).astype(np.float32) 
+            B = np.random.rand(16, 16).astype(np.float32)
+            B_ref = B + A
 
-        # check for correctness
-        np.testing.assert_allclose(B, B_ref)
+            test_function = hat_package[function.name]
+            test_function(A, B)
+
+            # check for correctness
+            np.testing.assert_allclose(B, B_ref)
