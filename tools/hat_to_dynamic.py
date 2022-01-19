@@ -49,7 +49,7 @@ def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_h
     inline_c_path = os.path.join(include_path, "inline.c")
     inline_obj_path = os.path.join(include_path, "inline.obj")
     with open(inline_c_path, "w") as f:
-        print("#include <{}>".format(os.path.basename(input_hat_path)), file=f)
+        f.write(f"#include <{os.path.basename(input_hat_path)}>")
     # compile it separately so that we can suppress the warnings about the missing terminating ' character
     os.system(f'gcc -c -w -fPIC -o "{inline_obj_path}" -I"{include_path}" "{inline_c_path}"')
 
@@ -102,7 +102,7 @@ def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output
             # Resolve inline functions defined in the static HAT package
             f.write("#include <{}>\n".format(os.path.basename(input_hat_path)))
             f.write("BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }\n")
-        os.system('cl.exe /I"{}" /Fodllmain.obj /c dllmain.cpp'.format(os.path.dirname(input_hat_path)))
+        os.system(f'cl.exe /I"{os.path.dirname(input_hat_path)}" /Fodllmain.obj /c dllmain.cpp')
 
         # create the new HAT binary dll
         prefix, _ = os.path.splitext(output_hat_path)
