@@ -56,7 +56,8 @@ def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_h
     # create new HAT binary
     prefix, _ = os.path.splitext(output_hat_path)
     output_hat_binary_path = prefix + ".so"
-    os.system(f'gcc -shared -fPIC -o "{output_hat_binary_path}" "{inline_obj_path}" "{input_hat_binary_path}"')
+    libraries = " ".join([d["target_file"] for d in hat_description["dependencies"]["dynamic"]])
+    os.system(f'gcc -shared -fPIC -o "{output_hat_binary_path}" "{inline_obj_path}" "{input_hat_binary_path}" {libraries}')
 
     # create new HAT file
     hat_description["dependencies"]["link_target"] = os.path.basename(output_hat_binary_path)
@@ -110,7 +111,10 @@ def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output
 
         function_descriptions = hat_description["functions"]
         function_names = list(function_descriptions.keys())
-        linker_command_line = 'link.exe -dll -FORCE:MULTIPLE -EXPORT:{} -out:out.dll dllmain.obj "{}"'.format(' -EXPORT:'.join(function_names), input_hat_binary_path)
+        exports = " -EXPORT:".join(function_names)
+        libraries = " ".join([d["target_file"] for d in hat_description["dependencies"]["dynamic"]])
+
+        linker_command_line = f'link.exe -dll -FORCE:MULTIPLE -EXPORT:{exports} -out:out.dll dllmain.obj "{input_hat_binary_path}" {libraries}'
         os.system(linker_command_line)
         shutil.copyfile("out.dll", output_hat_binary_path)
 
