@@ -112,8 +112,8 @@ def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output
         function_descriptions = hat_description["functions"]
         function_names = list(function_descriptions.keys())
         exports = " -EXPORT:".join(function_names)
-        libraries = " ".join([d["target_file"] for d in hat_description["dependencies"]["dynamic"]])
 
+        libraries = " ".join([d["target_file"] for d in hat_description["dependencies"]["dynamic"]])
         linker_command_line = f'link.exe -dll -FORCE:MULTIPLE -EXPORT:{exports} -out:out.dll dllmain.obj "{input_hat_binary_path}" {libraries}'
         os.system(linker_command_line)
         shutil.copyfile("out.dll", output_hat_binary_path)
