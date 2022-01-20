@@ -14,15 +14,19 @@ To use the tool, point it to the '.hat' file associated with the statically-link
 Dependencies on Windows:
 * the cl.exe command-line compiler, available with Microsoft Visual Studio  
 
-Dependencies on Linux:
-* the g++ command-line compiler
+Dependencies on Linux / macOS:
+* the gcc command-line compiler
 """
 
 import sys
 import os
 import argparse
-import toml
 import shutil
+
+if __package__:
+    from .hat_file import HATFile
+else:
+    from hat_file import HATFile
 
 def get_platform():
     """Returns the current platform: Linux, Windows, or OS X"""
@@ -37,7 +41,7 @@ def get_platform():
     sys.exit(f"ERROR: Unsupported operating system: {sys.platform}")
 
 
-def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_description):
+def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file):
     """Creates a dynamic HAT (.so) from a static HAT (.obj) on a Linux platform"""
     # Confirm that this is a static hat library
     _, extension = os.path.splitext(input_hat_binary_path)
@@ -56,13 +60,12 @@ def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_h
     # create new HAT binary
     prefix, _ = os.path.splitext(output_hat_path)
     output_hat_binary_path = prefix + ".so"
-    libraries = " ".join([d["target_file"] for d in hat_description["dependencies"]["dynamic"]])
+    libraries = " ".join([d["target_file"] for d in hat_file.dependencies.dynamic])
     os.system(f'gcc -shared -fPIC -o "{output_hat_binary_path}" "{inline_obj_path}" "{input_hat_binary_path}" {libraries}')
 
     # create new HAT file
-    hat_description["dependencies"]["link_target"] = os.path.basename(output_hat_binary_path)
-    with open(output_hat_path, "w") as f:
-        toml.dump(hat_description, f)
+    hat_file.dependencies.link_target = os.path.basename(output_hat_binary_path)
+    hat_file.Serialize(output_hat_path)
 
 
 def windows_ensure_compiler_in_path():
@@ -79,7 +82,7 @@ def windows_ensure_compiler_in_path():
         sys.exit(f'ERROR: Could not find cl.exe, please run "{vcvars_script_path}" (including quotes) to setup your command prompt')
 
 
-def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_description):
+def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file):
     """Creates a Windows dynamic HAT package (.dll) from a static HAT package (.obj/.lib)"""
 
     windows_ensure_compiler_in_path()
@@ -109,19 +112,18 @@ def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output
         prefix, _ = os.path.splitext(output_hat_path)
         output_hat_binary_path = prefix + ".dll"
 
-        function_descriptions = hat_description["functions"]
-        function_names = list(function_descriptions.keys())
+        function_descriptions = hat_file.functions
+        function_names = [f.name for f in function_descriptions]
         exports = " -EXPORT:".join(function_names)
 
-        libraries = " ".join([d["target_file"] for d in hat_description["dependencies"]["dynamic"]])
+        libraries = " ".join([d["target_file"] for d in hat_file.dependencies.dynamic])
         linker_command_line = f'link.exe -dll -FORCE:MULTIPLE -EXPORT:{exports} -out:out.dll dllmain.obj "{input_hat_binary_path}" {libraries}'
         os.system(linker_command_line)
         shutil.copyfile("out.dll", output_hat_binary_path)
 
         # create new HAT file
-        hat_description["dependencies"]["link_target"] = os.path.basename(output_hat_binary_path)
-        with open("out.hat", "w") as f:
-            toml.dump(hat_description, f)
+        hat_file.dependencies.link_target = os.path.basename(output_hat_binary_path)
+        hat_file.Serialize("out.hat")
         shutil.copyfile("out.hat", output_hat_path)
     finally:
         os.chdir(cwd) # restore the current working directory
@@ -158,18 +160,18 @@ def create_dynamic_package(input_hat_path, output_hat_path):
 
     # load the function decscriptions and the library path from the hat file
     input_hat_path = os.path.abspath(input_hat_path)
-    hat_description = toml.load(input_hat_path)
+    hat_file = HATFile.Deserialize(input_hat_path)
 
     # get the absolute path to the input binary
-    input_hat_binary_filename = hat_description["dependencies"]["link_target"]
+    input_hat_binary_filename = hat_file.dependencies.link_target
     input_hat_binary_path = os.path.join(os.path.dirname(input_hat_path), input_hat_binary_filename)
 
     # create the dynamic package
     output_hat_path = os.path.abspath(output_hat_path)
     if platform == "Windows":
-        windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_description)
+        windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file)
     elif platform in ["Linux", "OS X"]:
-        linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_description)
+        linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file)
 
 
 def main():
