@@ -138,6 +138,11 @@ class AttributeDict(OrderedDict):
     def names(self):
         return list(self.keys())
 
+    def __getitem__(self, key):
+        for k, v in self.items():
+            if k.startswith(key):
+                return v
+        return OrderedDict.__getitem__(key)
 
 def load(hat_path):
     """ Creates a class with static functions based on the function descriptions in a HAT package

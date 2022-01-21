@@ -42,8 +42,17 @@ class HAT_test(unittest.TestCase):
             B = np.random.rand(16, 16).astype(np.float32)
             B_ref = B + A
 
-            test_function = hat_package[function.name]
+            # find the function by basename
+            test_function = hat_package["test_function"]
             test_function(A, B)
+
+            # check for correctness
+            np.testing.assert_allclose(B, B_ref)
+
+            # find the function by actual name
+            B_ref = B + A
+            test_function1 = hat_package[function.name]
+            test_function1(A, B)
 
             # check for correctness
             np.testing.assert_allclose(B, B_ref)
