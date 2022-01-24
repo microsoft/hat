@@ -22,6 +22,7 @@ import sys
 import os
 import argparse
 import shutil
+from secrets import token_hex
 
 if __package__:
     from .hat_file import HATFile
@@ -59,8 +60,9 @@ def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_h
 
     # create new HAT binary
     prefix, _ = os.path.splitext(output_hat_path)
-    output_hat_binary_path = prefix + ".so"
-    libraries = " ".join([d["target_file"] for d in hat_file.dependencies.dynamic])
+    suffix = token_hex(4) # always create a new dll (avoids cases where dll is already loaded)
+    output_hat_binary_path = f"{prefix}_{suffix}.so"
+    libraries = " ".join([d.target_file for d in hat_file.dependencies.dynamic])
     os.system(f'gcc -shared -fPIC -o "{output_hat_binary_path}" "{inline_obj_path}" "{input_hat_binary_path}" {libraries}')
 
     # create new HAT file
@@ -109,14 +111,15 @@ def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output
         os.system(f'cl.exe /I"{os.path.dirname(input_hat_path)}" /Fodllmain.obj /c dllmain.cpp')
 
         # create the new HAT binary dll
+        suffix = token_hex(4) # always create a new dll (avoids case where dll is already loaded)
         prefix, _ = os.path.splitext(output_hat_path)
-        output_hat_binary_path = prefix + ".dll"
+        output_hat_binary_path = f"{prefix}_{suffix}.dll"
 
         function_descriptions = hat_file.functions
         function_names = [f.name for f in function_descriptions]
         exports = " -EXPORT:".join(function_names)
 
-        libraries = " ".join([d["target_file"] for d in hat_file.dependencies.dynamic])
+        libraries = " ".join([d.target_file for d in hat_file.dependencies.dynamic])
         linker_command_line = f'link.exe -dll -FORCE:MULTIPLE -EXPORT:{exports} -out:out.dll dllmain.obj "{input_hat_binary_path}" {libraries}'
         os.system(linker_command_line)
         shutil.copyfile("out.dll", output_hat_binary_path)

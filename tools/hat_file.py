@@ -453,9 +453,11 @@ class HATFile:
         root_table.add(CompiledWith.TableName, self.compiled_with.to_table())
         root_table.add(Declaration.TableName, self.declaration.to_table())
         with open(filepath, "w") as out_file:
-            out_file.write(self.HATPrologue.format(self.name))
+            # MSVC does not allow "." in macro definitions
+            name = self.name.replace(".", "_")
+            out_file.write(self.HATPrologue.format(name))
             out_file.write(tomlkit.dumps(root_table))
-            out_file.write(self.HATEpilogue.format(self.name))
+            out_file.write(self.HATEpilogue.format(name))
 
     @staticmethod
     def Deserialize(filepath):
