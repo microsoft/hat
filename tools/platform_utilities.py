@@ -24,7 +24,7 @@ def get_platform():
 def linux_ensure_compiler_in_path():
     """Ensures that PATH contains the gcc compiler.
     Prompts the user if not found."""
-    if os.system("gcc"): # returns 0 if found, !0 otherwise
+    if os.system("gcc --version"): # returns 0 if found, !0 otherwise
         sys.exit(f'ERROR: Could not find gcc, please install gcc before continuing')
 
 
