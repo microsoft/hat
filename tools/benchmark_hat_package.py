@@ -190,7 +190,7 @@ def main(argv):
     arg_parser = argparse.ArgumentParser(
         description="Benchmarks each function in a HAT package and estimates its duration.\n"
         "Example:\n"
-        "    benchmark_hat_package.py <hat_path>\n")
+        "    hatlib.benchmark_hat_package <hat_path>\n")
 
     arg_parser.add_argument("hat_path",
         help="Path to the HAT file",
