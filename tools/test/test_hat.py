@@ -8,7 +8,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from hat import load
 from hat_to_dynamic import create_dynamic_package
-from hat_to_lib import create_static_lib_package
+from hat_to_lib import create_static_package
 
 class HAT_test(unittest.TestCase):
 
@@ -33,7 +33,7 @@ class HAT_test(unittest.TestCase):
             package.build(name=package_name, output_dir="test_acccgen", mode=mode)
 
             create_dynamic_package(f"test_acccgen/{package_name}.hat", f"test_acccgen/{package_name}.dyn.hat")
-            create_static_library_package(f"test_acccgen/{package_name}.hat", f"test_acccgen/{package_name}.lib.hat")
+            create_static_package(f"test_acccgen/{package_name}.hat", f"test_acccgen/{package_name}.lib.hat")
 
             hat_package = load(f"test_acccgen/{package_name}.dyn.hat")
 

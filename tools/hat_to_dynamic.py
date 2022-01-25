@@ -25,15 +25,15 @@ import shutil
 from secrets import token_hex
 
 if __package__:
-    from .hat_file import HATFile
-    from .platform_utilities import get_platform, windows_ensure_compiler_in_path
+    from .hat_file import HATFile, OperatingSystem
+    from .platform_utilities import get_platform, ensure_compiler_in_path
 else:
-    from hat_file import HATFile
-    from platform_utilities import get_platform, windows_ensure_compiler_in_path
+    from hat_file import HATFile, OperatingSystem
+    from platform_utilities import get_platform, ensure_compiler_in_path
 
 
 def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file):
-    """Creates a dynamic HAT (.so) from a static HAT (.o) on a Linux/macOS platform"""
+    """Creates a dynamic HAT (.so) from a static HAT (.o/.a) on a Linux/macOS platform"""
     # Confirm that this is a static hat library
     _, extension = os.path.splitext(input_hat_binary_path)
     if extension not in [".o", ".a"]:
@@ -60,10 +60,9 @@ def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_h
     hat_file.dependencies.link_target = os.path.basename(output_hat_binary_path)
     hat_file.Serialize(output_hat_path)
 
+
 def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file):
     """Creates a Windows dynamic HAT package (.dll) from a static HAT package (.obj/.lib)"""
-
-    windows_ensure_compiler_in_path()
 
     # Confirm that this is a static hat library
     _, extension = os.path.splitext(input_hat_binary_path)
@@ -84,7 +83,7 @@ def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output
             # Resolve inline functions defined in the static HAT package
             f.write("#include <{}>\n".format(os.path.basename(input_hat_path)))
             f.write("BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }\n")
-        os.system(f'cl.exe /I"{os.path.dirname(input_hat_path)}" /Fodllmain.obj /c dllmain.cpp')
+        os.system(f'cl.exe /nologo /I"{os.path.dirname(input_hat_path)}" /Fodllmain.obj /c dllmain.cpp')
 
         # create the new HAT binary dll
         suffix = token_hex(4) # always create a new dll (avoids case where dll is already loaded)
@@ -93,10 +92,10 @@ def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output
 
         function_descriptions = hat_file.functions
         function_names = [f.name for f in function_descriptions]
-        exports = " -EXPORT:".join(function_names)
+        exports = " /EXPORT:".join(function_names)
 
         libraries = " ".join([d.target_file for d in hat_file.dependencies.dynamic])
-        linker_command_line = f'link.exe -dll -FORCE:MULTIPLE -EXPORT:{exports} -out:out.dll dllmain.obj "{input_hat_binary_path}" {libraries}'
+        linker_command_line = f'link.exe /NOLOGO /DLL /FORCE:MULTIPLE /EXPORT:{exports} /OUT:out.dll dllmain.obj "{input_hat_binary_path}" {libraries}'
         os.system(linker_command_line)
         shutil.copyfile("out.dll", output_hat_binary_path)
 
@@ -107,6 +106,7 @@ def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output
         shutil.copyfile("out.hat", output_hat_path)
     finally:
         os.chdir(cwd) # restore the current working directory
+
 
 def parse_args():
     """Parses and checks the command line arguments"""
@@ -138,6 +138,7 @@ def parse_args():
 
 def create_dynamic_package(input_hat_path, output_hat_path):
     platform = get_platform()
+    ensure_compiler_in_path()
 
     # load the function decscriptions and the library path from the hat file
     input_hat_path = os.path.abspath(input_hat_path)
@@ -149,9 +150,9 @@ def create_dynamic_package(input_hat_path, output_hat_path):
 
     # create the dynamic package
     output_hat_path = os.path.abspath(output_hat_path)
-    if platform == "Windows":
+    if platform == OperatingSystem.Windows:
         windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file)
-    elif platform in ["Linux", "OS X"]:
+    elif platform in [OperatingSystem.Linux, OperatingSystem.MacOS]:
         linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file)
 
 

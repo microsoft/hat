@@ -18,31 +18,32 @@ Dependencies on Linux / macOS:
 * the gcc command-line compiler
 """
 
+from lib2to3.pgen2.token import OP
 import sys
 import os
 import argparse
 import shutil
 
 if __package__:
-    from .hat_file import HATFile
-    from .platform_utilities import get_platform, windows_ensure_compiler_in_path
+    from .hat_file import HATFile, OperatingSystem
+    from .platform_utilities import get_platform, ensure_compiler_in_path
 else:
-    from hat_file import HATFile
-    from platform_utilities import get_platform, windows_ensure_compiler_in_path
+    from hat_file import HATFile, OperatingSystem
+    from platform_utilities import get_platform, ensure_compiler_in_path
 
 
-def linux_create_static_library_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file):
+def linux_create_static_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file):
     """Creates a static HAT (.a) from a static HAT (.o) on a Linux/macOS platform"""
     # Confirm that this is a static .o hat library
     _, extension = os.path.splitext(input_hat_binary_path)
-    if extension not in [".o"]:
+    if extension != ".o":
         sys.exit(f"ERROR: Expected input library to have extension .o, but received {input_hat_binary_path} instead")
 
     # create new HAT binary
     prefix, _ = os.path.splitext(output_hat_path)
     output_hat_binary_path = f"{prefix}.a"
     libraries = " ".join([d.target_file for d in hat_file.dependencies.dynamic])
-    os.system(f'gcc -shared -fPIC -o "{output_hat_binary_path}" "{input_hat_binary_path}" {libraries}')
+    os.system(f'ar rcs "{output_hat_binary_path}" "{input_hat_binary_path}" {libraries}')
 
     # create new HAT file
     hat_file.dependencies.dynamic = [] # previous dependencies are now part of the binary
@@ -50,15 +51,13 @@ def linux_create_static_library_package(input_hat_path, input_hat_binary_path, o
     hat_file.Serialize(output_hat_path)
 
 
-def windows_create_static_library_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file):
+def windows_create_static_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file):
     """Creates a Windows static .lib HAT package from a static .obj HAT package"""
-
-    windows_ensure_compiler_in_path()
 
     # Confirm that this is a static hat library
     _, extension = os.path.splitext(input_hat_binary_path)
-    if extension not in [".obj", ".lib"]:
-        sys.exit(f"ERROR: Expected input library to have extension .obj or .lib, but received {input_hat_binary_path} instead")
+    if extension != ".obj":
+        sys.exit(f"ERROR: Expected input library to have extension .obj, but received {input_hat_binary_path} instead")
 
     # Create all file in a directory named build
     if not os.path.exists("build"):
@@ -68,27 +67,15 @@ def windows_create_static_library_package(input_hat_path, input_hat_binary_path,
     try:
         os.chdir("build")
         
-        # Create a C source file for the DLL entry point and compile in into an obj
-        with open("dllmain.cpp", "w") as f:
-            f.write("#include <windows.h>\n")
-            # Resolve inline functions defined in the static HAT package
-            f.write("#include <{}>\n".format(os.path.basename(input_hat_path)))
-            f.write("BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }\n")
-        os.system(f'cl.exe /I"{os.path.dirname(input_hat_path)}" /Fodllmain.obj /c dllmain.cpp')
-
-        # create the new HAT binary dll
-        suffix = token_hex(4) # always create a new dll (avoids case where dll is already loaded)
+        # create the new HAT binary lib
         prefix, _ = os.path.splitext(output_hat_path)
-        output_hat_binary_path = f"{prefix}_{suffix}.dll"
+        output_hat_binary_path = f"{prefix}.lib"
 
-        function_descriptions = hat_file.functions
-        function_names = [f.name for f in function_descriptions]
-        exports = " -EXPORT:".join(function_names)
-
+        # presume /DEF is not needed because the exports will be part of the HAT file
         libraries = " ".join([d.target_file for d in hat_file.dependencies.dynamic])
-        linker_command_line = f'link.exe -dll -FORCE:MULTIPLE -EXPORT:{exports} -out:out.dll dllmain.obj "{input_hat_binary_path}" {libraries}'
-        os.system(linker_command_line)
-        shutil.copyfile("out.dll", output_hat_binary_path)
+        archiver_command_line = f'lib.exe /NOLOGO /OUT:out.lib "{input_hat_binary_path}" {libraries}'
+        os.system(archiver_command_line)
+        shutil.copyfile("out.lib", output_hat_binary_path)
 
         # create new HAT file
         hat_file.dependencies.dynamic = [] # previous dependencies are now part of the binary
@@ -126,8 +113,9 @@ def parse_args():
     return args
 
 
-def create_static_library_package(input_hat_path, output_hat_path):
+def create_static_package(input_hat_path, output_hat_path):
     platform = get_platform()
+    ensure_compiler_in_path()
 
     # load the function decscriptions and the library path from the hat file
     input_hat_path = os.path.abspath(input_hat_path)
@@ -140,15 +128,15 @@ def create_static_library_package(input_hat_path, output_hat_path):
     # create the static library package
     # TODO: prefer lld when available and support cross-compilation
     output_hat_path = os.path.abspath(output_hat_path)
-    if platform == "Windows":
-        windows_create_static_library_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file)
-    elif platform in ["Linux", "OS X"]:
-        linux_create_static_library_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file)
+    if platform == OperatingSystem.Windows:
+        windows_create_static_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file)
+    elif platform in [OperatingSystem.Linux, OperatingSystem.MacOS]:
+        linux_create_static_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file)
 
 
 def main():
     args = parse_args()
-    create_static_library_package(args.input_hat_path, args.output_hat_path)
+    create_static_package(args.input_hat_path, args.output_hat_path)
 
 
 if __name__ == "__main__":
