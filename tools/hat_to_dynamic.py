@@ -43,7 +43,7 @@ def get_platform():
 
 
 def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file):
-    """Creates a dynamic HAT (.so) from a static HAT (.obj) on a Linux platform"""
+    """Creates a dynamic HAT (.so) from a static HAT (.o) on a Linux platform"""
     # Confirm that this is a static hat library
     _, extension = os.path.splitext(input_hat_binary_path)
     if extension not in [".o", ".a"]:
@@ -52,7 +52,7 @@ def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_h
     # Create a C source file to resolve inline functions defined in the static HAT package
     include_path = os.path.dirname(input_hat_binary_path)
     inline_c_path = os.path.join(include_path, "inline.c")
-    inline_obj_path = os.path.join(include_path, "inline.obj")
+    inline_obj_path = os.path.join(include_path, "inline.o")
     with open(inline_c_path, "w") as f:
         f.write(f"#include <{os.path.basename(input_hat_path)}>")
     # compile it separately so that we can suppress the warnings about the missing terminating ' character
@@ -66,6 +66,7 @@ def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_h
     os.system(f'gcc -shared -fPIC -o "{output_hat_binary_path}" "{inline_obj_path}" "{input_hat_binary_path}" {libraries}')
 
     # create new HAT file
+    hat_file.dependencies.dynamic = [] # previous dependencies are now part of the binary
     hat_file.dependencies.link_target = os.path.basename(output_hat_binary_path)
     hat_file.Serialize(output_hat_path)
 
@@ -125,6 +126,7 @@ def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output
         shutil.copyfile("out.dll", output_hat_binary_path)
 
         # create new HAT file
+        hat_file.dependencies.dynamic = [] # previous dependencies are now part of the binary
         hat_file.dependencies.link_target = os.path.basename(output_hat_binary_path)
         hat_file.Serialize("out.hat")
         shutil.copyfile("out.hat", output_hat_path)
