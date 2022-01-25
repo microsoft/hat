@@ -3,7 +3,7 @@
 """Converts a statically-linked HAT package into a Dynamically-linked HAT package
 
 HAT packages come in two varieties: statically-linked and dynamically-linked. A statically-linked
-HAT package contains a binary file with the extension '.obj', '.a', or `.lib`. A dynamically-linked
+HAT package contains a binary file with the extension '.o', '.obj', '.a', or `.lib`. A dynamically-linked
 HAT package contains a binary file with the extension '.dll' or '.so'. This tool converts a
 statically-linked HAT package into a dynamically-linked HAT package.
 
@@ -25,25 +25,15 @@ import shutil
 from secrets import token_hex
 
 if __package__:
-    from .hat_file import HATFile
+    from .hat_file import HATFile, OperatingSystem
+    from .platform_utilities import get_platform, ensure_compiler_in_path
 else:
-    from hat_file import HATFile
-
-def get_platform():
-    """Returns the current platform: Linux, Windows, or OS X"""
-    
-    if sys.platform.startswith("linux"):
-        return "Linux"
-    if sys.platform == "win32":
-        return "Windows"
-    if sys.platform == "darwin":
-        return "OS X"
-
-    sys.exit(f"ERROR: Unsupported operating system: {sys.platform}")
+    from hat_file import HATFile, OperatingSystem
+    from platform_utilities import get_platform, ensure_compiler_in_path
 
 
 def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file):
-    """Creates a dynamic HAT (.so) from a static HAT (.obj) on a Linux platform"""
+    """Creates a dynamic HAT (.so) from a static HAT (.o/.a) on a Linux/macOS platform"""
     # Confirm that this is a static hat library
     _, extension = os.path.splitext(input_hat_binary_path)
     if extension not in [".o", ".a"]:
@@ -52,7 +42,7 @@ def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_h
     # Create a C source file to resolve inline functions defined in the static HAT package
     include_path = os.path.dirname(input_hat_binary_path)
     inline_c_path = os.path.join(include_path, "inline.c")
-    inline_obj_path = os.path.join(include_path, "inline.obj")
+    inline_obj_path = os.path.join(include_path, "inline.o")
     with open(inline_c_path, "w") as f:
         f.write(f"#include <{os.path.basename(input_hat_path)}>")
     # compile it separately so that we can suppress the warnings about the missing terminating ' character
@@ -66,28 +56,13 @@ def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_h
     os.system(f'gcc -shared -fPIC -o "{output_hat_binary_path}" "{inline_obj_path}" "{input_hat_binary_path}" {libraries}')
 
     # create new HAT file
+    hat_file.dependencies.dynamic = [] # previous dependencies are now part of the binary
     hat_file.dependencies.link_target = os.path.basename(output_hat_binary_path)
     hat_file.Serialize(output_hat_path)
 
 
-def windows_ensure_compiler_in_path():
-    """Ensures that PATH contains the cl.exe compiler from Microsoft Visual Studio.
-    Prompts the user if not found."""
-    import vswhere
-    vs_path = vswhere.get_latest_path()
-    if not vs_path:
-        sys.exit("ERROR: Could not find Visual Studio, please ensure that you have Visual Studio installed")
-
-    # Check if cl.exe is in PATH
-    if os.system("cl.exe"): # returns 0 if found, !0 otherwise
-        vcvars_script_path = os.path.join(vs_path, r"VC\Auxiliary\Build\vcvars64.bat")
-        sys.exit(f'ERROR: Could not find cl.exe, please run "{vcvars_script_path}" (including quotes) to setup your command prompt')
-
-
 def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file):
     """Creates a Windows dynamic HAT package (.dll) from a static HAT package (.obj/.lib)"""
-
-    windows_ensure_compiler_in_path()
 
     # Confirm that this is a static hat library
     _, extension = os.path.splitext(input_hat_binary_path)
@@ -108,7 +83,7 @@ def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output
             # Resolve inline functions defined in the static HAT package
             f.write("#include <{}>\n".format(os.path.basename(input_hat_path)))
             f.write("BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }\n")
-        os.system(f'cl.exe /I"{os.path.dirname(input_hat_path)}" /Fodllmain.obj /c dllmain.cpp')
+        os.system(f'cl.exe /nologo /I"{os.path.dirname(input_hat_path)}" /Fodllmain.obj /c dllmain.cpp')
 
         # create the new HAT binary dll
         suffix = token_hex(4) # always create a new dll (avoids case where dll is already loaded)
@@ -117,24 +92,27 @@ def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output
 
         function_descriptions = hat_file.functions
         function_names = [f.name for f in function_descriptions]
-        exports = " -EXPORT:".join(function_names)
+        exports = " /EXPORT:".join(function_names)
 
         libraries = " ".join([d.target_file for d in hat_file.dependencies.dynamic])
-        linker_command_line = f'link.exe -dll -FORCE:MULTIPLE -EXPORT:{exports} -out:out.dll dllmain.obj "{input_hat_binary_path}" {libraries}'
+        linker_command_line = f'link.exe /NOLOGO /DLL /FORCE:MULTIPLE /EXPORT:{exports} /OUT:out.dll dllmain.obj "{input_hat_binary_path}" {libraries}'
         os.system(linker_command_line)
         shutil.copyfile("out.dll", output_hat_binary_path)
 
         # create new HAT file
+        hat_file.dependencies.dynamic = [] # previous dependencies are now part of the binary
         hat_file.dependencies.link_target = os.path.basename(output_hat_binary_path)
         hat_file.Serialize("out.hat")
         shutil.copyfile("out.hat", output_hat_path)
     finally:
         os.chdir(cwd) # restore the current working directory
 
+
 def parse_args():
     """Parses and checks the command line arguments"""
-    parser = argparse.ArgumentParser(description="Creates a dynamically-linked HAT package from a statically-linked HAT package. Example:"
-        "    python hat_to_dynamic.py input.hat output.hat")
+    parser = argparse.ArgumentParser(description="Creates a dynamically-linked HAT package from a statically-linked HAT package.\n"
+        "Example:\n"
+        "    hatlib.hat_to_dynamic input.hat output.hat\n")
 
     parser.add_argument("input_hat_path", type=str, help="Path to the existing HAT file, which represents a statically-linked HAT package")
     parser.add_argument("output_hat_path", type=str, help="Path to the new HAT file, which will represent a dynamically-linked HAT package")
@@ -160,6 +138,7 @@ def parse_args():
 
 def create_dynamic_package(input_hat_path, output_hat_path):
     platform = get_platform()
+    ensure_compiler_in_path()
 
     # load the function decscriptions and the library path from the hat file
     input_hat_path = os.path.abspath(input_hat_path)
@@ -171,9 +150,9 @@ def create_dynamic_package(input_hat_path, output_hat_path):
 
     # create the dynamic package
     output_hat_path = os.path.abspath(output_hat_path)
-    if platform == "Windows":
+    if platform == OperatingSystem.Windows:
         windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file)
-    elif platform in ["Linux", "OS X"]:
+    elif platform in [OperatingSystem.Linux, OperatingSystem.MacOS]:
         linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file)
 
 

@@ -37,11 +37,30 @@ Usage:
 
 usage: hatlib.hat_to_dynamic [-h] input_hat_path output_hat_path
 
-Creates a dynamically-linked HAT package from a statically-linked HAT package. Example: python hat_to_dynamic.py input.hat output.hat
+Creates a dynamically-linked HAT package from a statically-linked HAT package. Example: hatlib.hat_to_dynamic input.hat output.hat
 
 positional arguments:
   input_hat_path   Path to the existing HAT file, which represents a statically-linked HAT package
   output_hat_path  Path to the new HAT file, which will represent a dynamically-linked HAT package
+
+optional arguments:
+  -h, --help       show this help message and exit
+```
+
+## hatlib.hat_to_lib
+A tool that converts a HAT package with .obj/.o into a HAT package with a .lib/.a
+
+Usage:
+
+```shell
+> hatlib.hat_to_lib --help
+usage: hatlib.hat_to_dynamic [-h] input_hat_path output_hat_path
+
+Creates a statically-linked HAT package with a .lib/.a from a statically-linked HAT package with an .obj/.o. Example: hatlib.hat_to_lib input.hat output.hat
+
+positional arguments:
+  input_hat_path   Path to the existing HAT file, which represents a statically-linked HAT package with an .obj/.o
+  output_hat_path  Path to the new HAT file, which will represent a statically-linked HAT package with a .lib/.a
 
 optional arguments:
   -h, --help       show this help message and exit
@@ -75,7 +94,7 @@ usage: benchmark_hat_package.py [-h] [--store_in_hat]
                                 [--input_sets_minimum_size_MB INPUT_SETS_MINIMUM_SIZE_MB]
                                 path_to_hat_package
 
-Benchmarks each function in a HAT package and estimates its duration. Example: benchmark_hat_package.py <hat_path>
+Benchmarks each function in a HAT package and estimates its duration. Example: hatlib.benchmark_hat <hat_path>
 
 positional arguments:
   hat_path   Path to the HAT file
