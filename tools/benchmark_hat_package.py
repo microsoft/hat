@@ -28,9 +28,7 @@ class Benchmark:
         A compilation toolchain in your PATH: cl.exe & link.exe (Windows), gcc (Linux), or clang (macOS)
     """
     def __init__(self, hat_path):
-        hat_path = Path(hat_path)
-        self.hat_path = hat_path.with_suffix(".dll.hat")
-        create_dynamic_package(str(hat_path), self.hat_path)
+        self.hat_path = Path(hat_path)
 
         self.hat_package = load(self.hat_path)
         self.hat_functions = self.hat_package.names

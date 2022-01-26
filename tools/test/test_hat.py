@@ -33,7 +33,6 @@ class HAT_test(unittest.TestCase):
             package.build(name=package_name, output_dir="test_acccgen", mode=mode)
 
             create_dynamic_package(f"test_acccgen/{package_name}.hat", f"test_acccgen/{package_name}.dyn.hat")
-            create_static_package(f"test_acccgen/{package_name}.hat", f"test_acccgen/{package_name}.lib.hat")
 
             hat_package = load(f"test_acccgen/{package_name}.dyn.hat")
 
