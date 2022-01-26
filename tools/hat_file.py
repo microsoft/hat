@@ -431,7 +431,7 @@ class HATFile:
     path: Path = None
 
     HATPrologue = "\n#ifndef __{0}__\n#define __{0}__\n\n#ifdef TOML\n"
-    HATEpilogue = "\n#endif // TOML\n\n#endif // __{0}__"
+    HATEpilogue = "\n#endif // TOML\n\n#endif // __{0}__\n"
 
     def __post_init__(self):
         self.functions = self._function_table.functions
