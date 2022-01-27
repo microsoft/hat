@@ -18,7 +18,6 @@ Dependencies on Linux / macOS:
 * the gcc command-line compiler
 """
 
-from lib2to3.pgen2.token import OP
 import sys
 import os
 import argparse
@@ -32,7 +31,7 @@ else:
     from platform_utilities import get_platform, ensure_compiler_in_path
 
 
-def linux_create_static_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file):
+def linux_create_static_package(input_hat_binary_path, output_hat_path, hat_file):
     """Creates a static HAT (.a) from a static HAT (.o) on a Linux/macOS platform"""
     # Confirm that this is a static .o hat library
     _, extension = os.path.splitext(input_hat_binary_path)
@@ -51,7 +50,7 @@ def linux_create_static_package(input_hat_path, input_hat_binary_path, output_ha
     hat_file.Serialize(output_hat_path)
 
 
-def windows_create_static_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file):
+def windows_create_static_package(input_hat_binary_path, output_hat_path, hat_file):
     """Creates a Windows static .lib HAT package from a static .obj HAT package"""
 
     # Confirm that this is a static hat library
@@ -129,9 +128,9 @@ def create_static_package(input_hat_path, output_hat_path):
     # TODO: prefer lld when available and support cross-compilation
     output_hat_path = os.path.abspath(output_hat_path)
     if platform == OperatingSystem.Windows:
-        windows_create_static_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file)
+        windows_create_static_package(input_hat_binary_path, output_hat_path, hat_file)
     elif platform in [OperatingSystem.Linux, OperatingSystem.MacOS]:
-        linux_create_static_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file)
+        linux_create_static_package(input_hat_binary_path, output_hat_path, hat_file)
 
 
 def main():
