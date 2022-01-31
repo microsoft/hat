@@ -2,17 +2,17 @@
 
 """Converts a HAT package with .obj/.o into a HAT package with a .lib/.a
 
-A statically-linked HAT package contains a binary file with the extension '.o', '.obj', '.a', or `.lib`. 
+A statically-linked HAT package contains a binary file with the extension '.o', '.obj', '.a', or `.lib`.
 
 This tool converts a statically-linked HAT package with an '.o' or '.obj' binary file into another
 statically-linked HAT package with a '.a' or '.lib' binary file.
 
-To use the tool, point it to the '.hat' file associated with the statically-linked package (the 
-'.hat' file knows where to find the associated binary file), and provide a filename for the new 
+To use the tool, point it to the '.hat' file associated with the statically-linked package (the
+'.hat' file knows where to find the associated binary file), and provide a filename for the new
 '.hat' file.
 
 Dependencies on Windows:
-* the cl.exe command-line compiler, available with Microsoft Visual Studio  
+* the cl.exe command-line compiler, available with Microsoft Visual Studio
 
 Dependencies on Linux / macOS:
 * the gcc command-line compiler
@@ -25,13 +25,13 @@ import shutil
 
 if __package__:
     from .hat_file import HATFile, OperatingSystem
-    from .platform_utilities import get_platform, ensure_compiler_in_path
+    from .platform_utilities import get_platform, ensure_compiler_in_path, run_command
 else:
     from hat_file import HATFile, OperatingSystem
-    from platform_utilities import get_platform, ensure_compiler_in_path
+    from platform_utilities import get_platform, ensure_compiler_in_path, run_command
 
 
-def linux_create_static_package(input_hat_binary_path, output_hat_path, hat_file):
+def linux_create_static_package(input_hat_binary_path, output_hat_path, hat_file, quiet=True):
     """Creates a static HAT (.a) from a static HAT (.o) on a Linux/macOS platform"""
     # Confirm that this is a static .o hat library
     _, extension = os.path.splitext(input_hat_binary_path)
@@ -42,7 +42,7 @@ def linux_create_static_package(input_hat_binary_path, output_hat_path, hat_file
     prefix, _ = os.path.splitext(output_hat_path)
     output_hat_binary_path = f"{prefix}.a"
     libraries = " ".join([d.target_file for d in hat_file.dependencies.dynamic])
-    os.system(f'ar rcs "{output_hat_binary_path}" "{input_hat_binary_path}" {libraries}')
+    run_command(f'ar rcs "{output_hat_binary_path}" "{input_hat_binary_path}" {libraries}', quiet=quiet)
 
     # create new HAT file
     hat_file.dependencies.dynamic = [] # previous dependencies are now part of the binary
@@ -50,7 +50,7 @@ def linux_create_static_package(input_hat_binary_path, output_hat_path, hat_file
     hat_file.Serialize(output_hat_path)
 
 
-def windows_create_static_package(input_hat_binary_path, output_hat_path, hat_file):
+def windows_create_static_package(input_hat_binary_path, output_hat_path, hat_file, quiet=True):
     """Creates a Windows static .lib HAT package from a static .obj HAT package"""
 
     # Confirm that this is a static hat library
@@ -65,7 +65,7 @@ def windows_create_static_package(input_hat_binary_path, output_hat_path, hat_fi
     cwd = os.getcwd()
     try:
         os.chdir("build")
-        
+
         # create the new HAT binary lib
         prefix, _ = os.path.splitext(output_hat_path)
         output_hat_binary_path = f"{prefix}.lib"
@@ -73,7 +73,7 @@ def windows_create_static_package(input_hat_binary_path, output_hat_path, hat_fi
         # presume /DEF is not needed because the exports will be part of the HAT file
         libraries = " ".join([d.target_file for d in hat_file.dependencies.dynamic])
         archiver_command_line = f'lib.exe /NOLOGO /OUT:out.lib "{input_hat_binary_path}" {libraries}'
-        os.system(archiver_command_line)
+        run_command(archiver_command_line, quiet=quiet)
         shutil.copyfile("out.lib", output_hat_binary_path)
 
         # create new HAT file
@@ -92,6 +92,7 @@ def parse_args():
 
     parser.add_argument("input_hat_path", type=str, help="Path to the existing HAT file, which represents a statically-linked HAT package with a .obj or .o binary file")
     parser.add_argument("output_hat_path", type=str, help="Path to the new HAT file, which will represent a statically-linked HAT package with a .lib or .a binary file")
+    parser.add_argument('-v', "--verbose", action='store_true', help="Enable verbose output")
     args = parser.parse_args()
 
     # check args
@@ -112,7 +113,7 @@ def parse_args():
     return args
 
 
-def create_static_package(input_hat_path, output_hat_path):
+def create_static_package(input_hat_path, output_hat_path, quiet=True):
     platform = get_platform()
     ensure_compiler_in_path()
 
@@ -128,14 +129,14 @@ def create_static_package(input_hat_path, output_hat_path):
     # TODO: prefer lld when available and support cross-compilation
     output_hat_path = os.path.abspath(output_hat_path)
     if platform == OperatingSystem.Windows:
-        windows_create_static_package(input_hat_binary_path, output_hat_path, hat_file)
+        windows_create_static_package(input_hat_binary_path, output_hat_path, hat_file, quiet=quiet)
     elif platform in [OperatingSystem.Linux, OperatingSystem.MacOS]:
-        linux_create_static_package(input_hat_binary_path, output_hat_path, hat_file)
+        linux_create_static_package(input_hat_binary_path, output_hat_path, hat_file, quiet=quiet)
 
 
 def main():
     args = parse_args()
-    create_static_package(args.input_hat_path, args.output_hat_path)
+    create_static_package(args.input_hat_path, args.output_hat_path, quiet=not args.verbose)
 
 
 if __name__ == "__main__":

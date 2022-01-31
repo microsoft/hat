@@ -10,14 +10,14 @@ Usage:
     import hatlib as hat
 
     # load the package
-    package = hat.load("my_package.hat") 
+    package = hat.load("my_package.hat")
 
     # print the function names
     for name in package.names():
         print(name)
 
     # create numpy arguments with the correct shape, dtype, and order
-    A = np.ones([256,32], dtype=np.float32, order="C") 
+    A = np.ones([256,32], dtype=np.float32, order="C")
     B = np.ones([32,256], dtype=np.float32, order="C")
     D = np.ones([256,32], dtype=np.float32, order="C")
     E = np.ones([256,32], dtype=np.float32, order="C")
@@ -35,7 +35,7 @@ Usage:
 ```shell
 > hatlib.hat_to_dynamic --help
 
-usage: hatlib.hat_to_dynamic [-h] input_hat_path output_hat_path
+usage: hatlib.hat_to_dynamic [-h] [-v] input_hat_path output_hat_path
 
 Creates a dynamically-linked HAT package from a statically-linked HAT package. Example: hatlib.hat_to_dynamic input.hat output.hat
 
@@ -45,6 +45,7 @@ positional arguments:
 
 optional arguments:
   -h, --help       show this help message and exit
+  -v, --verbose    Enable verbose output
 ```
 
 ## hatlib.hat_to_lib
@@ -54,7 +55,7 @@ Usage:
 
 ```shell
 > hatlib.hat_to_lib --help
-usage: hatlib.hat_to_dynamic [-h] input_hat_path output_hat_path
+usage: hatlib.hat_to_dynamic [-h] [-v] input_hat_path output_hat_path
 
 Creates a statically-linked HAT package with a .lib/.a from a statically-linked HAT package with an .obj/.o. Example: hatlib.hat_to_lib input.hat output.hat
 
@@ -64,6 +65,7 @@ positional arguments:
 
 optional arguments:
   -h, --help       show this help message and exit
+  -v, --verbose    Enable verbose output
 ```
 
 ## hatlib.benchmark_hat
