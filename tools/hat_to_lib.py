@@ -92,7 +92,7 @@ def parse_args():
 
     parser.add_argument("input_hat_path", type=str, help="Path to the existing HAT file, which represents a statically-linked HAT package with a .obj or .o binary file")
     parser.add_argument("output_hat_path", type=str, help="Path to the new HAT file, which will represent a statically-linked HAT package with a .lib or .a binary file")
-    parser.add_argument('-v', "--verbose", action='store_true')
+    parser.add_argument('-v', "--verbose", action='store_true', help="Enable verbose output")
     args = parser.parse_args()
 
     # check args

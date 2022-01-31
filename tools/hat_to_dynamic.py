@@ -68,7 +68,7 @@ def linux_create_dynamic_package(input_hat_path, input_hat_binary_path, output_h
     hat_file.Serialize(output_hat_path)
 
 
-def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file):
+def windows_create_dynamic_package(input_hat_path, input_hat_binary_path, output_hat_path, hat_file, quiet=True):
     """Creates a Windows dynamic HAT package (.dll) from a static HAT package (.obj/.lib)"""
 
     # Confirm that this is a static hat library
@@ -132,7 +132,7 @@ def parse_args():
                         help="Path to the existing HAT file, which represents a statically-linked HAT package")
     parser.add_argument("output_hat_path", type=str,
                         help="Path to the new HAT file, which will represent a dynamically-linked HAT package")
-    parser.add_argument('-v', "--verbose", action='store_true')
+    parser.add_argument('-v', "--verbose", action='store_true', help="Enable verbose output")
     args = parser.parse_args()
 
     # check args
