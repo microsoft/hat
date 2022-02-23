@@ -438,7 +438,7 @@ class HATFile:
         self.function_map = self._function_table.function_map
         for func in self.functions:
             func.hat_file = self
-            func.link_target = self.path / self.dependencies.link_target
+            func.link_target = Path(self.path).resolve().parent / self.dependencies.link_target
 
     def Serialize(self, filepath=None):
         """Serilizes the HATFile to disk using the file location specified by `filepath`.
