@@ -1,6 +1,6 @@
 # HAT TOML Schema
 [toml-schema]
-version = "0.0.0.2"
+version = "0.0.0.3"
 
 # Types to be used elsewhere in this schema
 [types]
@@ -66,6 +66,10 @@ version = "0.0.0.2"
     [types.functionType]
     type = "table"
 
+        ##########
+        # Required
+        ##########
+
         # The name of the function
         [types.functionType.name]
         type = "string"
@@ -77,8 +81,8 @@ version = "0.0.0.2"
         # The calling convention for this function
         [types.functionType.calling_convention]
         type = "string"
-        allowedvalues = [ "stdcall", "cdecl", "fastcall", "vectorcall" ]
-    
+        allowedvalues = [ "stdcall", "cdecl", "fastcall", "vectorcall", "device" ]
+
         # An array of arguments to the function
         [types.functionType.arguments]
         type = "array"
@@ -87,6 +91,25 @@ version = "0.0.0.2"
         # The return type description of the function
         [types.functionType.return]
         typeof = "paramType"
+
+        ##########
+        # Optional
+        ##########
+
+        # The runtime used by the function
+        [types.functionType.runtime]
+        type = "string"
+        optional = true
+
+        # The parameters needed to launch this function, if applicable
+        [types.functionType.launch_parameters]
+        type = "array"
+        optional = true
+
+        # The function that is launched by this function
+        [types.functionType.launches]
+        type = "string"
+        optional = true
 
         # Optional additional usage-specific information about the function that isn't part of this schema
         [types.functionType.auxiliary]
@@ -136,9 +159,15 @@ version = "0.0.0.2"
         type = "table"
         optional = true
 
-    # Collection of functions declared within the HAT file and their metadata
+    # Collection of host functions declared within the HAT file and their metadata
     # The keys in a collection are not prescribed by the schema, and in this case are the names of the functions as the HAT format does not support function overloading.
     [elements.functions]
+    type = "collection"
+    typeof = "functionType"
+
+    # Collection of device functions declared within the HAT file and their metadata
+    # The keys in a collection are not prescribed by the schema, and in this case are the names of the functions as the HAT format does not support function overloading.
+    [elements.device_functions]
     type = "collection"
     typeof = "functionType"
 
@@ -168,11 +197,17 @@ version = "0.0.0.2"
                 type = "array"
                 arraytype = "string"
 
+                # Optional CPU runtime library
+                [elements.target.required.CPU.runtime]
+                type = "string"
+                allowedvalues = [ "openmp" ]
+                optional = true
+
                 # Optional additional information not defined in this schema
                 [elements.target.required.CPU.auxiliary]
                 type = "table"
                 optional = true
-            
+
             # Required GPU characteristics if there are GPU functions in this HAT package
             [elements.target.required.GPU]
             type = "table"
@@ -194,7 +229,7 @@ version = "0.0.0.2"
                 # Minimum global memory in KB that will be allocated
                 [elements.target.required.GPU.min_global_memory_KB]
                 type = "integer"
-                
+
                 # Minimum shared memory in KB that will be allocated
                 [elements.target.required.GPU.min_shared_memory_KB]
                 type = "integer"
