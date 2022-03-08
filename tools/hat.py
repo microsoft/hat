@@ -49,7 +49,11 @@ class ArgInfo:
     def __init__(self, param_description):
         self.hat_declared_type = param_description["declared_type"]
         self.numpy_shape = tuple(param_description["shape"])
-        if self.hat_declared_type == "float*":
+        if self.hat_declared_type == "float16_t*":
+            self.numpy_dtype = np.float16
+            self.element_num_bytes = 2
+            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_uint16) # same bitwidth as float16
+        elif self.hat_declared_type == "float*":
             self.numpy_dtype = np.float32
             self.element_num_bytes = 4
             self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_float)
