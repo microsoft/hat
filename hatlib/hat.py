@@ -35,13 +35,31 @@ from dataclasses import dataclass
 from typing import Any, Tuple
 
 try:
-    from . import cuda_loader
     from . import hat_file
     from .arg_info import ArgInfo, verify_args, generate_input_sets
 except:
-    import cuda_loader
     import hat_file
     from arg_info import ArgInfo, verify_args, generate_input_sets
+
+try:
+    try:
+        from . import cuda_loader
+    except ModuleNotFoundError:
+        import cuda_loader
+except:
+    CUDA_AVAILABLE = False
+else:
+    CUDA_AVAILABLE = True
+
+try:
+    try:
+        from . import rocm_loader
+    except ModuleNotFoundError:
+        import rocm_loader
+except:
+    ROCM_AVAILABLE = False
+else:
+    ROCM_AVAILABLE = True
 
 
 def generate_input_sets_for_hat_file(hat_path):
@@ -106,11 +124,12 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile, hat_de
             if not device_func:
                 raise RuntimeError(
                     f"Couldn't find device function for loader: " + func_desc["launches"])
-            if func_desc["runtime"] == "CUDA":
+            if func_desc["runtime"] == "CUDA" and CUDA_AVAILABLE:
                 yield func_name, cuda_loader.create_loader_for_device_function(
                     device_func, hat_details)
-            else:
-                continue
+            elif func_desc["runtime"] == "ROCM" and ROCM_AVAILABLE:
+                yield func_name, rocm_loader.create_loader_for_device_function(
+                    device_func, hat_details)
 
 
 def load(hat_path):
