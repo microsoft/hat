@@ -49,6 +49,7 @@ class CallingConventionType(Enum):
     CDecl = "cdecl"
     FastCall = "fastcall"
     VectorCall = "vectorcall"
+    Device = "devicecall"
 
 
 class TargetType(Enum):
@@ -199,6 +200,7 @@ class Function(AuxiliarySupportedTable):
     # optional
     launch_parameters: list = field(default_factory=list)
     launches: str = ""
+    provider: str = ""
     runtime: str = ""
 
     def to_table(self):
@@ -214,14 +216,17 @@ class Function(AuxiliarySupportedTable):
             "arguments", arg_array
         )  # TODO : figure out why this isn't indenting after serialization in some cases
 
-        if self.runtime:
-            table.add("runtime", self.runtime)
-
         if self.launch_parameters:
             table.add("launch_parameters", self.launch_parameters)
 
         if self.launches:
             table.add("launches", self.launches)
+
+        if self.provider:
+            table.add("provider", self.provider)
+
+        if self.runtime:
+            table.add("runtime", self.runtime)
 
         table.add("return", self.return_info.to_table())
 
@@ -240,14 +245,18 @@ class Function(AuxiliarySupportedTable):
             for param_table in function_table["arguments"]
         ]
 
-        runtime = function_table[
-            "runtime"] if "runtime" in function_table else ""
-
         launch_parameters = function_table[
             "launch_parameters"] if "launch_parameters" in function_table else []
 
         launches = function_table[
             "launches"] if "launches" in function_table else ""
+
+        provider = function_table[
+            "provider"] if "provider" in function_table else ""
+
+        runtime = function_table[
+            "runtime"] if "runtime" in function_table else ""
+
         return_info = Parameter.parse_from_table(function_table["return"])
 
         return Function(
@@ -257,9 +266,10 @@ class Function(AuxiliarySupportedTable):
                 function_table["calling_convention"]),
             arguments=arguments,
             return_info=return_info,
-            runtime=runtime,
             launch_parameters=launch_parameters,
             launches=launches,
+            provider=provider,
+            runtime=runtime,
             auxiliary=AuxiliarySupportedTable.parse_auxiliary(function_table))
 
 
@@ -330,19 +340,23 @@ class Target:
                     extensions=table["extensions"],
                     runtime=runtime)
 
-        # TODO : support GPU
+        @dataclass
         class GPU:
             TableName = TargetType.GPU.value
-            runtime: str = ""
+            blocks: int = 0
             instruction_set_version: str = ""
             min_threads: int = 0
             min_global_memory_KB: int = 0
             min_shared_memory_KB: int = 0
             min_texture_memory_KB: int = 0
+            model: str = ""
+            runtime: str = ""
 
             def to_table(self):
                 table = tomlkit.table()
+                table.add("model", self.model)
                 table.add("runtime", self.runtime)
+                table.add("blocks", self.blocks)
                 table.add("instruction_set_version",
                           self.instruction_set_version)
                 table.add("min_threads", self.min_threads)
@@ -356,16 +370,14 @@ class Target:
             def parse_from_table(table):
                 required_table_entries = [
                     "runtime",
-                    "instruction_set_version",
-                    "min_threads",
-                    "min_global_memory_KB",
-                    "min_shared_memory_KB",
-                    "min_texture_memory_KB",
+                    "model",
                 ]
                 _check_required_table_entries(table, required_table_entries)
 
                 return Target.Required.GPU(
                     runtime=table["runtime"],
+                    model=table["model"],
+                    blocks=table["blocks"],
                     instruction_set_version=table["instruction_set_version"],
                     min_threads=table["min_threads"],
                     min_global_memory_KB=table["min_global_memory_KB"],
@@ -381,7 +393,7 @@ class Target:
             table = tomlkit.table()
             table.add("os", self.os.value)
             table.add(Target.Required.CPU.TableName, self.cpu.to_table())
-            if self.gpu is not None:
+            if self.gpu and self.gpu.runtime:
                 table.add(Target.Required.GPU.TableName, self.gpu.to_table())
             return table
 
@@ -558,8 +570,11 @@ class HATFile:
     name: str = ""
     description: Description = None
     _function_table: FunctionTable = None
+    _device_function_table: DeviceFunctionTable = None
     functions: list = field(default_factory=list)
+    device_functions: list = field(default_factory=list)
     function_map: dict = field(default_factory=dict)
+    device_function_map: list = field(default_factory=list)
     target: Target = None
     dependencies: Dependencies = None
     compiled_with: CompiledWith = None
@@ -577,6 +592,11 @@ class HATFile:
             func.link_target = Path(self.path).resolve(
             ).parent / self.dependencies.link_target
 
+        if not self._device_function_table:
+            self._device_function_table = DeviceFunctionTable({})
+        self.device_function_map = self._device_function_table.function_map
+        self.device_functions = self._device_function_table.functions
+
     def Serialize(self, filepath=None):
         """Serilizes the HATFile to disk using the file location specified by `filepath`.
         If `filepath` is not specified then the object's `path` attribute is used."""
@@ -586,6 +606,9 @@ class HATFile:
         root_table.add(Description.TableName, self.description.to_table())
         root_table.add(FunctionTable.TableName,
                        self._function_table.to_table())
+        if self.device_function_map:
+            root_table.add(DeviceFunctionTable.TableName,
+                           self._device_function_table.to_table())
         root_table.add(Target.TableName, self.target.to_table())
         root_table.add(Dependencies.TableName, self.dependencies.to_table())
         root_table.add(CompiledWith.TableName, self.compiled_with.to_table())
@@ -598,7 +621,7 @@ class HATFile:
             out_file.write(self.HATEpilogue.format(name))
 
     @staticmethod
-    def Deserialize(filepath):
+    def Deserialize(filepath) -> "HATFile":
         """Creates an instance of A HATFile class by deserializing the contents of the file at `filepath`"""
         hat_toml = _read_toml_file(filepath)
         name = os.path.splitext(os.path.basename(filepath))[0]
@@ -608,12 +631,17 @@ class HATFile:
             Declaration.TableName
         ]
         _check_required_table_entries(hat_toml, required_entries)
+        device_function_table = None
+        if DeviceFunctionTable.TableName in hat_toml:
+            device_function_table = DeviceFunctionTable.parse_from_table(
+                hat_toml[DeviceFunctionTable.TableName])
         hat_file = HATFile(
             name=name,
             description=Description.parse_from_table(
                 hat_toml[Description.TableName]),
             _function_table=FunctionTable.parse_from_table(
                 hat_toml[FunctionTable.TableName]),
+            _device_function_table=device_function_table,
             target=Target.parse_from_table(
                 hat_toml[Target.TableName]),
             dependencies=Dependencies.parse_from_table(

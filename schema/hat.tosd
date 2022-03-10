@@ -96,11 +96,6 @@ version = "0.0.0.3"
         # Optional
         ##########
 
-        # The runtime used by the function
-        [types.functionType.runtime]
-        type = "string"
-        optional = true
-
         # The parameters needed to launch this function, if applicable
         [types.functionType.launch_parameters]
         type = "array"
@@ -108,6 +103,16 @@ version = "0.0.0.3"
 
         # The function that is launched by this function
         [types.functionType.launches]
+        type = "string"
+        optional = true
+
+        # The provider of this function, if any
+        [types.functionType.provider]
+        type = "string"
+        optional = true
+
+        # The runtime used by the function
+        [types.functionType.runtime]
         type = "string"
         optional = true
 
