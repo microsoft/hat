@@ -47,36 +47,11 @@ except:
 def generate_input_sets_for_hat_file(hat_path):
     hat_path = pathlib.Path(hat_path).absolute()
     t: hat_file.HATFile = toml.load(hat_path)
-    # d = {}
     return {
         func_name: generate_input_sets(
             list(map(ArgInfo, func_desc["arguments"])))
         for func_name, func_desc in t["functions"].items()
     }
-
-    # for func_name, func_desc in t["functions"].items():
-    #     func_args = list(map(ArgInfo, func_desc["arguments"]))
-
-
-def hat_description_to_python_function(hat_description, hat_library):
-    """ Creates a callable function based on a function description in a HAT package
-    """
-    hat_arg_descriptions = hat_description["arguments"]
-    function_name = hat_description["name"]
-    arg_infos = [ArgInfo(d) for d in hat_arg_descriptions]
-
-    def f(*args):
-        # verify that the (numpy) input args match the description in the hat file
-        verify_args(args, arg_infos, function_name)
-
-        # prepare the args to the hat package
-        hat_args = [arg.ctypes.data_as(arg_info.ctypes_pointer_type)
-                    for arg, arg_info in zip(args, arg_infos)]
-
-        # call the function in the hat package
-        hat_library[function_name](*hat_args)
-
-    return f
 
 
 class AttributeDict(OrderedDict):
@@ -95,7 +70,7 @@ class AttributeDict(OrderedDict):
         return OrderedDict.__getitem__(key)
 
 
-def hat_description_to_python_function_2(hat_description: hat_file.HATFile, hat_details: AttributeDict):
+def hat_description_to_python_function(hat_description: hat_file.HATFile, hat_details: AttributeDict):
     """ Creates a callable function based on a function description in a HAT package
     """
 
@@ -164,5 +139,5 @@ def load(hat_path):
     # create dictionary of functions defined in the hat file
     # function_dict = AttributeDict({key : hat_description_to_python_function(val, hat_library) for key,val in function_descriptions.items()})
     function_dict = AttributeDict(
-        dict(hat_description_to_python_function_2(t, hat_details)))
+        dict(hat_description_to_python_function(t, hat_details)))
     return function_dict
