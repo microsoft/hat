@@ -22,7 +22,12 @@ class ArgInfo:
         self.hat_declared_type = param_description["declared_type"]
         self.numpy_shape = tuple(param_description["shape"])
         self.usage = param_description["usage"]
-        if self.hat_declared_type == "float*":
+        if self.hat_declared_type == "float16_t*":
+            self.numpy_dtype = np.float16
+            self.element_num_bytes = 2
+            self.ctypes_pointer_type = ctypes.POINTER(
+                ctypes.c_uint16)  # same bitwidth as float16
+        elif self.hat_declared_type == "float*":
             self.numpy_dtype = np.float32
             self.element_num_bytes = 4
             self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_float)
@@ -97,6 +102,7 @@ def generate_input_sets(parameters: List[ArgInfo], input_sets_minimum_size_MB: i
 
     num_input_sets = (input_sets_minimum_size_MB * 1024 *
                       1024 // set_size) + 1 + num_additional
-    input_sets = [[np.random.random(p.numpy_shape).astype(p.numpy_dtype) for p in parameters] for _ in range(num_input_sets)]
+    input_sets = [[np.random.random(p.numpy_shape).astype(
+        p.numpy_dtype) for p in parameters] for _ in range(num_input_sets)]
 
     return input_sets[0] if len(input_sets) == 1 else input_sets
