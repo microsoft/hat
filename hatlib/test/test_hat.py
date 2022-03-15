@@ -10,8 +10,8 @@ from hat import load
 from hat_to_dynamic import create_dynamic_package
 from hat_to_lib import create_static_package
 
-class HAT_test(unittest.TestCase):
 
+class HAT_test(unittest.TestCase):
     def test_load(self):
 
         # Generate a HAT package
@@ -30,9 +30,12 @@ class HAT_test(unittest.TestCase):
 
         for mode in [acc.Package.Mode.RELEASE, acc.Package.Mode.DEBUG]:
             package_name = f"HAT_test_load_{mode.value}"
-            package.build(name=package_name, output_dir="test_acccgen", mode=mode)
+            package.build(name=package_name,
+                          output_dir="test_acccgen",
+                          mode=mode)
 
-            create_dynamic_package(f"test_acccgen/{package_name}.hat", f"test_acccgen/{package_name}.dyn.hat")
+            create_dynamic_package(f"test_acccgen/{package_name}.hat",
+                                   f"test_acccgen/{package_name}.dyn.hat")
 
             hat_package = load(f"test_acccgen/{package_name}.dyn.hat")
 
@@ -40,7 +43,7 @@ class HAT_test(unittest.TestCase):
                 print(name)
 
             # create numpy arguments with the correct shape and dtype
-            A = np.random.rand(16, 16).astype(np.float32) 
+            A = np.random.rand(16, 16).astype(np.float32)
             B = np.random.rand(16, 16).astype(np.float32)
             B_ref = B + A
 

@@ -10,6 +10,7 @@ import tomlkit
 
 # TODO : type-checking on leaf node values
 
+
 def _read_toml_file(filepath):
     path = os.path.abspath(filepath)
     toml_doc = None
@@ -18,10 +19,12 @@ def _read_toml_file(filepath):
         toml_doc = tomlkit.parse(file_contents)
     return toml_doc
 
+
 def _check_required_table_entry(table, key):
     if key not in table:
         # TODO : add more context to this error message
         raise ValueError(f"Invalid HAT file: missing required key {key}")
+
 
 def _check_required_table_entries(table, keys):
     for key in keys:
@@ -34,25 +37,31 @@ class ParameterType(Enum):
     Element = "element"
     Void = "void"
 
+
 class UsageType(Enum):
     Input = "input"
     Output = "output"
     InputOutput = "input_output"
+
 
 class CallingConventionType(Enum):
     StdCall = "stdcall"
     CDecl = "cdecl"
     FastCall = "fastcall"
     VectorCall = "vectorcall"
+    Device = "devicecall"
+
 
 class TargetType(Enum):
     CPU = "CPU"
     GPU = "GPU"
 
+
 class OperatingSystem(Enum):
     Windows = "windows"
     MacOS = "macos"
     Linux = "linux"
+
 
 @dataclass
 class AuxiliarySupportedTable:
@@ -69,6 +78,7 @@ class AuxiliarySupportedTable:
             return table[AuxiliarySupportedTable.AuxiliaryKey]
         else:
             return {}
+
 
 @dataclass
 class Description(AuxiliarySupportedTable):
@@ -91,10 +101,12 @@ class Description(AuxiliarySupportedTable):
 
     @staticmethod
     def parse_from_table(table):
-        return Description(author=table["author"],
-                           version=table["version"],
-                           license_url=table["license_url"],
-                           auxiliary=AuxiliarySupportedTable.parse_auxiliary(table))
+        return Description(
+            author=table["author"],
+            version=table["version"],
+            license_url=table["license_url"],
+            auxiliary=AuxiliarySupportedTable.parse_auxiliary(table))
+
 
 @dataclass
 class Parameter:
@@ -135,9 +147,14 @@ class Parameter:
     # TODO : change "usage" to "role" in schema
     @staticmethod
     def parse_from_table(param_table):
-        required_table_entries = ["name", "description", "logical_type", "declared_type", "element_type", "usage"]
+        required_table_entries = [
+            "name", "description", "logical_type", "declared_type",
+            "element_type", "usage"
+        ]
         _check_required_table_entries(param_table, required_table_entries)
-        affine_array_required_table_entries = ["shape", "affine_map", "affine_offset"]
+        affine_array_required_table_entries = [
+            "shape", "affine_map", "affine_offset"
+        ]
         runtime_array_required_table_entries = ["size"]
 
         name = param_table["name"]
@@ -147,14 +164,23 @@ class Parameter:
         element_type = param_table["element_type"]
         usage = UsageType(param_table["usage"])
 
-        param = Parameter(name=name, description=description, logical_type=logical_type, declared_type=declared_type, element_type=element_type, usage=usage)
+        param = Parameter(name=name,
+                          description=description,
+                          logical_type=logical_type,
+                          declared_type=declared_type,
+                          element_type=element_type,
+                          usage=usage)
+
         if logical_type == ParameterType.AffineArray:
-            _check_required_table_entries(param_table, affine_array_required_table_entries)
+            _check_required_table_entries(param_table,
+                                          affine_array_required_table_entries)
             param.shape = param_table["shape"]
             param.affine_map = param_table["affine_map"]
             param.affine_offset = param_table["affine_offset"]
+
         elif logical_type == ParameterType.RuntimeArray:
-            _check_required_table_entries(param_table, runtime_array_required_table_entries)
+            _check_required_table_entries(
+                param_table, runtime_array_required_table_entries)
             param.size = param_table["size"]
 
         return param
@@ -162,13 +188,20 @@ class Parameter:
 
 @dataclass
 class Function(AuxiliarySupportedTable):
-    name: str = ""
-    description: str = ""
-    calling_convention: CallingConventionType = None
+    # required
     arguments: list = field(default_factory=list)
-    return_info: Parameter = None
+    calling_convention: CallingConventionType = None
+    description: str = ""
     hat_file: any = None
     link_target: Path = None
+    name: str = ""
+    return_info: Parameter = None
+
+    # optional
+    launch_parameters: list = field(default_factory=list)
+    launches: str = ""
+    provider: str = ""
+    runtime: str = ""
 
     def to_table(self):
         table = tomlkit.table()
@@ -179,7 +212,22 @@ class Function(AuxiliarySupportedTable):
         arg_array = tomlkit.array()
         for arg_table in arg_tables:
             arg_array.append(arg_table)
-        table.add("arguments", arg_array) # TODO : figure out why this isn't indenting after serialization in some cases
+        table.add(
+            "arguments", arg_array
+        )  # TODO : figure out why this isn't indenting after serialization in some cases
+
+        if self.launch_parameters:
+            table.add("launch_parameters", self.launch_parameters)
+
+        if self.launches:
+            table.add("launches", self.launches)
+
+        if self.provider:
+            table.add("provider", self.provider)
+
+        if self.runtime:
+            table.add("runtime", self.runtime)
+
         table.add("return", self.return_info.to_table())
 
         self.add_auxiliary_table(table)
@@ -188,72 +236,153 @@ class Function(AuxiliarySupportedTable):
 
     @staticmethod
     def parse_from_table(function_table):
-        required_table_entries = ["name", "description", "calling_convention", "arguments", "return"]
+        required_table_entries = [
+            "name", "description", "calling_convention", "arguments", "return"
+        ]
         _check_required_table_entries(function_table, required_table_entries)
-        arguments = [Parameter.parse_from_table(param_table) for param_table in function_table["arguments"]]
+        arguments = [
+            Parameter.parse_from_table(param_table)
+            for param_table in function_table["arguments"]
+        ]
+
+        launch_parameters = function_table[
+            "launch_parameters"] if "launch_parameters" in function_table else []
+
+        launches = function_table[
+            "launches"] if "launches" in function_table else ""
+
+        provider = function_table[
+            "provider"] if "provider" in function_table else ""
+
+        runtime = function_table[
+            "runtime"] if "runtime" in function_table else ""
+
         return_info = Parameter.parse_from_table(function_table["return"])
-        return Function(name=function_table["name"],
-                        description=function_table["description"],
-                        calling_convention=CallingConventionType(function_table["calling_convention"]),
-                        arguments=arguments,
-                        return_info=return_info,
-                        auxiliary=AuxiliarySupportedTable.parse_auxiliary(function_table))
+
+        return Function(
+            name=function_table["name"],
+            description=function_table["description"],
+            calling_convention=CallingConventionType(
+                function_table["calling_convention"]),
+            arguments=arguments,
+            return_info=return_info,
+            launch_parameters=launch_parameters,
+            launches=launches,
+            provider=provider,
+            runtime=runtime,
+            auxiliary=AuxiliarySupportedTable.parse_auxiliary(function_table))
 
 
-class FunctionTable:
-    TableName = "functions"
+class FunctionTableCommon:
     def __init__(self, function_map):
         self.function_map = function_map
         self.functions = self.function_map.values()
 
     def to_table(self):
-        serialized_map = { function_key : self.function_map[function_key].to_table() for function_key in self.function_map }
         func_table = tomlkit.table()
         for function_key in self.function_map:
-            func_table.add(function_key, self.function_map[function_key].to_table())
+            func_table.add(function_key,
+                           self.function_map[function_key].to_table())
         return func_table
 
-    @staticmethod
-    def parse_from_table(all_functions_table):
-        function_map = {function_key: Function.parse_from_table(all_functions_table[function_key]) for function_key in all_functions_table}
-        return FunctionTable(function_map)
+    @classmethod
+    def parse_from_table(cls, all_functions_table):
+        function_map = {
+            function_key:
+            Function.parse_from_table(all_functions_table[function_key])
+            for function_key in all_functions_table
+        }
+        return cls(function_map)
+
+
+class FunctionTable(FunctionTableCommon):
+    TableName = "functions"
+
+
+class DeviceFunctionTable(FunctionTableCommon):
+    TableName = "device_functions"
 
 
 @dataclass
 class Target:
-
     @dataclass
     class Required:
-
         @dataclass
         class CPU:
             TableName = TargetType.CPU.value
+
+            # required
             architecture: str = ""
             extensions: list = field(default_factory=list)
+
+            # optional
+            runtime: str = ""
 
             def to_table(self):
                 table = tomlkit.table()
                 table.add("architecture", self.architecture)
                 table.add("extensions", self.extensions)
+
+                if self.runtime:
+                    table.add("runtime", self.runtime)
+
                 return table
 
             @staticmethod
             def parse_from_table(table):
                 required_table_entries = ["architecture", "extensions"]
                 _check_required_table_entries(table, required_table_entries)
-                return Target.Required.CPU(architecture=table["architecture"], extensions=table["extensions"])
 
-        # TODO : support GPU
+                runtime = table.get("runtime", "")
+
+                return Target.Required.CPU(
+                    architecture=table["architecture"],
+                    extensions=table["extensions"],
+                    runtime=runtime)
+
+        @dataclass
         class GPU:
-            TableName = TargetType.CPU.value
+            TableName = TargetType.GPU.value
+            blocks: int = 0
+            instruction_set_version: str = ""
+            min_threads: int = 0
+            min_global_memory_KB: int = 0
+            min_shared_memory_KB: int = 0
+            min_texture_memory_KB: int = 0
+            model: str = ""
+            runtime: str = ""
 
             def to_table(self):
-                return tomlkit.table()
+                table = tomlkit.table()
+                table.add("model", self.model)
+                table.add("runtime", self.runtime)
+                table.add("blocks", self.blocks)
+                table.add("instruction_set_version",
+                          self.instruction_set_version)
+                table.add("min_threads", self.min_threads)
+                table.add("min_global_memory_KB", self.min_global_memory_KB)
+                table.add("min_shared_memory_KB", self.min_shared_memory_KB)
+                table.add("min_texture_memory_KB", self.min_texture_memory_KB)
+
+                return table
 
             @staticmethod
             def parse_from_table(table):
-                pass
+                required_table_entries = [
+                    "runtime",
+                    "model",
+                ]
+                _check_required_table_entries(table, required_table_entries)
 
+                return Target.Required.GPU(
+                    runtime=table["runtime"],
+                    model=table["model"],
+                    blocks=table["blocks"],
+                    instruction_set_version=table["instruction_set_version"],
+                    min_threads=table["min_threads"],
+                    min_global_memory_KB=table["min_global_memory_KB"],
+                    min_shared_memory_KB=table["min_shared_memory_KB"],
+                    min_texture_memory_KB=table["min_texture_memory_KB"])
 
         TableName = "required"
         os: OperatingSystem = None
@@ -264,7 +393,7 @@ class Target:
             table = tomlkit.table()
             table.add("os", self.os.value)
             table.add(Target.Required.CPU.TableName, self.cpu.to_table())
-            if self.gpu is not None:
+            if self.gpu and self.gpu.runtime:
                 table.add(Target.Required.GPU.TableName, self.gpu.to_table())
             return table
 
@@ -272,9 +401,11 @@ class Target:
         def parse_from_table(table):
             required_table_entries = ["os", Target.Required.CPU.TableName]
             _check_required_table_entries(table, required_table_entries)
-            cpu_info = Target.Required.CPU.parse_from_table(table[Target.Required.CPU.TableName])
+            cpu_info = Target.Required.CPU.parse_from_table(
+                table[Target.Required.CPU.TableName])
             if Target.Required.GPU.TableName in table:
-                gpu_info = Target.Required.GPU.parse_from_table(table[Target.Required.GPU.TableName])
+                gpu_info = Target.Required.GPU.parse_from_table(
+                    table[Target.Required.GPU.TableName])
             else:
                 gpu_info = Target.Required.GPU()
             return Target.Required(os=table["os"], cpu=cpu_info, gpu=gpu_info)
@@ -298,19 +429,23 @@ class Target:
         table = tomlkit.table()
         table.add(Target.Required.TableName, self.required.to_table())
         if self.optimized_for is not None:
-            table.add(Target.OptimizedFor.TableName, self.optimized_for.to_table())
+            table.add(Target.OptimizedFor.TableName,
+                      self.optimized_for.to_table())
         return table
 
     @staticmethod
     def parse_from_table(target_table):
         required_table_entries = [Target.Required.TableName]
         _check_required_table_entries(target_table, required_table_entries)
-        required_data = Target.Required.parse_from_table(target_table[Target.Required.TableName])
+        required_data = Target.Required.parse_from_table(
+            target_table[Target.Required.TableName])
         if Target.OptimizedFor.TableName in target_table:
-            optimized_for_data = Target.OptimizedFor.parse_from_table(target_table[Target.OptimizedFor.TableName])
+            optimized_for_data = Target.OptimizedFor.parse_from_table(
+                target_table[Target.OptimizedFor.TableName])
         else:
             optimized_for_data = Target.OptimizedFor()
         return Target(required=required_data, optimized_for=optimized_for_data)
+
 
 @dataclass
 class LibraryReference:
@@ -328,8 +463,8 @@ class LibraryReference:
     @staticmethod
     def parse_from_table(table):
         return LibraryReference(name=table["name"],
-                                   version=table["version"],
-                                   target_file=table["target_file"])
+                                version=table["version"],
+                                target_file=table["target_file"])
 
 
 @dataclass
@@ -355,12 +490,18 @@ class Dependencies(AuxiliarySupportedTable):
     @staticmethod
     def parse_from_table(dependencies_table):
         required_table_entries = ["link_target", "deploy_files", "dynamic"]
-        _check_required_table_entries(dependencies_table, required_table_entries)
-        dynamic = [LibraryReference.parse_from_table(lib_ref_table) for lib_ref_table in dependencies_table["dynamic"]]
+        _check_required_table_entries(dependencies_table,
+                                      required_table_entries)
+        dynamic = [
+            LibraryReference.parse_from_table(lib_ref_table)
+            for lib_ref_table in dependencies_table["dynamic"]
+        ]
         return Dependencies(link_target=dependencies_table["link_target"],
                             deploy_files=dependencies_table["deploy_files"],
                             dynamic=dynamic,
-                            auxiliary=AuxiliarySupportedTable.parse_auxiliary(dependencies_table))
+                            auxiliary=AuxiliarySupportedTable.parse_auxiliary(
+                                dependencies_table))
+
 
 @dataclass
 class CompiledWith:
@@ -386,12 +527,17 @@ class CompiledWith:
     @staticmethod
     def parse_from_table(compiled_with_table):
         required_table_entries = ["compiler", "flags", "crt", "libraries"]
-        _check_required_table_entries(compiled_with_table, required_table_entries)
-        libraries = [LibraryReference.parse_from_table(lib_ref_table) for lib_ref_table in compiled_with_table["libraries"]]
+        _check_required_table_entries(compiled_with_table,
+                                      required_table_entries)
+        libraries = [
+            LibraryReference.parse_from_table(lib_ref_table)
+            for lib_ref_table in compiled_with_table["libraries"]
+        ]
         return CompiledWith(compiler=compiled_with_table["compiler"],
                             flags=compiled_with_table["flags"],
                             crt=compiled_with_table["crt"],
                             libraries=libraries)
+
 
 @dataclass
 class Declaration:
@@ -406,14 +552,16 @@ class Declaration:
     @staticmethod
     def parse_from_table(declaration_table):
         required_table_entries = ["code"]
-        _check_required_table_entries(declaration_table, required_table_entries)
+        _check_required_table_entries(declaration_table,
+                                      required_table_entries)
         return Declaration(code=declaration_table["code"])
+
 
 @dataclass
 class HATFile:
-    """Encapsulates a HAT file. An instance of this class can be created by calling the 
+    """Encapsulates a HAT file. An instance of this class can be created by calling the
     Deserialize class method e.g.:
-        some_hat_file = Deserialize('someFile.hat') 
+        some_hat_file = Deserialize('someFile.hat')
     Similarly, HAT files can be serialized but creating/modifying a HATFile instance
     and then calling Serilize e.g.:
         some_hat_file.name = 'some new name'
@@ -422,8 +570,11 @@ class HATFile:
     name: str = ""
     description: Description = None
     _function_table: FunctionTable = None
+    _device_function_table: DeviceFunctionTable = None
     functions: list = field(default_factory=list)
+    device_functions: list = field(default_factory=list)
     function_map: dict = field(default_factory=dict)
+    device_function_map: list = field(default_factory=list)
     target: Target = None
     dependencies: Dependencies = None
     compiled_with: CompiledWith = None
@@ -438,7 +589,13 @@ class HATFile:
         self.function_map = self._function_table.function_map
         for func in self.functions:
             func.hat_file = self
-            func.link_target = Path(self.path).resolve().parent / self.dependencies.link_target
+            func.link_target = Path(self.path).resolve(
+            ).parent / self.dependencies.link_target
+
+        if not self._device_function_table:
+            self._device_function_table = DeviceFunctionTable({})
+        self.device_function_map = self._device_function_table.function_map
+        self.device_functions = self._device_function_table.functions
 
     def Serialize(self, filepath=None):
         """Serilizes the HATFile to disk using the file location specified by `filepath`.
@@ -447,7 +604,11 @@ class HATFile:
             filepath = self.path
         root_table = tomlkit.table()
         root_table.add(Description.TableName, self.description.to_table())
-        root_table.add(FunctionTable.TableName, self._function_table.to_table())
+        root_table.add(FunctionTable.TableName,
+                       self._function_table.to_table())
+        if self.device_function_map:
+            root_table.add(DeviceFunctionTable.TableName,
+                           self._device_function_table.to_table())
         root_table.add(Target.TableName, self.target.to_table())
         root_table.add(Dependencies.TableName, self.dependencies.to_table())
         root_table.add(CompiledWith.TableName, self.compiled_with.to_table())
@@ -460,23 +621,34 @@ class HATFile:
             out_file.write(self.HATEpilogue.format(name))
 
     @staticmethod
-    def Deserialize(filepath):
+    def Deserialize(filepath) -> "HATFile":
         """Creates an instance of A HATFile class by deserializing the contents of the file at `filepath`"""
         hat_toml = _read_toml_file(filepath)
         name = os.path.splitext(os.path.basename(filepath))[0]
-        required_entries = [Description.TableName,
-                            FunctionTable.TableName,
-                            Target.TableName,
-                            Dependencies.TableName,
-                            CompiledWith.TableName,
-                            Declaration.TableName]
+        required_entries = [
+            Description.TableName, FunctionTable.TableName, Target.TableName,
+            Dependencies.TableName, CompiledWith.TableName,
+            Declaration.TableName
+        ]
         _check_required_table_entries(hat_toml, required_entries)
-        hat_file = HATFile(name=name,
-                           description=Description.parse_from_table(hat_toml[Description.TableName]),
-                           _function_table=FunctionTable.parse_from_table(hat_toml[FunctionTable.TableName]),
-                           target=Target.parse_from_table(hat_toml[Target.TableName]),
-                           dependencies=Dependencies.parse_from_table(hat_toml[Dependencies.TableName]),
-                           compiled_with=CompiledWith.parse_from_table(hat_toml[CompiledWith.TableName]),
-                           declaration=Declaration.parse_from_table(hat_toml[Declaration.TableName]),
-                           path=Path(filepath).resolve())
+        device_function_table = None
+        if DeviceFunctionTable.TableName in hat_toml:
+            device_function_table = DeviceFunctionTable.parse_from_table(
+                hat_toml[DeviceFunctionTable.TableName])
+        hat_file = HATFile(
+            name=name,
+            description=Description.parse_from_table(
+                hat_toml[Description.TableName]),
+            _function_table=FunctionTable.parse_from_table(
+                hat_toml[FunctionTable.TableName]),
+            _device_function_table=device_function_table,
+            target=Target.parse_from_table(
+                hat_toml[Target.TableName]),
+            dependencies=Dependencies.parse_from_table(
+                hat_toml[Dependencies.TableName]),
+            compiled_with=CompiledWith.parse_from_table(
+                hat_toml[CompiledWith.TableName]),
+            declaration=Declaration.parse_from_table(
+                hat_toml[Declaration.TableName]),
+            path=Path(filepath).resolve())
         return hat_file

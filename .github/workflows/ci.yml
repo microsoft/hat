@@ -28,11 +28,11 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install -r tools/requirements.txt
+        python -m pip install -r hatlib/requirements.txt
     - name: Unittest
       run: |
-        python -m pip install -r tools/test/requirements.txt
-        python -m unittest discover tools/test
+        python -m pip install -r hatlib/test/requirements.txt
+        python -m unittest discover hatlib/test
     - name: Build whl
       run: |
         python -m pip install build
