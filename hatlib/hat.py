@@ -93,7 +93,7 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile,
         func_name: str
 
         launches = func_desc.get("launches")
-        if launches:
+        if not launches:
 
             hat_arg_descriptions = func_desc["arguments"]
             function_name = func_desc["name"]
