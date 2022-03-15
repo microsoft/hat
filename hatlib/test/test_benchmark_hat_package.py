@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 import unittest
 import sys, os
@@ -7,6 +6,7 @@ import accera as acc
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from benchmark_hat_package import run_benchmark
+
 
 class BenchmarkHATPackage_test(unittest.TestCase):
     def test_benchmark(self):
@@ -23,9 +23,16 @@ class BenchmarkHATPackage_test(unittest.TestCase):
 
         package = acc.Package()
         package.add(nest, args=(A, B, C), base_name="test_function")
-        package.build(name="BenchmarkHATPackage_test_benchmark", output_dir="test_acccgen", format=acc.Package.Format.HAT_DYNAMIC)
+        package.build(name="BenchmarkHATPackage_test_benchmark",
+                      output_dir="test_acccgen",
+                      format=acc.Package.Format.HAT_DYNAMIC)
 
-        run_benchmark("test_acccgen/BenchmarkHATPackage_test_benchmark.hat", store_in_hat=False, batch_size=2, min_time_in_sec=1, input_sets_minimum_size_MB=1)
+        run_benchmark("test_acccgen/BenchmarkHATPackage_test_benchmark.hat",
+                      store_in_hat=False,
+                      batch_size=2,
+                      min_time_in_sec=1,
+                      input_sets_minimum_size_MB=1)
+
 
 if __name__ == '__main__':
     unittest.main()

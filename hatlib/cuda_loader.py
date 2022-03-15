@@ -235,9 +235,6 @@ namespace std { using namespace __jitify_math_ns; }
 
 HEADER_MAP['climits'] = HEADER_MAP['limits.h']
 
-PROG_NAME = "test_gpu_vec_add"
-SRC_FILE = "./test_gpu_vec_add.cu"
-
 
 def ASSERT_DRV(err):
     if isinstance(err, cuda.CUresult):

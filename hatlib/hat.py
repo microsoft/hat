@@ -1,8 +1,8 @@
 """Loads a dynamically-linked HAT package in Python
 
-Call 'load' to load a HAT package in Python. After loading, call the HAT functions using numpy
-arrays as arguments. The shape, element type, and order of each numpy array should exactly match
-the requirements of the HAT function.
+Call 'load' to load a HAT package in Python. After loading, call the HAT
+functions using numpy arrays as arguments. The shape, element type, and order
+of each numpy array should exactly match the requirements of the HAT function.
 
 For example:
     import numpy as np
@@ -54,12 +54,13 @@ else:
 # Remove when ROCM is finally available
 ROCM_AVAILABLE = False
 
+
 def generate_input_sets_for_hat_file(hat_path):
     hat_path = pathlib.Path(hat_path).absolute()
     t: hat_file.HATFile = toml.load(hat_path)
     return {
-        func_name: generate_input_sets(
-            list(map(ArgInfo, func_desc["arguments"])))
+        func_name:
+        generate_input_sets(list(map(ArgInfo, func_desc["arguments"])))
         for func_name, func_desc in t["functions"].items()
     }
 
@@ -69,7 +70,7 @@ class AttributeDict(OrderedDict):
     """
     __getattr__ = OrderedDict.__getitem__
 
-    @ property
+    @property
     def names(self):
         return list(self.keys())
 
@@ -80,8 +81,10 @@ class AttributeDict(OrderedDict):
         return OrderedDict.__getitem__(key)
 
 
-def hat_description_to_python_function(hat_description: hat_file.HATFile, hat_details: AttributeDict):
-    """ Creates a callable function based on a function description in a HAT package
+def hat_description_to_python_function(hat_description: hat_file.HATFile,
+                                       hat_details: AttributeDict):
+    """ Creates a callable function based on a function description in a HAT
+    package
     """
 
     for func_name, func_desc in hat_description["functions"].items():
@@ -96,13 +99,16 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile, hat_de
             hat_library: ctypes.CDLL = hat_details.shared_lib
 
             def f(*args):
-                # verify that the (numpy) input args match the description in the hat file
+                # verify that the (numpy) input args match the description in
+                # the hat file
                 arg_infos = [ArgInfo(d) for d in hat_arg_descriptions]
                 verify_args(args, arg_infos, function_name)
 
                 # prepare the args to the hat package
-                hat_args = [arg.ctypes.data_as(arg_info.ctypes_pointer_type)
-                            for arg, arg_info in zip(args, arg_infos)]
+                hat_args = [
+                    arg.ctypes.data_as(arg_info.ctypes_pointer_type)
+                    for arg, arg_info in zip(args, arg_infos)
+                ]
 
                 # call the function in the hat package
                 hat_library[function_name](*hat_args)
@@ -115,7 +121,8 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile, hat_de
 
             if not device_func:
                 raise RuntimeError(
-                    f"Couldn't find device function for loader: " + func_desc["launches"])
+                    f"Couldn't find device function for loader: " +
+                    func_desc["launches"])
             if func_desc["runtime"] == "CUDA" and CUDA_AVAILABLE:
                 yield func_name, cuda_loader.create_loader_for_device_function(
                     device_func, hat_details)
@@ -125,7 +132,8 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile, hat_de
 
 
 def load(hat_path):
-    """ Creates a class with static functions based on the function descriptions in a HAT package
+    """ Creates a class with static functions based on the function
+    descriptions in a HAT package
     """
     # load the function decscriptions from the hat file
     hat_path = pathlib.Path(hat_path).absolute()
@@ -144,11 +152,10 @@ def load(hat_path):
 
     # load the hat_library:
     hat_library = ctypes.cdll.LoadLibrary(
-        hat_binary_path) if extension else None
+        str(hat_binary_path)) if extension else None
     hat_details["shared_lib"] = hat_library
 
     # create dictionary of functions defined in the hat file
-    # function_dict = AttributeDict({key : hat_description_to_python_function(val, hat_library) for key,val in function_descriptions.items()})
     function_dict = AttributeDict(
         dict(hat_description_to_python_function(t, hat_details)))
     return function_dict
