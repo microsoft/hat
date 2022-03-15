@@ -137,14 +137,14 @@ mean_duration_in_sec = 1.5953456437541567e-06
 This repository contains unit tests, authored with the Python `unittest` library. To setup and run all tests:
 
 ```shell
-pip install -r <path_to_repo>/tools/test/requirements.txt
-python -m unittest discover <path_to_repo>/tools/test
+pip install -r <path_to_repo>/hatlib/test/requirements.txt
+python -m unittest discover <path_to_repo>/hatlib/test
 ```
 
 To run a test case:
 
 ```shell
-python -m unittest discover -k "test_file_basic_serialize" <path_to_repo>/tools/test
+python -m unittest discover -k "test_file_basic_serialize" <path_to_repo>/hatlib/test
 ```
 
 Note that some tests will require a C++ compiler (e.g. MSVC for windows, gcc for linux) in `PATH`.
