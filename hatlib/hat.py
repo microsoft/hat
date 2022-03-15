@@ -117,16 +117,20 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile,
             yield func_name, f
 
         else:
-            device_func = hat_description["device_functions"].get(launches)
+            device_func = hat_description.get("device_functions",
+                                              {}).get(launches)
 
+            func_runtime = func_desc("runtime")
             if not device_func:
                 raise RuntimeError(
-                    f"Couldn't find device function for loader: " +
-                    func_desc["launches"])
-            if func_desc["runtime"] == "CUDA" and CUDA_AVAILABLE:
+                    f"Couldn't find device function for loader: " + launches)
+            if not func_runtime:
+                raise RuntimeError(f"Couldn't find runtime for loader: " +
+                                   launches)
+            if func_runtime == "CUDA" and CUDA_AVAILABLE:
                 yield func_name, cuda_loader.create_loader_for_device_function(
                     device_func, hat_details)
-            elif func_desc["runtime"] == "ROCM" and ROCM_AVAILABLE:
+            elif func_runtime == "ROCM" and ROCM_AVAILABLE:
                 yield func_name, rocm_loader.create_loader_for_device_function(
                     device_func, hat_details)
 
