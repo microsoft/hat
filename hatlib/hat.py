@@ -120,7 +120,7 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile,
             device_func = hat_description.get("device_functions",
                                               {}).get(launches)
 
-            func_runtime = func_desc("runtime")
+            func_runtime = func_desc.get("runtime")
             if not device_func:
                 raise RuntimeError(
                     f"Couldn't find device function for loader: " + launches)
