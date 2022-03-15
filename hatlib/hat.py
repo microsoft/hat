@@ -92,7 +92,8 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile,
         func_desc: hat_file.Function
         func_name: str
 
-        if not func_desc["launches"]:
+        launches = func_desc.get("launches")
+        if launches:
 
             hat_arg_descriptions = func_desc["arguments"]
             function_name = func_desc["name"]
@@ -116,8 +117,7 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile,
             yield func_name, f
 
         else:
-            device_func = hat_description["device_functions"].get(
-                func_desc["launches"])
+            device_func = hat_description["device_functions"].get(launches)
 
             if not device_func:
                 raise RuntimeError(
