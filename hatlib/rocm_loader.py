@@ -32,7 +32,7 @@ def compile_rocm_program(rocm_src_path: pathlib.Path, func_name):
     src = rocm_src_path.read_text()
 
     prog = hiprtcCreateProgram(source=src,
-                               name=func_name,
+                               name=func_name + ".cu",
                                header_names=HEADER_MAP.keys(),
                                header_sources=HEADER_MAP.values())
     device_properties = hipGetDeviceProperties(0)

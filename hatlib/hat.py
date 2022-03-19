@@ -144,8 +144,8 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile,
                            cuda_loader.create_loader_for_device_function(
                                device_func, hat_details))
                 elif NOTIFY_ABOUT_CUDA:
-                    print("CUDA functionality not available on this machine. \
-                            Please install the cuda and pvnrtc python modules")
+                    print("CUDA functionality not available on this machine."
+                          " Please install the cuda and pvnrtc python modules")
                     NOTIFY_ABOUT_CUDA = False
             elif func_runtime == "ROCM":
                 global NOTIFY_ABOUT_ROCM
@@ -154,8 +154,8 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile,
                            rocm_loader.create_loader_for_device_function(
                                device_func, hat_details))
                 elif NOTIFY_ABOUT_ROCM:
-                    print("ROCm functionality not available on this machine. \
-                            Please install the ROCm 4.2 or higher")
+                    print("ROCm functionality not available on this machine."
+                          " Please install the ROCm 4.2 or higher")
                     NOTIFY_ABOUT_ROCM = False
 
 
