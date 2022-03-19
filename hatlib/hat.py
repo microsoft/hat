@@ -138,6 +138,7 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile,
                 raise RuntimeError(f"Couldn't find runtime for loader: " +
                                    launches)
             if func_runtime == "CUDA":
+                global NOTIFY_ABOUT_CUDA
                 if CUDA_AVAILABLE:
                     yield (func_name,
                            cuda_loader.create_loader_for_device_function(
@@ -147,6 +148,7 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile,
                             Please install the cuda and pvnrtc python modules")
                     NOTIFY_ABOUT_CUDA = False
             elif func_runtime == "ROCM":
+                global NOTIFY_ABOUT_ROCM
                 if ROCM_AVAILABLE:
                     yield (func_name,
                            rocm_loader.create_loader_for_device_function(
