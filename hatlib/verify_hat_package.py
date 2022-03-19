@@ -6,14 +6,15 @@ import enum
 import sys
 
 if __package__:
-    from .hat import load, generate_input_sets_for_hat_file
+    # from .hat import load, generate_input_sets_for_hat_file
+    from . import hat
 else:
-    from hat import load, generate_input_sets_for_hat_file
+    import hat
 
 
 def verify_hat_package(hat_path):
-    funcs = load(hat_path)
-    inputs = generate_input_sets_for_hat_file(hat_path)
+    funcs = hat.load(hat_path)
+    inputs = hat.generate_input_sets_for_hat_file(hat_path)
     for name, fn in funcs.items():
         print(f"Verifying function {name} --")
         func_inputs = inputs[name]
