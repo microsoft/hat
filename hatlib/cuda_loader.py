@@ -12,10 +12,10 @@ from cuda import cuda, nvrtc
 
 try:
     from .arg_info import ArgInfo, verify_args
-    from .gpu_headers import HEADER_MAP
+    from .gpu_headers import CUDA_HEADER_MAP
 except:
     from arg_info import ArgInfo, verify_args
-    from gpu_headers import HEADER_MAP
+    from gpu_headers import CUDA_HEADER_MAP
 
 
 def ASSERT_DRV(err):
@@ -53,8 +53,8 @@ def compile_cuda_program(cuda_src_path: pathlib.Path, func_name):
 
     prog = Program(src=src,
                    name=func_name,
-                   headers=HEADER_MAP.values(),
-                   include_names=HEADER_MAP.keys())
+                   headers=CUDA_HEADER_MAP.values(),
+                   include_names=CUDA_HEADER_MAP.keys())
     ptx = prog.compile([
         '-use_fast_math',
         '-default-device',

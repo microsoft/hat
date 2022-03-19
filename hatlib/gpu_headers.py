@@ -1,7 +1,7 @@
 from typing import Dict
 
 # lifted from https://github.com/NVIDIA/jitify/blob/master/jitify.hpp
-HEADER_MAP: Dict[str, str] = {
+CUDA_HEADER_MAP: Dict[str, str] = {
     'float.h':
         """
 #pragma once
@@ -29,6 +29,7 @@ HEADER_MAP: Dict[str, str] = {
 #define FLT_EVAL_METHOD 0
 #define DECIMAL_DIG     21
 #endif
+
 """,
     'limits.h':
         """
@@ -72,6 +73,7 @@ enum {
 #define LLONG_MAX  9223372036854775807LL
 #define LLONG_MIN  (-LLONG_MAX - 1LL)
 #define ULLONG_MAX 18446744073709551615ULL
+
 """,
     'stdint.h':
         """
@@ -138,6 +140,7 @@ typedef unsigned long      uintptr_t; //optional
 } // namespace __jitify_stdint_ns
 namespace std { using namespace __jitify_stdint_ns; }
 using namespace __jitify_stdint_ns;
+
 """,
     'math.h':
         """
@@ -214,8 +217,11 @@ namespace std { using namespace __jitify_math_ns; }
 #define M_PI 3.14159265358979323846
 // Note: Global namespace already includes CUDA math funcs
 //using namespace __jitify_math_ns;
+
 """,
     'cuda_fp16.h': "",
 }
 
-HEADER_MAP['climits'] = HEADER_MAP['limits.h']
+CUDA_HEADER_MAP['climits'] = CUDA_HEADER_MAP['limits.h']
+
+ROCM_HEADER_MAP: Dict[str, str] = {}

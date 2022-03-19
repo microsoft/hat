@@ -8,12 +8,12 @@ from typing import Dict, List
 
 try:
     from .arg_info import ArgInfo, verify_args
-    from .gpu_headers import HEADER_MAP
+    from .gpu_headers import ROCM_HEADER_MAP
     from .pyhip_hip import *
     from .pyhip_hiprtc import *
 except ModuleNotFoundError:
     from arg_info import ArgInfo, verify_args
-    from gpu_headers import HEADER_MAP
+    from gpu_headers import ROCM_HEADER_MAP
     from pyhip_hip import *
     from pyhip_hiprtc import *
 
@@ -34,8 +34,8 @@ def compile_rocm_program(rocm_src_path: pathlib.Path, func_name):
     print(f"Creating ROCm program for {func_name}")
     prog = hiprtcCreateProgram(source=src,
                                name=func_name + ".cu",
-                               header_names=[],
-                               header_sources=[])
+                               header_names=ROCM_HEADER_MAP.keys(),
+                               header_sources=ROCM_HEADER_MAP.values())
     device_properties = hipGetDeviceProperties(0)
     print(f"Compiling ROCm program for {device_properties.gcnArchName}")
     hiprtcCompileProgram(prog,
