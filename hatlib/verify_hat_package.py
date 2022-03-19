@@ -17,7 +17,7 @@ def verify_hat_package(hat_path):
         fn(inputs[name])
 
 
-def main(argv):
+def main():
     arg_parser = argparse.ArgumentParser(
         description="Executes every available function in the hat package \
             with randomized inputs. Meant for quick verification.\n"
@@ -28,9 +28,9 @@ def main(argv):
                             help="Path to the HAT file",
                             default=None)
 
-    args = vars(arg_parser.parse_args(argv))
+    args = vars(arg_parser.parse_args())
     verify_hat_package(args["hat_path"])
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()
