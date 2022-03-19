@@ -1,3 +1,4 @@
+from typing import Dict
 
 # lifted from https://github.com/NVIDIA/jitify/blob/master/jitify.hpp
 HEADER_MAP: Dict[str, str] = {
