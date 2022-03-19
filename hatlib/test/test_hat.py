@@ -34,6 +34,7 @@ class HAT_test(unittest.TestCase):
             package_name = f"HAT_test_load_{mode.value}"
             package.build(name=package_name,
                           output_dir="test_acccgen",
+                          format=acc.Package.Format.HAT_STATIC,
                           mode=mode)
 
             create_dynamic_package(f"test_acccgen/{package_name}.hat",
