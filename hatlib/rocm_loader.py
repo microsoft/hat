@@ -34,8 +34,8 @@ def compile_rocm_program(rocm_src_path: pathlib.Path, func_name):
     print(f"Creating ROCm program for {func_name}")
     prog = hiprtcCreateProgram(source=src,
                                name=func_name + ".cu",
-                               header_names=HEADER_MAP.keys(),
-                               header_sources=HEADER_MAP.values())
+                               header_names=[],
+                               header_sources=[])
     device_properties = hipGetDeviceProperties(0)
     print(f"Compiling ROCm program for {device_properties.gcnArchName}")
     hiprtcCompileProgram(prog,
