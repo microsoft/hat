@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-import unittest
-import sys, os
 import accera as acc
 import numpy as np
+import os
+import sys
+import unittest
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -12,6 +13,7 @@ from hat_to_lib import create_static_package
 
 
 class HAT_test(unittest.TestCase):
+
     def test_load(self):
 
         # Generate a HAT package
