@@ -48,6 +48,7 @@ try:
         import cuda_loader
 except:
     CUDA_AVAILABLE = False
+    NOTIFY_ABOUT_CUDA = True
 else:
     CUDA_AVAILABLE = True
 
@@ -58,6 +59,7 @@ try:
         import rocm_loader
 except:
     ROCM_AVAILABLE = False
+    NOTIFY_ABOUT_ROCM = True
 else:
     ROCM_AVAILABLE = True
 
@@ -134,12 +136,24 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile,
             if not func_runtime:
                 raise RuntimeError(f"Couldn't find runtime for loader: " +
                                    launches)
-            if func_runtime == "CUDA" and CUDA_AVAILABLE:
-                yield func_name, cuda_loader.create_loader_for_device_function(
-                    device_func, hat_details)
-            elif func_runtime == "ROCM" and ROCM_AVAILABLE:
-                yield func_name, rocm_loader.create_loader_for_device_function(
-                    device_func, hat_details)
+            if func_runtime == "CUDA":
+                if CUDA_AVAILABLE:
+                    yield (func_name,
+                           cuda_loader.create_loader_for_device_function(
+                               device_func, hat_details))
+                elif NOTIFY_ABOUT_CUDA:
+                    print("CUDA functionality not available on this machine. \
+                            Please install the cuda and pvnrtc python modules")
+                    NOTIFY_ABOUT_CUDA = False
+            elif func_runtime == "ROCM":
+                if ROCM_AVAILABLE:
+                    yield (func_name,
+                           rocm_loader.create_loader_for_device_function(
+                               device_func, hat_details))
+                elif NOTIFY_ABOUT_ROCM:
+                    print("ROCm functionality not available on this machine. \
+                            Please install the ROCm 4.2 or higher")
+                    NOTIFY_ABOUT_ROCM = False
 
 
 def load(hat_path):
