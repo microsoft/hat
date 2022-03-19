@@ -17,9 +17,6 @@ except:
     from arg_info import ArgInfo, verify_args
     from gpu_headers import HEADER_MAP
 
-PROG_NAME = "test_gpu_vec_add"
-SRC_FILE = "./test_gpu_vec_add.cu"
-
 
 def ASSERT_DRV(err):
     if isinstance(err, cuda.CUresult):
