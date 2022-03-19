@@ -1,10 +1,8 @@
 import ctypes
-import os
 import pathlib
-import sys
 import numpy as np
 from functools import reduce
-from typing import Dict, List
+from typing import List
 
 try:
     from .arg_info import ArgInfo, verify_args
@@ -31,15 +29,15 @@ def initialize_rocm():
 def compile_rocm_program(rocm_src_path: pathlib.Path, func_name):
     src = rocm_src_path.read_text()
 
-    print(f"Creating ROCm program for {func_name}")
     prog = hiprtcCreateProgram(source=src,
                                name=func_name + ".cu",
                                header_names=ROCM_HEADER_MAP.keys(),
                                header_sources=ROCM_HEADER_MAP.values())
     device_properties = hipGetDeviceProperties(0)
-    print(f"Compiling ROCm program for {device_properties.gcnArchName}")
-    hiprtcCompileProgram(prog,
-                         [f'--offload-arch={device_properties.gcnArchName}', '-D__HIP_PLATFORM_AMD__'])
+    hiprtcCompileProgram(prog, [
+        f'--offload-arch={device_properties.gcnArchName}',
+        '-D__HIP_PLATFORM_AMD__'
+    ])
     print(hiprtcGetProgramLog(prog))
     code = hiprtcGetCode(prog)
 
@@ -115,9 +113,6 @@ def create_loader_for_device_function(device_func, hat_details):
                                   arg_infos=arg_infos)
         data = DataStruct(*device_mem)
 
-        # err, stream = cuda.cuStreamCreate(0)
-        # ASSERT_DRV(err)
-
         hipModuleLaunchKernel(
             kernel,
             *launch_parameters,  # [ grid[x-z], block[x-z] ]
@@ -126,8 +121,6 @@ def create_loader_for_device_function(device_func, hat_details):
             data,  # data
         )
         hipDeviceSynchronize()
-        # cuStreamSynchronize()
-        # ASSERT_DRV(err)
 
         transfer_mem_rocm_to_host(device_args=device_mem,
                                   host_args=args,

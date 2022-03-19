@@ -3,7 +3,7 @@ import pathlib
 import sys
 import numpy as np
 from functools import reduce
-from typing import Dict, List
+from typing import List
 
 # CUDA stuff
 # TODO: move from pvnrtc module to cuda entirely to reduce dependencies

@@ -1,7 +1,7 @@
 """
 Python interface to hiprtc
 lifted from https://github.com/jatinx/PyHIP
-Once PRs #2 and #3 get closed, move to a submodule
+TODO: move to a submodule
 """
 
 import sys, ctypes
