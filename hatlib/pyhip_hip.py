@@ -13,11 +13,9 @@ if 'linux' in sys.platform:
     _libhip = ctypes.cdll.LoadLibrary(_libhip_libname)
 else:
     # Currently we do not support windows, mainly because I do not have a windows build of hip
-    print("ROCm support is only available on Linux")
     raise RuntimeError('Only linux is supported')
 
 if _libhip == None:
-    print("Could not find HIP library!")
     raise OSError('hiprtc library not found')
 
 
