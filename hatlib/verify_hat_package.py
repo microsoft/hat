@@ -23,7 +23,7 @@ def verify_hat_package(hat_path):
         for i, func_input in enumerate(func_inputs):
             print(f"\tInput {i}: {','.join(map(str, func_input[:32]))}")
 
-        fn(inputs[name])
+        fn(*inputs[name])
 
         print("Inputs after function call:")
         for i, func_input in enumerate(func_inputs):
