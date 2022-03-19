@@ -48,7 +48,6 @@ try:
         import cuda_loader
 except:
     CUDA_AVAILABLE = False
-    NOTIFY_ABOUT_CUDA = True
 else:
     CUDA_AVAILABLE = True
 
@@ -59,9 +58,11 @@ try:
         import rocm_loader
 except:
     ROCM_AVAILABLE = False
-    NOTIFY_ABOUT_ROCM = True
 else:
     ROCM_AVAILABLE = True
+
+NOTIFY_ABOUT_CUDA = not CUDA_AVAILABLE
+NOTIFY_ABOUT_ROCM = not ROCM_AVAILABLE
 
 
 def generate_input_sets_for_hat_file(hat_path):
