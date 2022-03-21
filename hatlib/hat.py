@@ -26,13 +26,11 @@ For example:
 """
 
 import ctypes
-import numpy as np
 import pathlib
 import sys
 import toml
 from collections import OrderedDict
-from dataclasses import dataclass
-from typing import Any, Tuple
+from functools import partial
 
 try:
     from . import hat_file
@@ -109,7 +107,7 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile,
             function_name = func_desc["name"]
             hat_library: ctypes.CDLL = hat_details.shared_lib
 
-            def f(*args):
+            def f(function_name, *args):
                 # verify that the (numpy) input args match the description in
                 # the hat file
                 arg_infos = [ArgInfo(d) for d in hat_arg_descriptions]
@@ -124,7 +122,7 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile,
                 # call the function in the hat package
                 hat_library[function_name](*hat_args)
 
-            yield func_name, f
+            yield func_name, partial(f, function_name)
 
         else:
             device_func = hat_description.get("device_functions",
