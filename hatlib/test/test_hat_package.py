@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
+import sys
+import os
 import unittest
+from pathlib import Path
 
-import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from hat_file import (CallingConventionType, CompiledWith, Declaration,
@@ -13,6 +14,7 @@ from hat_file import (CallingConventionType, CompiledWith, Declaration,
 
 
 class HATFile_test(unittest.TestCase):
+
     def test_file_basic_serialize(self):
         # Construct a HAT file from scratch
         # Start with a function definition
@@ -59,8 +61,8 @@ class HATFile_test(unittest.TestCase):
             # Remove the file
             os.remove(test_file_name)
 
-        # Do basic verification that the deserialized HatFile contains what we specified
-        # when we created the HATFile directly
+        # Do basic verification that the deserialized HatFile contains what we
+        # specified when we created the HATFile directly
         self.assertEqual(hat_file1.description, hat_file2.description)
         self.assertEqual(hat_file1.dependencies, hat_file2.dependencies)
         self.assertEqual(hat_file1.compiled_with.to_table(),
