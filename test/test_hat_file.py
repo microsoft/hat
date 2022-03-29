@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-import sys
 import os
+import sys
 import unittest
 from pathlib import Path
 from hatlib import (
@@ -72,7 +72,7 @@ class HATFile_test(unittest.TestCase):
     def test_file_basic_deserialize(self):
         # Load a HAT file from the samples directory
         hat_file1 = HATFile.Deserialize(
-            os.path.join(os.path.dirname(__file__), "..", "..", "samples", "sample_gemm_library.hat")
+            os.path.join(os.path.dirname(__file__), "..", "samples", "sample_gemm_library.hat")
         )
         description = {
             "author": "John Doe",
@@ -84,7 +84,7 @@ class HATFile_test(unittest.TestCase):
         # Verify the description has entries we expect
         self.assertLessEqual(description.items(), hat_file1.description.to_table().items())
         # Verify the list of functions
-        self.assertTrue(len(hat_file1.function_map) == 2)
+        self.assertTrue(len(hat_file1.functions) == 2)
         self.assertTrue("GEMM_B94D27B9934D3E08" in hat_file1.function_map)
         self.assertTrue("blas_sgemm_row_major" in hat_file1.function_map)
 
