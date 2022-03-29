@@ -4,12 +4,7 @@ import numpy as np
 import os
 import sys
 import unittest
-
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-
-from hat import load
-from hat_to_dynamic import create_dynamic_package
-from hat_to_lib import create_static_package
+from hatlib import load, create_dynamic_package, create_static_package
 
 
 class HAT_test(unittest.TestCase):
@@ -32,17 +27,13 @@ class HAT_test(unittest.TestCase):
 
         for mode in [acc.Package.Mode.RELEASE, acc.Package.Mode.DEBUG]:
             package_name = f"HAT_test_load_{mode.value}"
-            package.build(name=package_name,
-                          output_dir="test_acccgen",
-                          format=acc.Package.Format.HAT_STATIC,
-                          mode=mode)
+            package.build(name=package_name, output_dir="test_acccgen", format=acc.Package.Format.HAT_STATIC, mode=mode)
 
-            create_dynamic_package(f"test_acccgen/{package_name}.hat",
-                                   f"test_acccgen/{package_name}.dyn.hat")
+            create_dynamic_package(f"test_acccgen/{package_name}.hat", f"test_acccgen/{package_name}.dyn.hat")
 
-            hat_package = load(f"test_acccgen/{package_name}.dyn.hat")
+            _, func_dict = load(f"test_acccgen/{package_name}.dyn.hat")
 
-            for name in hat_package.names:
+            for name in func_dict.names:
                 print(name)
 
             # create numpy arguments with the correct shape and dtype
@@ -51,7 +42,7 @@ class HAT_test(unittest.TestCase):
             B_ref = B + A
 
             # find the function by basename
-            test_function = hat_package["test_function"]
+            test_function = func_dict["test_function"]
             test_function(A, B)
 
             # check for correctness
@@ -59,7 +50,7 @@ class HAT_test(unittest.TestCase):
 
             # find the function by actual name
             B_ref = B + A
-            test_function1 = hat_package[function.name]
+            test_function1 = func_dict[function.name]
             test_function1(A, B)
 
             # check for correctness

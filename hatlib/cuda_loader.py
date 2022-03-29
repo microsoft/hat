@@ -10,19 +10,15 @@ from typing import List
 from pynvrtc.compiler import Program
 from cuda import cuda, nvrtc
 
-try:
-    from .arg_info import ArgInfo, verify_args
-    from .gpu_headers import CUDA_HEADER_MAP
-except:
-    from arg_info import ArgInfo, verify_args
-    from gpu_headers import CUDA_HEADER_MAP
+from .arg_info import ArgInfo, verify_args
+from .gpu_headers import CUDA_HEADER_MAP
+from .hat_file import Function
 
 
 def ASSERT_DRV(err):
     if isinstance(err, cuda.CUresult):
         if err != cuda.CUresult.CUDA_SUCCESS:
-            raise RuntimeError("Cuda Error: {}".format(
-                cuda.cuGetErrorString(err)[1].decode('utf-8')))
+            raise RuntimeError("Cuda Error: {}".format(cuda.cuGetErrorString(err)[1].decode('utf-8')))
     elif isinstance(err, nvrtc.nvrtcResult):
         if err != nvrtc.nvrtcResult.NVRTC_SUCCESS:
             raise RuntimeError("Nvrtc Error: {}".format(err))
@@ -51,15 +47,12 @@ def _find_cuda_incl_path() -> pathlib.Path:
 def compile_cuda_program(cuda_src_path: pathlib.Path, func_name):
     src = cuda_src_path.read_text()
 
-    prog = Program(src=src,
-                   name=func_name,
-                   headers=CUDA_HEADER_MAP.values(),
-                   include_names=CUDA_HEADER_MAP.keys())
+    prog = Program(src=src, name=func_name, headers=CUDA_HEADER_MAP.values(), include_names=CUDA_HEADER_MAP.keys())
     ptx = prog.compile([
         '-use_fast_math',
         '-default-device',
         '-std=c++11',
-        '-arch=sm_52',  # TODO: is this needed?
+        '-arch=sm_52',    # TODO: is this needed?
     ])
 
     return ptx
@@ -91,27 +84,20 @@ def get_func_from_ptx(ptx, func_name):
 
 
 def _arg_size(arg_info: ArgInfo):
-    return arg_info.element_num_bytes * reduce(lambda x, y: x * y,
-                                               arg_info.numpy_shape)
+    return arg_info.element_num_bytes * reduce(lambda x, y: x * y, arg_info.numpy_shape)
 
 
-def transfer_mem_host_to_cuda(device_args: List, host_args: List[np.array],
-                              arg_infos: List[ArgInfo]):
-    for device_arg, host_arg, arg_info in zip(device_args, host_args,
-                                              arg_infos):
+def transfer_mem_host_to_cuda(device_args: List, host_args: List[np.array], arg_infos: List[ArgInfo]):
+    for device_arg, host_arg, arg_info in zip(device_args, host_args, arg_infos):
         if 'input' in arg_info.usage:
-            err, = cuda.cuMemcpyHtoD(device_arg, host_arg.ctypes.data,
-                                     _arg_size(arg_info))
+            err, = cuda.cuMemcpyHtoD(device_arg, host_arg.ctypes.data, _arg_size(arg_info))
             ASSERT_DRV(err)
 
 
-def transfer_mem_cuda_to_host(device_args: List, host_args: List[np.array],
-                              arg_infos: List[ArgInfo]):
-    for device_arg, host_arg, arg_info in zip(device_args, host_args,
-                                              arg_infos):
+def transfer_mem_cuda_to_host(device_args: List, host_args: List[np.array], arg_infos: List[ArgInfo]):
+    for device_arg, host_arg, arg_info in zip(device_args, host_args, arg_infos):
         if 'output' in arg_info.usage:
-            err, = cuda.cuMemcpyDtoH(host_arg.ctypes.data, device_arg,
-                                     _arg_size(arg_info))
+            err, = cuda.cuMemcpyDtoH(host_arg.ctypes.data, device_arg, _arg_size(arg_info))
             ASSERT_DRV(err)
 
 
@@ -133,10 +119,12 @@ def device_args_to_ptr_list(device_args: List):
     return ptrs
 
 
-def create_loader_for_device_function(device_func, hat_dir_path: str):
-    cuda_src_path: pathlib.Path = pathlib.Path(
-        hat_dir_path) / device_func["provider"]
-    func_name = device_func["name"]
+def create_loader_for_device_function(device_func: Function, hat_dir_path: str):
+    if not device_func.provider:
+        raise RuntimeError("Expected a provider for the device function")
+
+    cuda_src_path: pathlib.Path = pathlib.Path(hat_dir_path) / device_func.provider
+    func_name = device_func.name
 
     ptx = compile_cuda_program(cuda_src_path, func_name)
 
@@ -144,16 +132,14 @@ def create_loader_for_device_function(device_func, hat_dir_path: str):
 
     kernel = get_func_from_ptx(ptx, func_name)
 
-    hat_arg_descriptions = device_func["arguments"]
+    hat_arg_descriptions = device_func.arguments
     arg_infos = [ArgInfo(d) for d in hat_arg_descriptions]
-    launch_parameters = device_func["launch_parameters"]
+    launch_parameters = device_func.launch_parameters
 
     def f(*args):
         verify_args(args, arg_infos, func_name)
         device_mem = allocate_cuda_mem(arg_infos)
-        transfer_mem_host_to_cuda(device_args=device_mem,
-                                  host_args=args,
-                                  arg_infos=arg_infos)
+        transfer_mem_host_to_cuda(device_args=device_mem, host_args=args, arg_infos=arg_infos)
         ptrs = device_args_to_ptr_list(device_mem)
 
         err, stream = cuda.cuStreamCreate(0)
@@ -161,18 +147,16 @@ def create_loader_for_device_function(device_func, hat_dir_path: str):
 
         err, = cuda.cuLaunchKernel(
             kernel,
-            *launch_parameters,  # [ grid[x-z], block[x-z] ]
-            0,  # dynamic shared memory
-            stream,  # stream
-            ptrs.ctypes.data,  # kernel arguments
-            0,  # extra (ignore)
+            *launch_parameters,    # [ grid[x-z], block[x-z] ]
+            0,    # dynamic shared memory
+            stream,    # stream
+            ptrs.ctypes.data,    # kernel arguments
+            0,    # extra (ignore)
         )
         ASSERT_DRV(err)
         err, = cuda.cuStreamSynchronize(stream)
         ASSERT_DRV(err)
 
-        transfer_mem_cuda_to_host(device_args=device_mem,
-                                  host_args=args,
-                                  arg_infos=arg_infos)
+        transfer_mem_cuda_to_host(device_args=device_mem, host_args=args, arg_infos=arg_infos)
 
     return f
