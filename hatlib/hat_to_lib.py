@@ -23,12 +23,8 @@ import os
 import argparse
 import shutil
 
-if __package__:
-    from .hat_file import HATFile, OperatingSystem
-    from .platform_utilities import get_platform, ensure_compiler_in_path, run_command
-else:
-    from hat_file import HATFile, OperatingSystem
-    from platform_utilities import get_platform, ensure_compiler_in_path, run_command
+from .hat_file import HATFile, OperatingSystem
+from .platform_utilities import get_platform, ensure_compiler_in_path, run_command
 
 
 def linux_create_static_package(input_hat_binary_path, output_hat_path, hat_file, quiet=True):

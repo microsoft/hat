@@ -9,14 +9,8 @@ import toml
 import traceback
 from pathlib import Path
 
-if __package__:
-    from .hat_file import HATFile
-    from .hat_to_dynamic import create_dynamic_package
-    from .hat import load, ArgInfo, generate_input_sets_for_func
-else:
-    from hat_file import HATFile
-    from hat_to_dynamic import create_dynamic_package
-    from hat import load, ArgInfo, generate_input_sets_for_func
+from .hat_file import HATFile
+from .hat import load, generate_input_sets_for_func
 
 
 class Benchmark:

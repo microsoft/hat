@@ -5,10 +5,7 @@ from ast import arg
 import enum
 import sys
 
-if __package__:
-    from . import hat
-else:
-    import hat
+from . import hat
 
 
 def verify_hat_package(hat_path):

@@ -28,15 +28,6 @@ import numpy as np
 from typing import Tuple, Union
 from functools import reduce
 
-# try:
-#     from . import hat_file
-#     from . import hat_package
-#     from .arg_info import ArgInfo
-# except:
-#     import hat_file
-#     import hat_package
-#     from arg_info import ArgInfo
-
 from . import hat_file
 from . import hat_package
 from .arg_info import ArgInfo

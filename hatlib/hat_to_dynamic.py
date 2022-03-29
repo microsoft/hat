@@ -23,14 +23,9 @@ import argparse
 import shutil
 from secrets import token_hex
 
-if __package__:
-    from .hat_file import HATFile, OperatingSystem
-    from .hat_package import HATPackage
-    from .platform_utilities import get_platform, ensure_compiler_in_path, run_command
-else:
-    from hat_file import HATFile, OperatingSystem
-    from hat_package import HATPackage
-    from platform_utilities import get_platform, ensure_compiler_in_path, run_command
+from .hat_file import HATFile, OperatingSystem
+from .hat_package import HATPackage
+from .platform_utilities import get_platform, ensure_compiler_in_path, run_command
 
 
 def linux_create_dynamic_package(input_hat_path,

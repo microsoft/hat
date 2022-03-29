@@ -4,7 +4,8 @@ lifted from https://github.com/jatinx/PyHIP
 TODO: move to a submodule
 """
 
-import sys, ctypes
+import ctypes
+import sys
 
 _libhip_libname = 'libamdhip64.so'
 
@@ -15,7 +16,7 @@ else:
     # Currently we do not support windows, mainly because I do not have a windows build of hip
     raise RuntimeError('Only linux is supported')
 
-if _libhip == None:
+if _libhip is None:
     raise OSError('hiprtc library not found')
 
 
@@ -482,7 +483,7 @@ def hipMalloc(count, ctype=None):
     ptr = ctypes.c_void_p()
     status = _libhip.hipMalloc(ctypes.byref(ptr), count)
     hipCheckStatus(status)
-    if ctype != None:
+    if ctype is not None:
         ptr = ctypes.cast(ptr, ctypes.POINTER(ctype))
     return ptr
 
