@@ -26,41 +26,21 @@ For example:
 """
 
 import ctypes
-import pathlib
+import os
 import sys
-import toml
+from typing import Tuple, Union
 from collections import OrderedDict
 from functools import partial
 
 try:
+    from . import hat_package
     from . import hat_file
     from .arg_info import ArgInfo, verify_args, generate_input_sets
 except:
     import hat_file
     from arg_info import ArgInfo, verify_args, generate_input_sets
 
-try:
-    try:
-        from . import cuda_loader
-    except ModuleNotFoundError:
-        import cuda_loader
-except:
-    CUDA_AVAILABLE = False
-else:
-    CUDA_AVAILABLE = True
 
-try:
-    try:
-        from . import rocm_loader
-    except ModuleNotFoundError:
-        import rocm_loader
-except:
-    ROCM_AVAILABLE = False
-else:
-    ROCM_AVAILABLE = True
-
-NOTIFY_ABOUT_CUDA = not CUDA_AVAILABLE
-NOTIFY_ABOUT_ROCM = not ROCM_AVAILABLE
 
 
 def generate_input_sets_for_hat_file(hat_path):
@@ -119,7 +99,8 @@ def hat_description_to_python_function(hat_description: hat_file.HATFile,
                 # call the function in the hat package
                 hat_library[function_name](*hat_args)
 
-            yield func_name, partial(f, func_desc["name"], func_desc["arguments"])
+            yield func_name, partial(f, func_desc["name"],
+                                     func_desc["arguments"])
 
         else:
             device_func = hat_description.get("device_functions",
@@ -182,3 +163,29 @@ def load(hat_path):
     function_dict = AttributeDict(
         dict(hat_description_to_python_function(t, hat_details)))
     return function_dict
+
+
+def load2(
+    hat_path,
+    try_dynamic_load=True
+) -> Tuple[hat_package.HATPackage, Union[AttributeDict, None]]:
+    """
+    Returns a HATPackage object loaded from the path provided. If
+    `try_dynamic_load` is True, a non-empty dictionary object that can be used
+    to invoke the functions in the HATPackage on the current system is the
+    second returned object, `None` otherwise.
+    """
+
+    pkg = hat_package.HATPackage(hat_file_path=hat_path)
+
+    # TODO: Add heuristics to determine whether loading is possible on this system
+    function_dict = None
+
+    if try_dynamic_load:
+        try:
+            # TODO: Figure out how to communicate failure better
+            function_dict = hat_package.hat_package_to_func_dict(pkg)
+        except:
+            pass
+
+    return pkg, function_dict

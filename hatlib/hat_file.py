@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 # Utility to parse the TOML metadata from HAT files
-from enum import Enum
-from dataclasses import dataclass, field
 import os
-from pathlib import Path
-
 import tomlkit
+from dataclasses import dataclass, field
+from enum import Enum
+from pathlib import Path
+from typing import Dict, List
 
 # TODO : type-checking on leaf node values
 
@@ -189,7 +189,7 @@ class Parameter:
 @dataclass
 class Function(AuxiliarySupportedTable):
     # required
-    arguments: list = field(default_factory=list)
+    arguments: List[Parameter] = field(default_factory=list)
     calling_convention: CallingConventionType = None
     description: str = ""
     hat_file: any = None
@@ -335,10 +335,9 @@ class Target:
 
                 runtime = table.get("runtime", "")
 
-                return Target.Required.CPU(
-                    architecture=table["architecture"],
-                    extensions=table["extensions"],
-                    runtime=runtime)
+                return Target.Required.CPU(architecture=table["architecture"],
+                                           extensions=table["extensions"],
+                                           runtime=runtime)
 
         @dataclass
         class GPU:
@@ -573,8 +572,8 @@ class HATFile:
     _device_function_table: DeviceFunctionTable = None
     functions: list = field(default_factory=list)
     device_functions: list = field(default_factory=list)
-    function_map: dict = field(default_factory=dict)
-    device_function_map: list = field(default_factory=list)
+    function_map: Dict[str, Function] = field(default_factory=dict)
+    device_function_map: Dict[str, Function] = field(default_factory=dict)
     target: Target = None
     dependencies: Dependencies = None
     compiled_with: CompiledWith = None
@@ -589,8 +588,8 @@ class HATFile:
         self.function_map = self._function_table.function_map
         for func in self.functions:
             func.hat_file = self
-            func.link_target = Path(self.path).resolve(
-            ).parent / self.dependencies.link_target
+            func.link_target = Path(
+                self.path).resolve().parent / self.dependencies.link_target
 
         if not self._device_function_table:
             self._device_function_table = DeviceFunctionTable({})
@@ -620,6 +619,10 @@ class HATFile:
             out_file.write(tomlkit.dumps(root_table))
             out_file.write(self.HATEpilogue.format(name))
 
+    def generate_declarations(self, prefix="", suffix=""):
+        for f in self.functions:
+            ...
+
     @staticmethod
     def Deserialize(filepath) -> "HATFile":
         """Creates an instance of A HATFile class by deserializing the contents of the file at `filepath`"""
@@ -635,20 +638,19 @@ class HATFile:
         if DeviceFunctionTable.TableName in hat_toml:
             device_function_table = DeviceFunctionTable.parse_from_table(
                 hat_toml[DeviceFunctionTable.TableName])
-        hat_file = HATFile(
-            name=name,
-            description=Description.parse_from_table(
-                hat_toml[Description.TableName]),
-            _function_table=FunctionTable.parse_from_table(
-                hat_toml[FunctionTable.TableName]),
-            _device_function_table=device_function_table,
-            target=Target.parse_from_table(
-                hat_toml[Target.TableName]),
-            dependencies=Dependencies.parse_from_table(
-                hat_toml[Dependencies.TableName]),
-            compiled_with=CompiledWith.parse_from_table(
-                hat_toml[CompiledWith.TableName]),
-            declaration=Declaration.parse_from_table(
-                hat_toml[Declaration.TableName]),
-            path=Path(filepath).resolve())
+        hat_file = HATFile(name=name,
+                           description=Description.parse_from_table(
+                               hat_toml[Description.TableName]),
+                           _function_table=FunctionTable.parse_from_table(
+                               hat_toml[FunctionTable.TableName]),
+                           _device_function_table=device_function_table,
+                           target=Target.parse_from_table(
+                               hat_toml[Target.TableName]),
+                           dependencies=Dependencies.parse_from_table(
+                               hat_toml[Dependencies.TableName]),
+                           compiled_with=CompiledWith.parse_from_table(
+                               hat_toml[CompiledWith.TableName]),
+                           declaration=Declaration.parse_from_table(
+                               hat_toml[Declaration.TableName]),
+                           path=Path(filepath).resolve())
         return hat_file

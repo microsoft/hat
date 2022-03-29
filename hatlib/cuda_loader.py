@@ -133,9 +133,9 @@ def device_args_to_ptr_list(device_args: List):
     return ptrs
 
 
-def create_loader_for_device_function(device_func, hat_details):
-    hat_path: pathlib.Path = hat_details.path
-    cuda_src_path: pathlib.Path = hat_path.parent / device_func["provider"]
+def create_loader_for_device_function(device_func, hat_dir_path: str):
+    cuda_src_path: pathlib.Path = pathlib.Path(
+        hat_dir_path) / device_func["provider"]
     func_name = device_func["name"]
 
     ptx = compile_cuda_program(cuda_src_path, func_name)

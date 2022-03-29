@@ -86,9 +86,9 @@ def device_args_to_ptr_list(device_args: List):
     return ptrs
 
 
-def create_loader_for_device_function(device_func, hat_details):
-    hat_path: pathlib.Path = hat_details.path
-    rocm_src_path: pathlib.Path = hat_path.parent / device_func["provider"]
+def create_loader_for_device_function(device_func, hat_dir_path: str):
+    rocm_src_path: pathlib.Path = pathlib.Path(
+        hat_dir_path) / device_func["provider"]
     func_name = device_func["name"]
 
     rocm_program = compile_rocm_program(rocm_src_path, func_name)
