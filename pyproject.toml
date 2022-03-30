@@ -9,7 +9,7 @@ local_scheme = "no-local-version"
 [tool.yapf]
 allow_multiline_dictionary_keys = false
 allow_split_before_dict_value = true
-based_on_style = pep8
+based_on_style = "pep8"
 coalesce_brackets = true
 column_limit = 120
 dedent_closing_brackets = true
