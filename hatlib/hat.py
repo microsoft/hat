@@ -80,10 +80,10 @@ def load(
     function_dict = None
 
     if try_dynamic_load:
-        # try:
-        # TODO: Figure out how to communicate failure better
-        function_dict = hat_package.hat_package_to_func_dict(pkg)
-        # except:
-        # pass
+        try:
+            function_dict = hat_package.hat_package_to_func_dict(pkg)
+        except:
+            # TODO: Figure out how to communicate failure better
+            pass
 
     return pkg, function_dict

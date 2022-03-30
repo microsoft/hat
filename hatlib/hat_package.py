@@ -114,7 +114,7 @@ def _load_pkg_binary_module(hat_pkg: HATPackage):
     return shared_lib
 
 
-def hat_package_to_func_dict(hat_pkg: HATPackage) -> Union[AttributeDict, None]:
+def hat_package_to_func_dict(hat_pkg: HATPackage) -> AttributeDict:
 
     try:
         try:
