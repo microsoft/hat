@@ -21,6 +21,7 @@ class Benchmark:
         A compilation toolchain in your PATH: cl.exe & link.exe (Windows), gcc (Linux), or clang (macOS)
     """
     def __init__(self, hat_path: str):
+        self.hat_path = hat_path
         self.hat_package, self.func_dict = load(self.hat_path)
         self.hat_functions = self.func_dict.names
 
