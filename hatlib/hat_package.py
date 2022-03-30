@@ -105,16 +105,16 @@ def _load_pkg_binary_module(hat_pkg: HATPackage):
             # device function section?
             raise RuntimeError(f"Unsupported HAT library extension: {extension}")
 
-        hat_binary_path = hat_pkg.link_target_path
+        hat_binary_path = os.path.abspath(hat_pkg.link_target_path)
 
         # load the hat_library:
-        hat_library = ctypes.cdll.LoadLibrary(str(hat_binary_path)) if extension else None
+        hat_library = ctypes.cdll.LoadLibrary(hat_binary_path) if extension else None
         shared_lib = hat_library
 
     return shared_lib
 
 
-def hat_package_to_func_dict(hat_pkg: HATPackage) -> Union[AttributeDict, None]:
+def hat_package_to_func_dict(hat_pkg: HATPackage) -> AttributeDict:
 
     try:
         try:

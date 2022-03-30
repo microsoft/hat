@@ -7,8 +7,8 @@ from typing import List
 from .arg_info import ArgInfo, verify_args
 from .hat_file import Function
 from .gpu_headers import ROCM_HEADER_MAP
-from .pyhip_hip import *
-from .pyhip_hiprtc import *
+from .pyhip.hip import *
+from .pyhip.hiprtc import *
 
 
 def _arg_size(arg_info: ArgInfo):
