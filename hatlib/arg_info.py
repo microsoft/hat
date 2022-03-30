@@ -51,7 +51,22 @@ class ArgInfo:
             self.numpy_dtype = np.int8
             self.element_num_bytes = 1
             self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_int8)
-
+        elif self.hat_declared_type == "uint64_t*":
+            self.numpy_dtype = np.uint64
+            self.element_num_bytes = 8
+            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_uint64)
+        elif self.hat_declared_type == "uint32_t*":
+            self.numpy_dtype = np.uint32
+            self.element_num_bytes = 4
+            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_uint32)
+        elif self.hat_declared_type == "uint16_t*":
+            self.numpy_dtype = np.uint16
+            self.element_num_bytes = 2
+            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_uint16)
+        elif self.hat_declared_type == "uint8_t*":
+            self.numpy_dtype = np.uint8
+            self.element_num_bytes = 1
+            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_uint8)
         else:
             raise NotImplementedError(
                 f"Unsupported declared_type {self.hat_declared_type} in hat file"
