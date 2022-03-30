@@ -54,13 +54,13 @@ def allocate_rocm_mem(arg_infos: List[ArgInfo]):
 
 def transfer_mem_host_to_rocm(device_args: List, host_args: List[np.array], arg_infos: List[ArgInfo]):
     for device_arg, host_arg, arg_info in zip(device_args, host_args, arg_infos):
-        if 'input' in arg_info.usage:
+        if 'input' in arg_info.usage.value:
             hipMemcpy_htod(dst=device_arg, src=host_arg.ctypes.data, count=_arg_size(arg_info))
 
 
 def transfer_mem_rocm_to_host(device_args: List, host_args: List[np.array], arg_infos: List[ArgInfo]):
     for device_arg, host_arg, arg_info in zip(device_args, host_args, arg_infos):
-        if 'output' in arg_info.usage:
+        if 'output' in arg_info.usage.value:
             hipMemcpy_dtoh(dst=host_arg.ctypes.data, src=device_arg, count=_arg_size(arg_info))
 
 

@@ -89,14 +89,14 @@ def _arg_size(arg_info: ArgInfo):
 
 def transfer_mem_host_to_cuda(device_args: List, host_args: List[np.array], arg_infos: List[ArgInfo]):
     for device_arg, host_arg, arg_info in zip(device_args, host_args, arg_infos):
-        if 'input' in arg_info.usage:
+        if 'input' in arg_info.usage.value:
             err, = cuda.cuMemcpyHtoD(device_arg, host_arg.ctypes.data, _arg_size(arg_info))
             ASSERT_DRV(err)
 
 
 def transfer_mem_cuda_to_host(device_args: List, host_args: List[np.array], arg_infos: List[ArgInfo]):
     for device_arg, host_arg, arg_info in zip(device_args, host_args, arg_infos):
-        if 'output' in arg_info.usage:
+        if 'output' in arg_info.usage.value:
             err, = cuda.cuMemcpyDtoH(host_arg.ctypes.data, device_arg, _arg_size(arg_info))
             ASSERT_DRV(err)
 

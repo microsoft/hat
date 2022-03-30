@@ -16,7 +16,7 @@ class ArgInfo:
     numpy_dtype: type
     element_num_bytes: int
     ctypes_pointer_type: Any
-    usage: str = ""
+    usage: hat_file.UsageType = None
 
     def __init__(self, param_description: hat_file.Parameter):
         self.hat_declared_type = param_description.declared_type
