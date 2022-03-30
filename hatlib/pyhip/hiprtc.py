@@ -4,7 +4,8 @@ lifted from https://github.com/jatinx/PyHIP
 TODO: move to a submodule
 """
 
-import sys, ctypes
+import ctypes
+import sys
 
 # _libhiprtc_libname = 'libhiprtc.so' # Currently its the same library
 _libhiprtc_libname = 'libamdhip64.so'
@@ -16,7 +17,7 @@ else:
     # Currently we do not support windows, mainly because I do not have a windows build of hip
     raise RuntimeError('Only linux is supported')
 
-if _libhiprtc == None:
+if _libhiprtc is None:
     raise OSError('hiprtc library not found')
 
 
