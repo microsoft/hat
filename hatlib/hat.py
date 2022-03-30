@@ -33,25 +33,40 @@ from . import hat_package
 from .arg_info import ArgInfo
 
 
-def generate_input_sets_for_func(func: hat_file.Function, input_sets_minimum_size_MB: int = 0, num_additional: int = 0):
+def generate_input_sets_for_func(func: hat_file.Function,
+                                 input_sets_minimum_size_MB: int = 0,
+                                 num_additional: int = 0):
     parameters = list(map(ArgInfo, func.arguments))
-    shapes_to_sizes = [reduce(lambda x, y: x * y, p.numpy_shape) for p in parameters]
-    set_size = reduce(lambda x, y: x + y, map(lambda size, p: size * p.element_num_bytes, shapes_to_sizes, parameters))
+    shapes_to_sizes = [
+        reduce(lambda x, y: x * y, p.numpy_shape) for p in parameters
+    ]
+    set_size = reduce(
+        lambda x, y: x + y,
+        map(lambda size, p: size * p.element_num_bytes, shapes_to_sizes,
+            parameters))
 
-    num_input_sets = (input_sets_minimum_size_MB * 1024 * 1024 // set_size) + 1 + num_additional
-    input_sets = [[np.random.random(p.numpy_shape).astype(p.numpy_dtype) for p in parameters]
-                  for _ in range(num_input_sets)]
+    num_input_sets = (input_sets_minimum_size_MB * 1024 * 1024 //
+                      set_size) + 1 + num_additional
+    input_sets = [[
+        np.random.random(p.numpy_shape).astype(p.numpy_dtype)
+        for p in parameters
+    ] for _ in range(num_input_sets)]
 
     return input_sets[0] if len(input_sets) == 1 else input_sets
 
 
 def generate_input_sets_for_hat_file(hat_path):
     t = hat_file.HATFile.Deserialize(hat_path)
-    return {func_name: generate_input_sets_for_func(func_desc)
-            for func_name, func_desc in t.function_map.items()}
+    return {
+        func_name: generate_input_sets_for_func(func_desc)
+        for func_name, func_desc in t.function_map.items()
+    }
 
 
-def load(hat_path, try_dynamic_load=True) -> Tuple[hat_package.HATPackage, Union[hat_package.AttributeDict, None]]:
+def load(
+    hat_path,
+    try_dynamic_load=True
+) -> Tuple[hat_package.HATPackage, Union[hat_package.AttributeDict, None]]:
     """
     Returns a HATPackage object loaded from the path provided. If
     `try_dynamic_load` is True, a non-empty dictionary object that can be used
@@ -65,10 +80,10 @@ def load(hat_path, try_dynamic_load=True) -> Tuple[hat_package.HATPackage, Union
     function_dict = None
 
     if try_dynamic_load:
-        try:
-            # TODO: Figure out how to communicate failure better
-            function_dict = hat_package.hat_package_to_func_dict(pkg)
-        except:
-            pass
+        # try:
+        # TODO: Figure out how to communicate failure better
+        function_dict = hat_package.hat_package_to_func_dict(pkg)
+        # except:
+        # pass
 
     return pkg, function_dict
