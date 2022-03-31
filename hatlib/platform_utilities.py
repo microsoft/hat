@@ -8,10 +8,7 @@ import shutil
 import subprocess
 import sys
 
-if __package__:
-    from .hat_file import OperatingSystem
-else:
-    from hat_file import OperatingSystem
+from .hat_file import OperatingSystem
 
 
 def _preprocess_command(command_to_run, shell):
@@ -33,13 +30,8 @@ def _dump_file_contents(iostream):
 
 
 def run_command(
-        command_to_run,
-        working_directory=None,
-        stdout=None,
-        stderr=None,
-        shell=False,
-        pretend=False,
-        quiet=True):
+    command_to_run, working_directory=None, stdout=None, stderr=None, shell=False, pretend=False, quiet=True
+):
     if not working_directory:
         working_directory = os.getcwd()
 
@@ -50,20 +42,14 @@ def run_command(
     command_to_run = _preprocess_command(command_to_run, shell)
 
     if not pretend:
-        with subprocess.Popen(
-                command_to_run,
-                close_fds=(platform.system() != "Windows"),
-                shell=shell,
-                stdout=stdout,
-                stderr=stderr,
-                cwd=working_directory) as proc:
+        with subprocess.Popen(command_to_run, close_fds=(platform.system() != "Windows"), shell=shell, stdout=stdout,
+                              stderr=stderr, cwd=working_directory) as proc:
 
             proc.wait()
             if proc.returncode:
                 _dump_file_contents(stderr)
                 _dump_file_contents(stdout)
-                raise subprocess.CalledProcessError(
-                    proc.returncode, command_to_run)
+                raise subprocess.CalledProcessError(proc.returncode, command_to_run)
 
 
 def get_platform():
@@ -84,8 +70,7 @@ def linux_ensure_compiler_in_path():
     Prompts the user if not found."""
     compiler = os.environ.get("CXX") or (os.environ.get("CC") or "gcc")
     if not shutil.which(compiler):
-        sys.exit(
-            'ERROR: Could not find any valid C or C++ compiler, please install gcc before continuing')
+        sys.exit('ERROR: Could not find any valid C or C++ compiler, please install gcc before continuing')
 
 
 def windows_ensure_compiler_in_path():
@@ -94,15 +79,14 @@ def windows_ensure_compiler_in_path():
     import vswhere
     vs_path = vswhere.get_latest_path()
     if not vs_path:
-        sys.exit(
-            "ERROR: Could not find Visual Studio, please ensure that you have Visual Studio installed")
+        sys.exit("ERROR: Could not find Visual Studio, please ensure that you have Visual Studio installed")
 
     # Check if cl.exe is in PATH
-    if not shutil.which("cl"):  # returns 0 if found, !0 otherwise
-        vcvars_script_path = os.path.join(
-            vs_path, r"VC\Auxiliary\Build\vcvars64.bat")
+    if not shutil.which("cl"):    # returns 0 if found, !0 otherwise
+        vcvars_script_path = os.path.join(vs_path, r"VC\Auxiliary\Build\vcvars64.bat")
         sys.exit(
-            f'ERROR: Could not find cl.exe, please run "{vcvars_script_path}" (including quotes) to setup your command prompt')
+            f'ERROR: Could not find cl.exe, please run "{vcvars_script_path}" (including quotes) to setup your command prompt'
+        )
 
 
 def ensure_compiler_in_path():
