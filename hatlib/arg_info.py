@@ -16,7 +16,7 @@ ARG_TYPES = {
     "uint16_t*" : [ ctypes.c_uint16, "uint16" ],
     "uint32_t*" : [ ctypes.c_uint32, "uint32" ],
     "uint64_t*" : [ ctypes.c_uint64, "uint64" ],
-    "float16_t*" : [ ctypes.c_uint16, "float16" ],
+    "float16_t*" : [ ctypes.c_uint16, "float16" ], # same bitwidth as uint16
     "float*" : [ ctypes.c_float, "float32" ],
     "double*" : [ ctypes.c_double, "float64" ],
 }
