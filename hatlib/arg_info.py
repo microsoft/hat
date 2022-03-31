@@ -8,17 +8,17 @@ from . import hat_file
 
 # hat_declared_type : [ ctype, dtype_str ]
 ARG_TYPES = {
+    "int8_t*" : [ ctypes.c_int8, "int8" ],
+    "int16_t*" : [ ctypes.c_int16, "int16" ],
+    "int32_t*" : [ ctypes.c_int32, "int32" ],
+    "int64_t*" : [ ctypes.c_int64, "int64" ],
+    "uint8_t*" : [ ctypes.c_uint8, "uint8" ],
+    "uint16_t*" : [ ctypes.c_uint16, "uint16" ],
+    "uint32_t*" : [ ctypes.c_uint32, "uint32" ],
+    "uint64_t*" : [ ctypes.c_int64, "uint64" ],
     "float16_t*" : [ ctypes.c_uint16, "float16" ],
     "float*" : [ ctypes.c_float, "float32" ],
     "double*" : [ ctypes.c_double, "float64" ],
-    "int64_t*" : [ ctypes.c_int64, "int64" ],
-    "int32_t*" : [ ctypes.c_int32, "int32" ],
-    "int16_t*" : [ ctypes.c_int16, "int16" ],
-    "int8_t*" : [ ctypes.c_int8, "int8" ],
-    "uint64_t*" : [ ctypes.c_int64, "uint64" ],
-    "uint32_t*" : [ ctypes.c_uint32, "uint32" ],
-    "uint16_t*" : [ ctypes.c_uint16, "uint16" ],
-    "uint8_t*" : [ ctypes.c_uint8, "uint8" ],
 }
 CTYPE_ENTRY = 0
 DTYPE_ENTRY = 1
