@@ -6,6 +6,22 @@ from typing import Any, List, Tuple
 
 from . import hat_file
 
+# hat_declared_type : [ ctype, dtype_str ]
+ARG_TYPES = {
+    "float16_t*" : [ ctypes.c_uint16, "float16" ],
+    "float*" : [ ctypes.c_float, "float32" ],
+    "double*" : [ ctypes.c_double, "float64" ],
+    "int64_t*" : [ ctypes.c_int64, "int64" ],
+    "int32_t*" : [ ctypes.c_int32, "int32" ],
+    "int16_t*" : [ ctypes.c_int16, "int16" ],
+    "int8_t*" : [ ctypes.c_int8, "int8" ],
+    "uint64_t*" : [ ctypes.c_int64, "uint64" ],
+    "uint32_t*" : [ ctypes.c_uint32, "uint32" ],
+    "uint16_t*" : [ ctypes.c_uint16, "uint16" ],
+    "uint8_t*" : [ ctypes.c_uint8, "uint8" ],
+}
+CTYPE_ENTRY = 0
+DTYPE_ENTRY = 1
 
 @dataclass
 class ArgInfo:
@@ -22,53 +38,13 @@ class ArgInfo:
         self.hat_declared_type = param_description.declared_type
         self.numpy_shape = tuple(param_description.shape)
         self.usage = param_description.usage
-        if self.hat_declared_type == "float16_t*":
-            self.numpy_dtype = np.float16
-            self.element_num_bytes = 2
-            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_uint16)    # same bitwidth as float16
-        elif self.hat_declared_type == "float*":
-            self.numpy_dtype = np.float32
-            self.element_num_bytes = 4
-            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_float)
-        elif self.hat_declared_type == "double*":
-            self.numpy_dtype = np.float64
-            self.element_num_bytes = 8
-            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_double)
-        elif self.hat_declared_type == "int64_t*":
-            self.numpy_dtype = np.int64
-            self.element_num_bytes = 8
-            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_int64)
-        elif self.hat_declared_type == "int32_t*":
-            self.numpy_dtype = np.int32
-            self.element_num_bytes = 4
-            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_int32)
-        elif self.hat_declared_type == "int16_t*":
-            self.numpy_dtype = np.int16
-            self.element_num_bytes = 2
-            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_int16)
-        elif self.hat_declared_type == "int8_t*":
-            self.numpy_dtype = np.int8
-            self.element_num_bytes = 1
-            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_int8)
-        elif self.hat_declared_type == "uint64_t*":
-            self.numpy_dtype = np.uint64
-            self.element_num_bytes = 8
-            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_uint64)
-        elif self.hat_declared_type == "uint32_t*":
-            self.numpy_dtype = np.uint32
-            self.element_num_bytes = 4
-            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_uint32)
-        elif self.hat_declared_type == "uint16_t*":
-            self.numpy_dtype = np.uint16
-            self.element_num_bytes = 2
-            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_uint16)
-        elif self.hat_declared_type == "uint8_t*":
-            self.numpy_dtype = np.uint8
-            self.element_num_bytes = 1
-            self.ctypes_pointer_type = ctypes.POINTER(ctypes.c_uint8)
-        else:
+
+        if not self.hat_declared_type in ARG_TYPES:
             raise NotImplementedError(f"Unsupported declared_type {self.hat_declared_type} in hat file")
 
+        self.ctypes_pointer_type = ctypes.POINTER(ARG_TYPES[self.hat_declared_type][CTYPE_ENTRY])
+        self.numpy_dtype = np.dtype(ARG_TYPES[self.hat_declared_type][DTYPE_ENTRY])
+        self.element_num_bytes = self.numpy_dtype.itemsize
         self.numpy_strides = tuple([self.element_num_bytes * x for x in param_description.affine_map])
 
 
