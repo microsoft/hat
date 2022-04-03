@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
-from ast import arg
-import enum
-import sys
 
 from . import hat
 
 
 def verify_hat_package(hat_path):
-    funcs = hat.load(hat_path)
+    _, funcs = hat.load(hat_path)
     inputs = hat.generate_input_sets_for_hat_file(hat_path)
     for name, fn in funcs.items():
         print(f"Verifying function {name} --")
