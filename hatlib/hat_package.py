@@ -3,7 +3,7 @@
 # Utility to parse and validate a HAT package
 
 import ctypes
-from typing import List, Union
+from typing import Any, List, Union
 from collections import OrderedDict
 from functools import partial
 

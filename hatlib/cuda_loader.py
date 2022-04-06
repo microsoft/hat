@@ -12,7 +12,7 @@ from cuda import cuda, nvrtc
 
 from .arg_info import ArgInfo, verify_args
 from .gpu_headers import CUDA_HEADER_MAP
-from .hat_file import Function
+from .hat_file import Function, CallableFunc
 
 
 def ASSERT_DRV(err):
@@ -111,6 +111,11 @@ def allocate_cuda_mem(arg_infos: List[ArgInfo]):
     return device_mem
 
 
+def free_cuda_mem(args):
+    for arg in args:
+        cuda.cuMemFree(arg)
+
+
 def device_args_to_ptr_list(device_args: List):
     # CUDA python example says this is subject to change
     ptrs = [np.array([int(d_arg)], dtype=np.uint64) for d_arg in device_args]
@@ -119,7 +124,7 @@ def device_args_to_ptr_list(device_args: List):
     return ptrs
 
 
-def create_loader_for_device_function(device_func: Function, hat_dir_path: str):
+def create_loader_for_device_function(device_func: Function, hat_dir_path: str) -> CallableFunc:
     if not device_func.provider:
         raise RuntimeError("Expected a provider for the device function")
 
@@ -135,6 +140,42 @@ def create_loader_for_device_function(device_func: Function, hat_dir_path: str):
     hat_arg_descriptions = device_func.arguments
     arg_infos = [ArgInfo(d) for d in hat_arg_descriptions]
     launch_parameters = device_func.launch_parameters
+
+    def init_runtime():
+        initialize_cuda()
+
+    def cleanup_runtime():
+        pass
+
+    data = {}
+    def init_main(*args):
+        verify_args(args, arg_infos, func_name)
+        data['device_mem'] = allocate_cuda_mem(arg_infos)
+        transfer_mem_host_to_cuda(device_args=data['device_mem'], host_args=args, arg_infos=arg_infos)
+        data['ptrs'] = device_args_to_ptr_list(data['device_mem'])
+
+        err, data['stream'] = cuda.cuStreamCreate(0)
+        ASSERT_DRV(err)
+
+    def main(*args):
+        err, = cuda.cuLaunchKernel(
+            kernel,
+            *launch_parameters,    # [ grid[x-z], block[x-z] ]
+            0,    # dynamic shared memory
+            data['stream'],    # stream
+            data['ptrs'].ctypes.data,    # kernel arguments
+            0,    # extra (ignore)
+        )
+        ASSERT_DRV(err)
+
+    def cleanup_main(*args):
+        err, = cuda.cuStreamSynchronize(data['stream'])
+        ASSERT_DRV(err)
+
+        transfer_mem_cuda_to_host(device_args=data['device_mem'], host_args=args, arg_infos=arg_infos)
+        free_cuda_mem(data['device_mem'])
+        cuda.cuStreamDestroy(data['stream'])
+        data.clear()
 
     def f(*args):
         verify_args(args, arg_infos, func_name)
