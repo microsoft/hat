@@ -13,7 +13,7 @@ from cuda import cuda, nvrtc
 from .arg_info import ArgInfo, verify_args
 from .callable_func import CallableFunc
 from .gpu_headers import CUDA_HEADER_MAP
-from .hat_file import Function, CallableFunc
+from .hat_file import Function
 
 
 def ASSERT_DRV(err):
@@ -105,7 +105,7 @@ def transfer_mem_host_to_cuda(device_args: List, host_args: List[np.array], arg_
         source_args=[a.ctypes.data for a in host_args],
         dest_args=device_args,
         arg_infos=arg_infos,
-        strean=stream
+        stream=stream
     )
 
 
@@ -163,7 +163,7 @@ class CudaCallableFunc(CallableFunc):
         self.exec_time = 0.
 
     def init_runtime(self):
-        initialize_cuda()
+        pass
 
     def cleanup_runtime(self):
         pass
@@ -171,7 +171,7 @@ class CudaCallableFunc(CallableFunc):
     def init_main(self, warmup_iters=0, args=[]):
         verify_args(args, self.arg_infos, self.func_name)
         self.device_mem = allocate_cuda_mem(self.arg_infos)
-        transfer_mem_host_to_cuda(device_args=self.devic.e_mem, host_args=args, arg_infos=self.arg_infos)
+        transfer_mem_host_to_cuda(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
         self.ptrs = device_args_to_ptr_list(self.device_mem)
 
         err, self.stream = cuda.cuStreamCreate(0)
@@ -181,7 +181,7 @@ class CudaCallableFunc(CallableFunc):
         ASSERT_DRV(err)
         err, self.stop_event = cuda.cuEventCreate(cuda.CUevent_flags.CU_EVENT_BLOCKING_SYNC)
         ASSERT_DRV(err)
-    
+
         for _ in range(warmup_iters):
             err, = cuda.cuLaunchKernel(
                 self.kernel,
@@ -218,8 +218,10 @@ class CudaCallableFunc(CallableFunc):
                     self.ptrs.ctypes.data,    # kernel arguments
                     0,    # extra (ignore)
                 )
-        ASSERT_DRV(cuda.cuEventRecord(self.stop_event, 0))
-        ASSERT_DRV(cuda.cuEventSynchronize(self.stop_event))
+        err, = cuda.cuEventRecord(self.stop_event, 0)
+        ASSERT_DRV(err)
+        err, = cuda.cuEventSynchronize(self.stop_event)
+        ASSERT_DRV(err)
         err, self.exec_time = cuda.cuEventElapsedTime(self.start_event, self.stop_event)
         ASSERT_DRV(err)
         self.exec_time /= iters
@@ -232,6 +234,7 @@ class CudaCallableFunc(CallableFunc):
         cuda.cuEventDestroy(self.stop_event)
         cuda.cuStreamDestroy(self.stream)
 
+initialize_cuda()
 
 def create_loader_for_device_function(device_func: Function, hat_dir_path: str) -> CallableFunc:
     if not device_func.provider:
@@ -241,8 +244,6 @@ def create_loader_for_device_function(device_func: Function, hat_dir_path: str) 
     func_name = device_func.name
 
     ptx = compile_cuda_program(cuda_src_path, func_name)
-
-    initialize_cuda()
 
     kernel = get_func_from_ptx(ptx, func_name)
 

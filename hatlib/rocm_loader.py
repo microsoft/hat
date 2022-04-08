@@ -70,6 +70,7 @@ def device_args_to_ptr_list(device_args: List):
 
     return ptrs
 
+initialize_rocm()
 
 def create_loader_for_device_function(device_func: Function, hat_dir_path: str):
     if not device_func.provider:
@@ -79,8 +80,6 @@ def create_loader_for_device_function(device_func: Function, hat_dir_path: str):
     func_name = device_func.name
 
     rocm_program = compile_rocm_program(rocm_src_path, func_name)
-
-    initialize_rocm()
 
     kernel = get_func_from_rocm_program(rocm_program, func_name)
 
