@@ -112,13 +112,13 @@ class RocmCallableFunc(CallableFunc):
 
         self.stream = hipStreamCreate()
 
-        self.start_event = hipEventCreate(hipEventDefault)
-        self.stop_event = hipEventCreate(hipEventDefault)
+        self.start_event = hipEventCreate()
+        self.stop_event = hipEventCreate()
 
         for _ in range(warmup_iters):
             hipModuleLaunchKernel(
                 self.kernel,
-                *self.launch_parameters,    # [ grid[x-z], block[x-z] ]
+                *self.launch_params,    # [ grid[x-z], block[x-z] ]
                 0,    # dynamic shared memory
                 0,    # stream
                 self.data,    # data
@@ -131,7 +131,7 @@ class RocmCallableFunc(CallableFunc):
         if iters == 1:
             hipModuleLaunchKernel(
                 self.kernel,
-                *self.launch_parameters,    # [ grid[x-z], block[x-z] ]
+                *self.launch_params,    # [ grid[x-z], block[x-z] ]
                 0,    # dynamic shared memory
                 0,    # stream
                 self.data,    # data
@@ -140,7 +140,7 @@ class RocmCallableFunc(CallableFunc):
             for _ in range(iters):
                 hipModuleLaunchKernel(
                     self.kernel,
-                    *self.launch_parameters,    # [ grid[x-z], block[x-z] ]
+                    *self.launch_params,    # [ grid[x-z], block[x-z] ]
                     0,    # dynamic shared memory
                     0,    # stream
                     self.data,    # data
