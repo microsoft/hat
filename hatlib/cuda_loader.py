@@ -11,6 +11,7 @@ from pynvrtc.compiler import Program
 from cuda import cuda, nvrtc
 
 from .arg_info import ArgInfo, verify_args
+from .callable_func import CallableFunc
 from .gpu_headers import CUDA_HEADER_MAP
 from .hat_file import Function, CallableFunc
 
@@ -87,33 +88,53 @@ def _arg_size(arg_info: ArgInfo):
     return arg_info.element_num_bytes * reduce(lambda x, y: x * y, arg_info.numpy_shape)
 
 
-def transfer_mem_host_to_cuda(device_args: List, host_args: List[np.array], arg_infos: List[ArgInfo]):
-    for device_arg, host_arg, arg_info in zip(device_args, host_args, arg_infos):
-        if 'input' in arg_info.usage.value:
-            err, = cuda.cuMemcpyHtoD(device_arg, host_arg.ctypes.data, _arg_size(arg_info))
+def _cuda_transfer_mem(usage, func, source_args: List, dest_args: List, arg_infos: List[ArgInfo], stream=None):
+    for source_arg, dest_arg, arg_info in zip(source_args, dest_args, arg_infos):
+        if usage in arg_info.usage.value:
+            if stream:
+                err, = func(dest_arg, source_arg, _arg_size(arg_info), stream)
+            else:
+                err, = func(dest_arg, source_arg, _arg_size(arg_info))
             ASSERT_DRV(err)
 
 
-def transfer_mem_cuda_to_host(device_args: List, host_args: List[np.array], arg_infos: List[ArgInfo]):
-    for device_arg, host_arg, arg_info in zip(device_args, host_args, arg_infos):
-        if 'output' in arg_info.usage.value:
-            err, = cuda.cuMemcpyDtoH(host_arg.ctypes.data, device_arg, _arg_size(arg_info))
-            ASSERT_DRV(err)
+def transfer_mem_host_to_cuda(device_args: List, host_args: List[np.array], arg_infos: List[ArgInfo], stream=None):
+    _cuda_transfer_mem(
+        usage='input',
+        func=cuda.cuMemCpyHtoDAsync if stream else cuda.cuMemcpyHtoD,
+        source_args=[a.ctypes.data for a in host_args],
+        dest_args=device_args,
+        arg_infos=arg_infos,
+        strean=stream
+    )
 
 
-def allocate_cuda_mem(arg_infos: List[ArgInfo]):
+def transfer_mem_cuda_to_host(device_args: List, host_args: List[np.array], arg_infos: List[ArgInfo], stream=None):
+    _cuda_transfer_mem(
+        usage='output',
+        func=cuda.cuMemcpyDtoHAsync if stream else cuda.cuMemcpyDtoH,
+        source_args=device_args,
+        dest_args=[a.ctypes.data for a in host_args],
+        arg_infos=arg_infos,
+        stream=stream
+    )
+
+
+def allocate_cuda_mem(arg_infos: List[ArgInfo], stream=None):
     device_mem = []
+
     for arg in arg_infos:
-        err, mem = cuda.cuMemAlloc(_arg_size(arg))
+        size = _arg_size(arg)
+        err, mem = cuda.cuMemAllocAsync(size, stream) if stream else cuda.cuMemAlloc(size)
         ASSERT_DRV(err)
         device_mem.append(mem)
 
     return device_mem
 
 
-def free_cuda_mem(args):
+def free_cuda_mem(args, stream=None):
     for arg in args:
-        cuda.cuMemFree(arg)
+        cuda.cuMemFreeAsync(arg, stream) if stream else cuda.cuMemFree(arg)
 
 
 def device_args_to_ptr_list(device_args: List):
@@ -122,6 +143,94 @@ def device_args_to_ptr_list(device_args: List):
     ptrs = np.array([ptr.ctypes.data for ptr in ptrs], dtype=np.uint64)
 
     return ptrs
+
+
+class CudaCallableFunc(CallableFunc):
+
+    def __init__(self, func: Function, kernel) -> None:
+        super().__init__()
+        self.hat_func = func
+        self.func_name = func.name
+        self.kernel = kernel
+        hat_arg_descriptions = func.arguments
+        self.arg_infos = [ArgInfo(d) for d in hat_arg_descriptions]
+        self.launch_params = func.launch_parameters
+        self.device_mem = None
+        self.ptrs = None
+        self.stream = None
+        self.start_event = None
+        self.stop_event = None
+        self.exec_time = 0.
+
+    def init_runtime(self):
+        initialize_cuda()
+
+    def cleanup_runtime(self):
+        pass
+
+    def init_main(self, warmup_iters=0, args=[]):
+        verify_args(args, self.arg_infos, self.func_name)
+        self.device_mem = allocate_cuda_mem(self.arg_infos)
+        transfer_mem_host_to_cuda(device_args=self.devic.e_mem, host_args=args, arg_infos=self.arg_infos)
+        self.ptrs = device_args_to_ptr_list(self.device_mem)
+
+        err, self.stream = cuda.cuStreamCreate(0)
+        ASSERT_DRV(err)
+
+        err, self.start_event = cuda.cuEventCreate(cuda.CUevent_flags.CU_EVENT_BLOCKING_SYNC)
+        ASSERT_DRV(err)
+        err, self.stop_event = cuda.cuEventCreate(cuda.CUevent_flags.CU_EVENT_BLOCKING_SYNC)
+        ASSERT_DRV(err)
+    
+        for _ in range(warmup_iters):
+            err, = cuda.cuLaunchKernel(
+                self.kernel,
+                *self.launch_params,    # [ grid[x-z], block[x-z] ]
+                0,    # dynamic shared memory
+                self.stream,    # stream
+                self.ptrs.ctypes.data,    # kernel arguments
+                0,    # extra (ignore)
+            )
+            ASSERT_DRV(err)
+        else:
+            err, = cuda.cuStreamSynchronize(self.stream)
+            ASSERT_DRV(err)
+
+    def main(self, iters=1, args=[]) -> float:
+        cuda.cuEventRecord(self.start_event, 0)
+        if iters == 1:
+            err, = cuda.cuLaunchKernel(
+                self.kernel,
+                *self.launch_params,    # [ grid[x-z], block[x-z] ]
+                0,    # dynamic shared memory
+                self.stream,    # stream
+                self.ptrs.ctypes.data,    # kernel arguments
+                0,    # extra (ignore)
+            )
+            ASSERT_DRV(err)
+        elif iters > 1:
+            for _ in range(iters):
+                cuda.cuLaunchKernel(
+                    self.kernel,
+                    *self.launch_params,    # [ grid[x-z], block[x-z] ]
+                    0,    # dynamic shared memory
+                    self.stream,    # stream
+                    self.ptrs.ctypes.data,    # kernel arguments
+                    0,    # extra (ignore)
+                )
+        ASSERT_DRV(cuda.cuEventRecord(self.stop_event, 0))
+        ASSERT_DRV(cuda.cuEventSynchronize(self.stop_event))
+        err, self.exec_time = cuda.cuEventElapsedTime(self.start_event, self.stop_event)
+        ASSERT_DRV(err)
+        self.exec_time /= iters
+        return self.exec_time
+
+    def cleanup_main(self, args=[]):
+        transfer_mem_cuda_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
+        free_cuda_mem(self.device_mem)
+        cuda.cuEventDestroy(self.start_event)
+        cuda.cuEventDestroy(self.stop_event)
+        cuda.cuStreamDestroy(self.stream)
 
 
 def create_loader_for_device_function(device_func: Function, hat_dir_path: str) -> CallableFunc:
@@ -137,67 +246,4 @@ def create_loader_for_device_function(device_func: Function, hat_dir_path: str) 
 
     kernel = get_func_from_ptx(ptx, func_name)
 
-    hat_arg_descriptions = device_func.arguments
-    arg_infos = [ArgInfo(d) for d in hat_arg_descriptions]
-    launch_parameters = device_func.launch_parameters
-
-    def init_runtime():
-        initialize_cuda()
-
-    def cleanup_runtime():
-        pass
-
-    data = {}
-    def init_main(*args):
-        verify_args(args, arg_infos, func_name)
-        data['device_mem'] = allocate_cuda_mem(arg_infos)
-        transfer_mem_host_to_cuda(device_args=data['device_mem'], host_args=args, arg_infos=arg_infos)
-        data['ptrs'] = device_args_to_ptr_list(data['device_mem'])
-
-        err, data['stream'] = cuda.cuStreamCreate(0)
-        ASSERT_DRV(err)
-
-    def main(*args):
-        err, = cuda.cuLaunchKernel(
-            kernel,
-            *launch_parameters,    # [ grid[x-z], block[x-z] ]
-            0,    # dynamic shared memory
-            data['stream'],    # stream
-            data['ptrs'].ctypes.data,    # kernel arguments
-            0,    # extra (ignore)
-        )
-        ASSERT_DRV(err)
-
-    def cleanup_main(*args):
-        err, = cuda.cuStreamSynchronize(data['stream'])
-        ASSERT_DRV(err)
-
-        transfer_mem_cuda_to_host(device_args=data['device_mem'], host_args=args, arg_infos=arg_infos)
-        free_cuda_mem(data['device_mem'])
-        cuda.cuStreamDestroy(data['stream'])
-        data.clear()
-
-    def f(*args):
-        verify_args(args, arg_infos, func_name)
-        device_mem = allocate_cuda_mem(arg_infos)
-        transfer_mem_host_to_cuda(device_args=device_mem, host_args=args, arg_infos=arg_infos)
-        ptrs = device_args_to_ptr_list(device_mem)
-
-        err, stream = cuda.cuStreamCreate(0)
-        ASSERT_DRV(err)
-
-        err, = cuda.cuLaunchKernel(
-            kernel,
-            *launch_parameters,    # [ grid[x-z], block[x-z] ]
-            0,    # dynamic shared memory
-            stream,    # stream
-            ptrs.ctypes.data,    # kernel arguments
-            0,    # extra (ignore)
-        )
-        ASSERT_DRV(err)
-        err, = cuda.cuStreamSynchronize(stream)
-        ASSERT_DRV(err)
-
-        transfer_mem_cuda_to_host(device_args=device_mem, host_args=args, arg_infos=arg_infos)
-
-    return f
+    return CudaCallableFunc(device_func, kernel)

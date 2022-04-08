@@ -182,53 +182,6 @@ class Parameter:
         return param
 
 
-class CallableFunc:
-
-    def __init__(
-        self,
-        main,
-        init_runtime=None,
-        init_main=None,
-        cleanup_main=None,
-        cleanup_runtime=None,
-        data={},
-        profile=False
-    ) -> None:
-        self._main = main
-        self._init_runtime = init_runtime
-        self._init_main = init_main
-        self._cleanup_main = cleanup_main
-        self._cleanup_runtime = cleanup_runtime
-        self._data = data
-        self._profile = profile
-
-    def __call__(self, *args: Any) -> Any:
-        try:
-            self.init_runtime()
-            try:
-                self.init_main()
-                self.main(*args)
-            finally:
-                self.cleanup_main()
-        finally:
-            self.cleanup_runtime()
-
-    def init_runtime(self):
-        self._init_runtime()
-
-    def cleanup_runtime(self):
-        self._cleanup_runtime()
-
-    def init_main(self):
-        self._init_main()
-
-    def cleanup_main(self):
-        self._cleanup_main()
-
-    def main(self, *args: Any):
-        self._main(*args)
-
-
 @dataclass
 class Function(AuxiliarySupportedTable):
     # required
