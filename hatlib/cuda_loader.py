@@ -177,9 +177,9 @@ class CudaCallableFunc(CallableFunc):
         err, self.stream = cuda.cuStreamCreate(0)
         ASSERT_DRV(err)
 
-        err, self.start_event = cuda.cuEventCreate(cuda.CUevent_flags.CU_EVENT_BLOCKING_SYNC)
+        err, self.start_event = cuda.cuEventCreate(cuda.CUevent_flags.CU_EVENT_DEFAULT)
         ASSERT_DRV(err)
-        err, self.stop_event = cuda.cuEventCreate(cuda.CUevent_flags.CU_EVENT_BLOCKING_SYNC)
+        err, self.stop_event = cuda.cuEventCreate(cuda.CUevent_flags.CU_EVENT_DEFAULT)
         ASSERT_DRV(err)
 
         for _ in range(warmup_iters):

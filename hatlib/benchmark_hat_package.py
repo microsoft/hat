@@ -9,6 +9,7 @@ import toml
 import traceback
 from pathlib import Path
 
+from .callable_func import CallableFunc
 from .hat_file import HATFile
 from .hat import load, generate_input_sets_for_func
 
@@ -32,6 +33,7 @@ class Benchmark:
             function_name: str,
             warmup_iterations: int = 10,
             min_timing_iterations: int = 100,
+            batch_size: int = 10,
             min_time_in_sec: int = 10,
             input_sets_minimum_size_MB=50) -> float:
         """Runs benchmarking for a function.
@@ -53,7 +55,7 @@ class Benchmark:
         # TODO: support packing and unpacking functions
 
         mean_elapsed_time, batch_timings = self._profile(
-            function_name, warmup_iterations, min_timing_iterations,
+            function_name, warmup_iterations, min_timing_iterations, batch_size,
             min_time_in_sec, input_sets_minimum_size_MB)
         print(
             f"[Benchmarking] Mean duration per iteration: {mean_elapsed_time:.8f}s"
@@ -61,7 +63,7 @@ class Benchmark:
 
         return mean_elapsed_time, batch_timings
 
-    def _profile(self, function_name, warmup_iterations, min_timing_iterations,
+    def _profile(self, function_name, warmup_iterations, min_timing_iterations, batch_size,
                  min_time_in_sec, input_sets_minimum_size_MB):
         def get_perf_counter():
             if hasattr(time, 'perf_counter_ns'):
@@ -74,51 +76,70 @@ class Benchmark:
 
         func = self.function_descriptions[function_name]
 
-        # generate sufficient input sets to overflow the L3 cache, since we don't know the size of the model
-        # we'll make a guess based on the minimum input set size
-        input_sets = generate_input_sets_for_func(func,
-                                                  input_sets_minimum_size_MB,
-                                                  num_additional=10)
+        benchmark_func = self.func_dict[function_name]
+        if not isinstance(benchmark_func, CallableFunc):
+            # generate sufficient input sets to overflow the L3 cache, since we don't know the size of the model
+            # we'll make a guess based on the minimum input set size
+            input_sets = generate_input_sets_for_func(func,
+                                                    input_sets_minimum_size_MB,
+                                                    num_additional=10)
 
-        set_size = 0
-        for i in input_sets[0]:
-            set_size += i.size * i.dtype.itemsize
+            set_size = 0
+            for i in input_sets[0]:
+                set_size += i.size * i.dtype.itemsize
 
-        print(
-            f"[Benchmarking] Using {len(input_sets)} input sets, each {set_size} bytes"
-        )
+            print(
+                f"[Benchmarking] Using {len(input_sets)} input sets, each {set_size} bytes"
+            )
+        
+            perf_counter, perf_counter_scale = get_perf_counter()
+            print(
+                f"[Benchmarking] Warming up for {warmup_iterations} iterations...")
 
-        perf_counter, perf_counter_scale = get_perf_counter()
-        print(
-            f"[Benchmarking] Warming up for {warmup_iterations} iterations...")
+            for _ in range(warmup_iterations):
+                for calling_args in input_sets:
+                    self.func_dict[function_name](*calling_args)
 
-        for _ in range(warmup_iterations):
-            for calling_args in input_sets:
-                self.func_dict[function_name](*calling_args)
-
-        print(
-            f"[Benchmarking] Timing for at least {min_time_in_sec}s and at least {min_timing_iterations} iterations..."
-        )
-        start_time = perf_counter()
-        end_time = perf_counter()
-
-        i = 0
-        i_max = len(input_sets)
-        iterations = 1
-        batch_timings = []
-        while ((end_time - start_time) / perf_counter_scale) < min_time_in_sec:
-            batch_start_time = perf_counter()
-            for _ in range(min_timing_iterations):
-                self.func_dict[function_name](*input_sets[i])
-                i = iterations % i_max
-                iterations += 1
+            print(
+                f"[Benchmarking] Timing for at least {min_time_in_sec}s and at least {min_timing_iterations} iterations..."
+            )
+            start_time = perf_counter()
             end_time = perf_counter()
-            batch_timings.append(
-                (end_time - batch_start_time) / perf_counter_scale)
 
-        elapsed_time = ((end_time - start_time) / perf_counter_scale)
-        mean_elapsed_time = elapsed_time / iterations
-        return mean_elapsed_time, batch_timings
+            i = 0
+            i_max = len(input_sets)
+            iterations = 1
+            batch_timings = []
+            while ((end_time - start_time) / perf_counter_scale) < min_time_in_sec and len(batch_timings) < batch_size:
+                batch_start_time = perf_counter()
+                for _ in range(min_timing_iterations):
+                    self.func_dict[function_name](*input_sets[i])
+                    i = iterations % i_max
+                    iterations += 1
+                end_time = perf_counter()
+                batch_timings.append(
+                    (end_time - batch_start_time) / perf_counter_scale)
+
+            elapsed_time = ((end_time - start_time) / perf_counter_scale)
+            mean_elapsed_time = elapsed_time / iterations
+            return mean_elapsed_time, batch_timings
+        else:
+            print(f"[Benchmarking] Benchmarking device function. {batch_size} batches of warming up for {warmup_iterations} and then measuring with {min_timing_iterations} iterations.")
+            input_sets = generate_input_sets_for_func(func,num_additional=batch_size)
+
+            set_size = 0
+            for i in input_sets[0]:
+                set_size += i.size * i.dtype.itemsize
+
+            print(
+                f"[Benchmarking] Using input of {set_size} bytes"
+            )
+
+            batch_timings = [
+                benchmark_func.benchmark(warmup_iters=warmup_iterations, iters=min_timing_iterations, args=input_sets[i]) for i in range(batch_size)
+            ]
+            time = sum(batch_timings) / (min_timing_iterations * batch_size)
+            return time, batch_timings
 
 
 def write_runtime_to_hat_file(hat_path, function_name, mean_time_secs):
@@ -162,6 +183,7 @@ def run_benchmark(hat_path,
                 function_name,
                 warmup_iterations=batch_size,
                 min_timing_iterations=batch_size,
+                batch_size=batch_size,
                 min_time_in_sec=min_time_in_sec,
                 input_sets_minimum_size_MB=input_sets_minimum_size_MB)
 

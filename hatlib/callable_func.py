@@ -18,13 +18,13 @@ class CallableFunc(ABC):
 
         return time
 
-    def benchmark(self, args):
+    def benchmark(self, warmup_iters, iters, args):
         time = -1.
         try:
             self.init_runtime()
             try:
-                self.init_main(warmup_iters=1, args=args)
-                time: float = self.main(iters=100, args=args)
+                self.init_main(warmup_iters=warmup_iters, args=args)
+                time: float = self.main(iters=iters, args=args)
             finally:
                 self.cleanup_main(args=args)
         finally:

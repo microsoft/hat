@@ -454,6 +454,260 @@ def hipCheckStatus(status):
             raise e
 
 
+# Stream management
+
+_libhip.hipStreamCreate.restype = int
+_libhip.hipStreamCreate.argtypes = [ctypes.POINTER(ctypes.c_void_p)]
+
+
+def hipStreamCreate():
+    """
+    Create an asynchronous stream.
+
+    Create a new asynchronous stream.  @p stream returns an opaque handle that can be used to
+    reference the newly created stream in subsequent hipStream* commands.  The stream is allocated on
+    the heap and will remain allocated even if the handle goes out-of-scope.  To release the memory
+    used by the stream, application must call hipStreamDestroy.
+
+    Returns
+    -------
+    ptr : ctypes pointer
+        Valid pointer to stream object.
+    """
+    ptr = ctypes.c_void_p()
+    status = _libhip.hipStreamCreate(ctypes.byref(ptr))
+    hipCheckStatus(status)
+    return ptr
+
+
+_libhip.hipStreamDestroy.restype = int
+_libhip.hipStreamDestroy.argtypes = [ctypes.c_void_p]
+
+
+def hipStreamDestroy(ptr):
+    """
+    Destroys the specified stream.
+    
+    If commands are still executing on the specified stream, some may complete execution before the
+    queue is deleted.
+    
+    The queue may be destroyed while some commands are still inflight, or may wait for all commands
+    queued to the stream before destroying it.
+
+    Parameters
+    -------
+    ptr : ctypes pointer
+        Valid pointer to stream object.
+    """
+    status = _libhip.hipStreamDestroy(ptr)
+    hipCheckStatus(status)
+
+
+_libhip.hipStreamDestroy.restype = int
+_libhip.hipStreamDestroy.argtypes = [ctypes.c_void_p]
+
+
+def hipStreamDestroy(ptr):
+    """
+    Destroys the specified stream.
+    
+    If commands are still executing on the specified stream, some may complete execution before the
+    queue is deleted.
+    
+    The queue may be destroyed while some commands are still inflight, or may wait for all commands
+    queued to the stream before destroying it.
+
+    Parameters
+    -------
+    ptr : ctypes pointer
+        Valid pointer to stream object.
+    """
+    status = _libhip.hipStreamDestroy(ptr)
+    hipCheckStatus(status)
+
+
+_libhip.hipStreamSynchronize.restype = int
+_libhip.hipStreamSynchronize.argtypes = [ctypes.c_void_p]
+
+
+def hipStreamSynchronize(ptr):
+    """
+    Wait for all commands in stream to complete.
+    
+    This command is host-synchronous : the host will block until the specified stream is empty.
+    
+    This command follows standard null-stream semantics.  Specifically, specifying the null stream
+    will cause the command to wait for other streams on the same device to complete all pending
+    operations.
+    
+    This command honors the hipDeviceLaunchBlocking flag, which controls whether the wait is active
+    or blocking.
+
+    Parameters
+    -------
+    ptr : ctypes pointer
+        Valid pointer to stream object.
+    """
+    status = _libhip.hipStreamSynchronize(ptr)
+    hipCheckStatus(status)
+
+
+# Event management
+
+# Event creation flags
+hipEventDefault = 0
+hipEventBlockingSync = 1
+hipEventDisableTiming = 2
+hipEventInterprocess = 4
+
+_libhip.hipEventCreateWithFlags.restype = int
+_libhip.hipEventCreateWithFlags.argtypes = [ctypes.POINTER(ctypes.c_void_p), ctypes.c_int]
+
+
+def hipEventCreateWithFlags(flags):
+    """
+    Create an event with the specified flags
+
+    Parameters
+    ----------
+    flags : int
+        Flags to control event behavior.  Valid values are hipEventDefault,
+        hipEventBlockingSync, hipEventDisableTiming, #hipEventInterprocess
+        * hipEventDefault : Default flag.  The event will use active synchronization and will support
+        timing.  Blocking synchronization provides lowest possible latency at the expense of dedicating a
+        CPU to poll on the event.
+        * hipEventBlockingSync : The event will use blocking synchronization : if hipEventSynchronize is
+        called on this event, the thread will block until the event completes.  This can increase latency
+        for the synchroniation but can result in lower power and more resources for other CPU threads.
+        * hipEventDisableTiming : Disable recording of timing information. Events created with this flag
+        would not record profiling data and provide best performance if used for synchronization.
+        * hipEventInterprocess : Warning On AMD platform, support is under development.  Use of this flag
+        will return an error.
+
+    Returns
+    -------
+    ptr : ctypes pointer
+        Pointer to the newly created event.
+
+    """
+    ptr = ctypes.c_void_p()
+    status = _libhip.hipEventCreateWithFlags(ctypes.byref(ptr), flags)
+    hipCheckStatus(status)
+    return ptr
+
+
+_libhip.hipEventCreate.restype = int
+_libhip.hipEventCreate.argtypes = [ctypes.POINTER(ctypes.c_void_p)]
+
+
+def hipEventCreate():
+    """
+    Create an event with the specified flags
+
+    Returns
+    -------
+    ptr : ctypes pointer
+        Pointer to the newly created event.
+
+    """
+    ptr = ctypes.c_void_p()
+    status = _libhip.hipEventCreate(ctypes.byref(ptr))
+    hipCheckStatus(status)
+    return ptr
+
+
+_libhip.hipEventRecord.restype = int
+_libhip.hipEventRecord.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+
+
+def hipEventRecord(event, stream=None):
+    """
+    Record an event in the specified stream.
+
+    Parameters
+    ----------
+    event : handle
+        event to record.
+    stream : _ctypes pointer, optional
+        stream in which to record event.
+
+    """
+    status = _libhip.hipEventRecord(event, stream)
+    hipCheckStatus(status)
+
+
+_libhip.hipEventDestroy.restype = int
+_libhip.hipEventDestroy.argtypes = [ctypes.c_void_p]
+
+
+def hipEventDestroy(ptr):
+    """
+    Destroy the specified event.
+
+    Parameters
+    ----------
+    event : ctypes pointer
+        Event to destroy.
+
+    """
+    status = _libhip.hipEventDestroy(ptr)
+    hipCheckStatus(status)
+
+
+_libhip.hipEventSynchronize.restype = int
+_libhip.hipEventSynchronize.argtypes = [ctypes.c_void_p]
+
+
+def hipEventSynchronize(ptr):
+    """
+    Wait for an event to complete.
+
+    This function will block until the event is ready, waiting for all previous work in the stream
+    specified when event was recorded with hipEventRecord().
+
+    If hipEventRecord() has not been called on @p event, this function returns immediately.
+
+    Parameters
+    ----------
+    event : ctypes pointer
+        Event to Synchronize.
+
+    """
+    status = _libhip.hipEventSynchronize(ptr)
+    hipCheckStatus(status)
+
+
+_libhip.hipEventElapsedTime.restype = int
+_libhip.hipEventElapsedTime.argtypes = [ctypes.POINTER(ctypes.c_float), ctypes.c_void_p, ctypes.c_void_p]
+
+
+def hipEventElapsedTime(start, stop):
+    """
+    Return the elapsed time between two events.
+
+    Computes the elapsed time between two events. Time is computed in ms, with
+    a resolution of approximately 1 us.
+    
+    Events which are recorded in a NULL stream will block until all commands
+    on all other streams complete execution, and then record the timestamp.
+    
+    Events which are recorded in a non-NULL stream will record their timestamp
+    when they reach the head of the specified stream, after all previous
+    commands in that stream have completed executing.  Thus the time that
+    the event recorded may be significantly after the host calls hipEventRecord().
+    Parameters
+    ----------
+    start : ctypes pointer
+        Start event.
+    stop : ctypes pointer
+        Stop event.
+    """
+    t = ctypes.c_float()
+    status = _libhip.hipEventElapsedTime(ctypes.byref(t), start, stop)
+    hipCheckStatus(status)
+    return t.value
+
+
 # Memory allocation functions (adapted from pystream):
 _libhip.hipMalloc.restype = int
 _libhip.hipMalloc.argtypes = [ctypes.POINTER(ctypes.c_void_p), ctypes.c_size_t]
@@ -543,8 +797,7 @@ def hipMallocPitch(pitch, rows, cols, elesize):
     """
 
     ptr = ctypes.c_void_p()
-    status = _libhip.hipMallocPitch(ctypes.byref(ptr), ctypes.c_size_t(pitch),
-                                    cols * elesize, rows)
+    status = _libhip.hipMallocPitch(ctypes.byref(ptr), ctypes.c_size_t(pitch), cols * elesize, rows)
     hipCheckStatus(status)
     return ptr, pitch
 
@@ -557,9 +810,7 @@ hipMemcpyDeviceToDevice = 3
 hipMemcpyDefault = 4
 
 _libhip.hipMemcpy.restype = int
-_libhip.hipMemcpy.argtypes = [
-    ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int
-]
+_libhip.hipMemcpy.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int]
 
 
 def hipMemcpy_htod(dst, src, count):
@@ -579,8 +830,7 @@ def hipMemcpy_htod(dst, src, count):
 
     """
 
-    status = _libhip.hipMemcpy(dst, src, ctypes.c_size_t(count),
-                               hipMemcpyHostToDevice)
+    status = _libhip.hipMemcpy(dst, src, ctypes.c_size_t(count), hipMemcpyHostToDevice)
     hipCheckStatus(status)
 
 
@@ -601,8 +851,7 @@ def hipMemcpy_dtoh(dst, src, count):
 
     """
 
-    status = _libhip.hipMemcpy(dst, src, ctypes.c_size_t(count),
-                               hipMemcpyDeviceToHost)
+    status = _libhip.hipMemcpy(dst, src, ctypes.c_size_t(count), hipMemcpyDeviceToHost)
     hipCheckStatus(status)
 
 
@@ -677,240 +926,240 @@ def hipGetDevice():
 
 class hipDeviceArch(ctypes.Structure):
     _fields_ = [
-        # *32-bit Atomics*
-        # 32-bit integer atomics for global memory.
+    # *32-bit Atomics*
+    # 32-bit integer atomics for global memory.
         ('hasGlobalInt32Atomics', ctypes.c_uint, 1),
 
-        # 32-bit float atomic exch for global memory.
+    # 32-bit float atomic exch for global memory.
         ('hasGlobalFloatAtomicExch', ctypes.c_uint, 1),
 
-        # 32-bit integer atomics for shared memory.
+    # 32-bit integer atomics for shared memory.
         ('hasSharedInt32Atomics', ctypes.c_uint, 1),
 
-        # 32-bit float atomic exch for shared memory.
+    # 32-bit float atomic exch for shared memory.
         ('hasSharedFloatAtomicExch', ctypes.c_uint, 1),
 
-        # 32-bit float atomic add in global and shared memory.
+    # 32-bit float atomic add in global and shared memory.
         ('hasFloatAtomicAdd', ctypes.c_uint, 1),
 
-        # *64-bit Atomics*
-        # 64-bit integer atomics for global memory.
+    # *64-bit Atomics*
+    # 64-bit integer atomics for global memory.
         ('hasGlobalInt64Atomics', ctypes.c_uint, 1),
 
-        # 64-bit integer atomics for shared memory.
+    # 64-bit integer atomics for shared memory.
         ('hasSharedInt64Atomics', ctypes.c_uint, 1),
 
-        # *Doubles*
-        # Double-precision floating point.
+    # *Doubles*
+    # Double-precision floating point.
         ('hasDoubles', ctypes.c_uint, 1),
 
-        # *Warp cross-lane operations*
-        # Warp vote instructions (__any, __all).
+    # *Warp cross-lane operations*
+    # Warp vote instructions (__any, __all).
         ('hasWarpVote', ctypes.c_uint, 1),
 
-        # Warp ballot instructions (__ballot).
+    # Warp ballot instructions (__ballot).
         ('hasWarpBallot', ctypes.c_uint, 1),
 
-        # Warp shuffle operations. (__shfl_*).
+    # Warp shuffle operations. (__shfl_*).
         ('hasWarpShuffle', ctypes.c_uint, 1),
 
-        # Funnel two words into one with shift&mask caps.
+    # Funnel two words into one with shift&mask caps.
         ('hasFunnelShift', ctypes.c_uint, 1),
 
-        # *Sync*
-        # __threadfence_system.
+    # *Sync*
+    # __threadfence_system.
         ('hasThreadFenceSystem', ctypes.c_uint, 1),
 
-        # __syncthreads_count, syncthreads_and, syncthreads_or.
+    # __syncthreads_count, syncthreads_and, syncthreads_or.
         ('hasSyncThreadsExt', ctypes.c_uint, 1),
 
-        # *Misc*
-        # Surface functions.
+    # *Misc*
+    # Surface functions.
         ('hasSurfaceFuncs', ctypes.c_uint, 1),
 
-        # Grid and group dims are 3D (rather than 2D).
+    # Grid and group dims are 3D (rather than 2D).
         ('has3dGrid', ctypes.c_uint, 1),
 
-        # Dynamic parallelism.
+    # Dynamic parallelism.
         ('hasDynamicParallelism', ctypes.c_uint, 1),
     ]
 
 
 class hipDeviceProperties(ctypes.Structure):
     _fields_ = [
-        # Device name
+    # Device name
         ('_name', ctypes.c_char * 256),
 
-        # Size of global memory region (in bytes)
+    # Size of global memory region (in bytes)
         ('totalGlobalMem', ctypes.c_size_t),
 
-        # Size of shared memory region (in bytes).
+    # Size of shared memory region (in bytes).
         ('sharedMemPerBlock', ctypes.c_size_t),
 
-        # Registers per block.
+    # Registers per block.
         ('regsPerBlock', ctypes.c_int),
 
-        # Warp size.
+    # Warp size.
         ('warpSize', ctypes.c_int),
 
-        # Max work items per work group or workgroup max size.
+    # Max work items per work group or workgroup max size.
         ('maxThreadsPerBlock', ctypes.c_int),
 
-        # Max number of threads in each dimension (XYZ) of a block.
+    # Max number of threads in each dimension (XYZ) of a block.
         ('maxThreadsDim', ctypes.c_int * 3),
 
-        # Max grid dimensions (XYZ).
+    # Max grid dimensions (XYZ).
         ('maxGridSize', ctypes.c_int * 3),
 
-        # Max clock frequency of the multiProcessors in khz.
+    # Max clock frequency of the multiProcessors in khz.
         ('clockRate', ctypes.c_int),
 
-        # Max global memory clock frequency in khz.
+    # Max global memory clock frequency in khz.
         ('memoryClockRate', ctypes.c_int),
 
-        # Global memory bus width in bits.
+    # Global memory bus width in bits.
         ('memoryBusWidth', ctypes.c_int),
 
-        # Size of shared memory region (in bytes).
+    # Size of shared memory region (in bytes).
         ('totalConstMem', ctypes.c_size_t),
 
-        # Major compute capability.  On HCC, this is an approximation and features may
-        # differ from CUDA CC.  See the arch feature flags for portable ways to query
-        # feature caps.
+    # Major compute capability.  On HCC, this is an approximation and features may
+    # differ from CUDA CC.  See the arch feature flags for portable ways to query
+    # feature caps.
         ('major', ctypes.c_int),
 
-        # Minor compute capability.  On HCC, this is an approximation and features may
-        # differ from CUDA CC.  See the arch feature flags for portable ways to query
-        # feature caps.
+    # Minor compute capability.  On HCC, this is an approximation and features may
+    # differ from CUDA CC.  See the arch feature flags for portable ways to query
+    # feature caps.
         ('minor', ctypes.c_int),
 
-        # Number of multi-processors (compute units).
+    # Number of multi-processors (compute units).
         ('multiProcessorCount', ctypes.c_int),
 
-        # L2 cache size.
+    # L2 cache size.
         ('l2CacheSize', ctypes.c_int),
 
-        # Maximum resident threads per multi-processor.
+    # Maximum resident threads per multi-processor.
         ('maxThreadsPerMultiProcessor', ctypes.c_int),
 
-        # Compute mode.
+    # Compute mode.
         ('computeMode', ctypes.c_int),
 
-        # Frequency in khz of the timer used by the device-side "clock*"
-        # instructions.  New for HIP.
+    # Frequency in khz of the timer used by the device-side "clock*"
+    # instructions.  New for HIP.
         ('clockInstructionRate', ctypes.c_int),
 
-        # Architectural feature flags.  New for HIP.
+    # Architectural feature flags.  New for HIP.
         ('arch', hipDeviceArch),
 
-        # Device can possibly execute multiple kernels concurrently.
+    # Device can possibly execute multiple kernels concurrently.
         ('concurrentKernels', ctypes.c_int),
 
-        # PCI Domain ID
+    # PCI Domain ID
         ('pciDomainID', ctypes.c_int),
 
-        # PCI Bus ID.
+    # PCI Bus ID.
         ('pciBusID', ctypes.c_int),
 
-        # PCI Device ID.
+    # PCI Device ID.
         ('pciDeviceID', ctypes.c_int),
 
-        # Maximum Shared Memory Per Multiprocessor.
+    # Maximum Shared Memory Per Multiprocessor.
         ('maxSharedMemoryPerMultiProcessor', ctypes.c_size_t),
 
-        # 1 if device is on a multi-GPU board, 0 if not.
+    # 1 if device is on a multi-GPU board, 0 if not.
         ('isMultiGpuBoard', ctypes.c_int),
 
-        # Check whether HIP can map host memory
+    # Check whether HIP can map host memory
         ('canMapHostMemory', ctypes.c_int),
 
-        # DEPRECATED: use gcnArchName instead
+    # DEPRECATED: use gcnArchName instead
         ('gcnArch', ctypes.c_int),
 
-        # AMD GCN Arch Name.
+    # AMD GCN Arch Name.
         ('_gcnArchName', ctypes.c_char * 256),
 
-        # APU vs dGPU
+    # APU vs dGPU
         ('integrated', ctypes.c_int),
 
-        # HIP device supports cooperative launch
+    # HIP device supports cooperative launch
         ('cooperativeLaunch', ctypes.c_int),
 
-        # HIP device supports cooperative launch on multiple devices
+    # HIP device supports cooperative launch on multiple devices
         ('cooperativeMultiDeviceLaunch', ctypes.c_int),
 
-        # Maximum size for 1D textures bound to linear memory
+    # Maximum size for 1D textures bound to linear memory
         ('maxTexture1DLinear', ctypes.c_int),
 
-        # Maximum number of elements in 1D images
+    # Maximum number of elements in 1D images
         ('maxTexture1D', ctypes.c_int),
 
-        # Maximum dimensions (width, height) of 2D images, in image elements
+    # Maximum dimensions (width, height) of 2D images, in image elements
         ('maxTexture2D', ctypes.c_int * 2),
 
-        # Maximum dimensions (width, height, depth) of 3D images, in image elements
+    # Maximum dimensions (width, height, depth) of 3D images, in image elements
         ('maxTexture3D', ctypes.c_int * 3),
 
-        # Addres of HDP_MEM_COHERENCY_FLUSH_CNTL register
+    # Addres of HDP_MEM_COHERENCY_FLUSH_CNTL register
         ('hdpMemFlushCntl', POINTER(ctypes.c_uint)),
 
-        # Addres of HDP_REG_COHERENCY_FLUSH_CNTL register
+    # Addres of HDP_REG_COHERENCY_FLUSH_CNTL register
         ('hdpRegFlushCntl', POINTER(ctypes.c_uint)),
 
-        # Maximum pitch in bytes allowed by memory copies
+    # Maximum pitch in bytes allowed by memory copies
         ('memPitch', ctypes.c_size_t),
 
-        # Alignment requirement for textures
+    # Alignment requirement for textures
         ('textureAlignment', ctypes.c_size_t),
 
-        # Pitch alignment requirement for texture references bound to pitched memory
+    # Pitch alignment requirement for texture references bound to pitched memory
         ('texturePitchAlignment', ctypes.c_size_t),
 
-        # Run time limit for kernels executed on the device
+    # Run time limit for kernels executed on the device
         ('kernelExecTimeoutEnabled', ctypes.c_int),
 
-        # Device has ECC support enabled
+    # Device has ECC support enabled
         ('ECCEnabled', ctypes.c_int),
 
-        # 1:If device is Tesla device using TCC driver, else 0
+    # 1:If device is Tesla device using TCC driver, else 0
         ('tccDriver', ctypes.c_int),
 
-        # HIP device supports cooperative launch on multiple
-        # devices with unmatched functions
+    # HIP device supports cooperative launch on multiple
+    # devices with unmatched functions
         ('cooperativeMultiDeviceUnmatchedFunc', ctypes.c_int),
 
-        # HIP device supports cooperative launch on multiple
-        # devices with unmatched grid dimensions
+    # HIP device supports cooperative launch on multiple
+    # devices with unmatched grid dimensions
         ('cooperativeMultiDeviceUnmatchedGridDim', ctypes.c_int),
 
-        # HIP device supports cooperative launch on multiple
-        # devices with unmatched block dimensions
+    # HIP device supports cooperative launch on multiple
+    # devices with unmatched block dimensions
         ('cooperativeMultiDeviceUnmatchedBlockDim', ctypes.c_int),
 
-        # HIP device supports cooperative launch on multiple
-        # devices with unmatched shared memories
+    # HIP device supports cooperative launch on multiple
+    # devices with unmatched shared memories
         ('cooperativeMultiDeviceUnmatchedSharedMem', ctypes.c_int),
 
-        # 1: if it is a large PCI bar device, else 0
+    # 1: if it is a large PCI bar device, else 0
         ('isLargeBar', ctypes.c_int),
 
-        # Revision of the GPU in this device
+    # Revision of the GPU in this device
         ('asicRevision', ctypes.c_int),
 
-        # Device supports allocating managed memory on this system
+    # Device supports allocating managed memory on this system
         ('managedMemory', ctypes.c_int),
 
-        # Host can directly access managed memory on the device without migration
+    # Host can directly access managed memory on the device without migration
         ('directManagedMemAccessFromHost', ctypes.c_int),
 
-        # Device can coherently access managed memory concurrently with the CPU
+    # Device can coherently access managed memory concurrently with the CPU
         ('concurrentManagedAccess', ctypes.c_int),
 
-        # Device supports coherently accessing pageable memory
-        # without calling hipHostRegister on it
+    # Device supports coherently accessing pageable memory
+    # without calling hipHostRegister on it
         ('pageableMemoryAccess', ctypes.c_int),
 
-        # Device accesses pageable memory via the host's page tables
+    # Device accesses pageable memory via the host's page tables
         ('pageableMemoryAccessUsesHostPageTables', ctypes.c_int),
     ]
 
@@ -924,9 +1173,7 @@ class hipDeviceProperties(ctypes.Structure):
 
 
 _libhip.hipGetDeviceProperties.restype = int
-_libhip.hipGetDeviceProperties.argtypes = [
-    POINTER(hipDeviceProperties), ctypes.c_int
-]
+_libhip.hipGetDeviceProperties.argtypes = [POINTER(hipDeviceProperties), ctypes.c_int]
 
 
 def hipGetDeviceProperties(deviceId: int):
@@ -943,8 +1190,7 @@ def hipGetDeviceProperties(deviceId: int):
        Information for the specified device
     """
     device_properties = hipDeviceProperties()
-    status = _libhip.hipGetDeviceProperties(ctypes.pointer(device_properties),
-                                            deviceId)
+    status = _libhip.hipGetDeviceProperties(ctypes.pointer(device_properties), deviceId)
     hipCheckStatus(status)
     return device_properties
 
@@ -953,12 +1199,11 @@ def hipGetDeviceProperties(deviceId: int):
 hipMemoryTypeHost = 1
 hipMemoryTypeDevice = 2
 hipMemoryTypeArray = 3
-hipMemoryTypeUnified = 4  # Not used currently
+hipMemoryTypeUnified = 4    # Not used currently
 
 
 class hipPointerAttributes(ctypes.Structure):
-    _fields_ = [('memoryType', ctypes.c_int), ('device', ctypes.c_int),
-                ('devicePointer', ctypes.c_void_p),
+    _fields_ = [('memoryType', ctypes.c_int), ('device', ctypes.c_int), ('devicePointer', ctypes.c_void_p),
                 ('hostPointer', ctypes.c_void_p)]
 
 
@@ -995,9 +1240,9 @@ def hipPointerGetAttributes(ptr):
 
 _libhip.hipModuleLoadData.restype = int
 _libhip.hipModuleLoadData.argtypes = [
-    ctypes.POINTER(ctypes.c_void_p),  # Module
+    ctypes.POINTER(ctypes.c_void_p),    # Module
     ctypes.c_void_p
-]  # Image
+]    # Image
 
 
 def hipModuleLoadData(data):
@@ -1023,10 +1268,10 @@ def hipModuleLoadData(data):
 
 _libhip.hipModuleGetFunction.restype = int
 _libhip.hipModuleGetFunction.argtypes = [
-    ctypes.POINTER(ctypes.c_void_p),  # Kernel
-    ctypes.c_void_p,  # Module
+    ctypes.POINTER(ctypes.c_void_p),    # Kernel
+    ctypes.c_void_p,    # Module
     ctypes.POINTER(ctypes.c_char)
-]  # kernel name
+]    # kernel name
 
 
 def hipModuleGetFunction(module, func_name):
@@ -1047,8 +1292,7 @@ def hipModuleGetFunction(module, func_name):
     """
     e_func_name = func_name.encode('utf-8')
     kernel = ctypes.c_void_p()
-    status = _libhip.hipModuleGetFunction(ctypes.byref(kernel), module,
-                                          e_func_name)
+    status = _libhip.hipModuleGetFunction(ctypes.byref(kernel), module, e_func_name)
     hipCheckStatus(status)
     return kernel
 
@@ -1072,22 +1316,21 @@ def hipModuleUnload(module):
 
 _libhip.hipModuleLaunchKernel.restype = int
 _libhip.hipModuleLaunchKernel.argtypes = [
-    ctypes.c_void_p,  # kernel
-    ctypes.c_uint,  # block x
-    ctypes.c_uint,  # block y
-    ctypes.c_uint,  # block z
-    ctypes.c_uint,  # thread x
-    ctypes.c_uint,  # thread y
-    ctypes.c_uint,  # thread z
-    ctypes.c_uint,  # shared mem
-    ctypes.c_void_p,  # stream
-    ctypes.POINTER(ctypes.c_void_p),  # kernel params
+    ctypes.c_void_p,    # kernel
+    ctypes.c_uint,    # block x
+    ctypes.c_uint,    # block y
+    ctypes.c_uint,    # block z
+    ctypes.c_uint,    # thread x
+    ctypes.c_uint,    # thread y
+    ctypes.c_uint,    # thread z
+    ctypes.c_uint,    # shared mem
+    ctypes.c_void_p,    # stream
+    ctypes.POINTER(ctypes.c_void_p),    # kernel params
     ctypes.POINTER(ctypes.c_void_p)
-]  # extra
+]    # extra
 
 
-def hipModuleLaunchKernel(kernel, bx, by, bz, tx, ty, tz, shared, stream,
-                          struct):
+def hipModuleLaunchKernel(kernel, bx, by, bz, tx, ty, tz, shared, stream, struct):
     """
     Launch the kernel
 
@@ -1129,14 +1372,12 @@ def hipModuleLaunchKernel(kernel, bx, by, bz, tx, ty, tz, shared, stream,
     size = ctypes.c_size_t(ctypes.sizeof(struct))
     p_size = ctypes.c_void_p(ctypes.addressof(size))
     p_struct = ctypes.c_void_p(ctypes.addressof(struct))
-    config = (ctypes.c_void_p * 5)(hip_launch_param_buffer_ptr, p_struct,
-                                   hip_launch_param_buffer_size, p_size,
-                                   hip_launch_param_buffer_end)
+    config = (ctypes.c_void_p * 5)(
+        hip_launch_param_buffer_ptr, p_struct, hip_launch_param_buffer_size, p_size, hip_launch_param_buffer_end
+    )
     nullptr = ctypes.POINTER(ctypes.c_void_p)(ctypes.c_void_p(0))
 
-    status = _libhip.hipModuleLaunchKernel(kernel, c_bx, c_by, c_bz, c_tx,
-                                           c_ty, c_tz, c_shared, stream, None,
-                                           config)
+    status = _libhip.hipModuleLaunchKernel(kernel, c_bx, c_by, c_bz, c_tx, c_ty, c_tz, c_shared, stream, None, config)
     hipCheckStatus(status)
 
 
@@ -1153,7 +1394,7 @@ def hipDeviceSynchronize():
 
 
 _libhip.hipInit.restype = int
-_libhip.hipInit.argtypes = [ctypes.c_uint]  # flags
+_libhip.hipInit.argtypes = [ctypes.c_uint]    # flags
 
 
 def hipInit(flags):
