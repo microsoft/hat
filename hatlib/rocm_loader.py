@@ -126,17 +126,11 @@ class RocmCallableFunc(CallableFunc):
         else:
             hipStreamSynchronize(self.stream)
 
-    def main(self, iters=1, args=[]) -> float:
-        hipEventRecord(self.start_event)
-        if iters == 1:
-            hipModuleLaunchKernel(
-                self.kernel,
-                *self.launch_params,    # [ grid[x-z], block[x-z] ]
-                0,    # dynamic shared memory
-                0,    # stream
-                self.data,    # data
-            )
-        elif iters > 1:
+    def main(self, iters=1, batch_size=1, args=[]) -> float:
+        batch_timings:List[float] = []
+        for _ in range(batch_size):
+            hipEventRecord(self.start_event)
+
             for _ in range(iters):
                 hipModuleLaunchKernel(
                     self.kernel,
@@ -145,11 +139,15 @@ class RocmCallableFunc(CallableFunc):
                     0,    # stream
                     self.data,    # data
                 )
-        hipEventRecord(self.stop_event)
-        hipEventSynchronize(self.stop_event)
-        self.exec_time = hipEventElapsedTime(self.start_event, self.stop_event)
-        self.exec_time /= iters
-        return self.exec_time
+
+            hipEventRecord(self.stop_event)
+            hipEventSynchronize(self.stop_event)
+            batch_time = hipEventElapsedTime(self.start_event, self.stop_event)
+            batch_timings.append(batch_time)
+            self.exec_time += batch_time
+
+        self.exec_time /= (iters * batch_size)
+        return batch_timings
 
     def cleanup_main(self, args=[]):
         transfer_mem_rocm_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)

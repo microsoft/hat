@@ -196,21 +196,14 @@ class CudaCallableFunc(CallableFunc):
             err, = cuda.cuStreamSynchronize(self.stream)
             ASSERT_DRV(err)
 
-    def main(self, iters=1, args=[]) -> float:
-        cuda.cuEventRecord(self.start_event, 0)
-        if iters == 1:
-            err, = cuda.cuLaunchKernel(
-                self.kernel,
-                *self.launch_params,    # [ grid[x-z], block[x-z] ]
-                0,    # dynamic shared memory
-                self.stream,    # stream
-                self.ptrs.ctypes.data,    # kernel arguments
-                0,    # extra (ignore)
-            )
+    def main(self, iters=1, batch_size=1, args=[]) -> float:
+        batch_timings:List[float] = []
+        for _ in range(batch_size):
+            err, = cuda.cuEventRecord(self.start_event, 0)
             ASSERT_DRV(err)
-        elif iters > 1:
+
             for _ in range(iters):
-                cuda.cuLaunchKernel(
+                err, = cuda.cuLaunchKernel(
                     self.kernel,
                     *self.launch_params,    # [ grid[x-z], block[x-z] ]
                     0,    # dynamic shared memory
@@ -218,14 +211,19 @@ class CudaCallableFunc(CallableFunc):
                     self.ptrs.ctypes.data,    # kernel arguments
                     0,    # extra (ignore)
                 )
-        err, = cuda.cuEventRecord(self.stop_event, 0)
-        ASSERT_DRV(err)
-        err, = cuda.cuEventSynchronize(self.stop_event)
-        ASSERT_DRV(err)
-        err, self.exec_time = cuda.cuEventElapsedTime(self.start_event, self.stop_event)
-        ASSERT_DRV(err)
-        self.exec_time /= iters
-        return self.exec_time
+                ASSERT_DRV(err)
+
+            err, = cuda.cuEventRecord(self.stop_event, 0)
+            ASSERT_DRV(err)
+            err, = cuda.cuEventSynchronize(self.stop_event)
+            ASSERT_DRV(err)
+            err, batch_time = cuda.cuEventElapsedTime(self.start_event, self.stop_event)
+            ASSERT_DRV(err)
+            batch_timings.append(batch_time)
+            self.exec_time += batch_time
+        
+        self.exec_time /= (iters * batch_size)
+        return batch_timings
 
     def cleanup_main(self, args=[]):
         transfer_mem_cuda_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)

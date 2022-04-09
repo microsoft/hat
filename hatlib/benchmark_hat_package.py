@@ -125,19 +125,17 @@ class Benchmark:
             return mean_elapsed_time, batch_timings
         else:
             print(f"[Benchmarking] Benchmarking device function. {batch_size} batches of warming up for {warmup_iterations} and then measuring with {min_timing_iterations} iterations.")
-            input_sets = generate_input_sets_for_func(func,num_additional=batch_size)
+            input_sets = generate_input_sets_for_func(func)
 
             set_size = 0
-            for i in input_sets[0]:
+            for i in input_sets:
                 set_size += i.size * i.dtype.itemsize
 
             print(
                 f"[Benchmarking] Using input of {set_size} bytes"
             )
 
-            batch_timings = [
-                benchmark_func.benchmark(warmup_iters=warmup_iterations, iters=min_timing_iterations, args=input_sets[i]) for i in range(batch_size)
-            ]
+            batch_timings = benchmark_func.benchmark(warmup_iters=warmup_iterations, iters=min_timing_iterations, batch_size=batch_size, args=input_sets)
             time = sum(batch_timings) / (min_timing_iterations * batch_size)
             return time, batch_timings
 
