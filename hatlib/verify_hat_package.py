@@ -16,11 +16,14 @@ def verify_hat_package(hat_path):
         for i, func_input in enumerate(func_inputs):
             print(f"\tInput {i}: {','.join(map(str, func_input.ravel()[:32]))}")
 
-        fn(*inputs[name])
+        time = fn(*inputs[name])
 
         print("Inputs after function call:")
         for i, func_input in enumerate(func_inputs):
             print(f"\tInput {i}: {','.join(map(str, func_input.ravel()[:32]))}")
+
+        if time:
+            print(f"Function execution time: {time:4f}ms")
 
 
 def main():
