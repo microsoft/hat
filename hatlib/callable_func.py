@@ -18,7 +18,7 @@ class CallableFunc(ABC):
 
         return time
 
-    def benchmark(self, warmup_iters, iters, args):
+    def benchmark(self, warmup_iters, iters, args) -> float:
         time = -1.
         try:
             self.init_runtime()

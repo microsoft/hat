@@ -91,7 +91,7 @@ class Benchmark:
             print(
                 f"[Benchmarking] Using {len(input_sets)} input sets, each {set_size} bytes"
             )
-        
+
             perf_counter, perf_counter_scale = get_perf_counter()
             print(
                 f"[Benchmarking] Warming up for {warmup_iterations} iterations...")
