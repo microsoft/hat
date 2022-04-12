@@ -67,12 +67,15 @@ class Benchmark:
                  min_time_in_sec, input_sets_minimum_size_MB):
         def get_perf_counter():
             if hasattr(time, 'perf_counter_ns'):
-                perf_counter = time.perf_counter_ns
+                _perf_counter = time.perf_counter_ns
                 perf_counter_scale = 1000000000
             else:
-                perf_counter = time.perf_counter
+                _perf_counter = time.perf_counter
                 perf_counter_scale = 1
-            return perf_counter, perf_counter_scale
+            def perf_counter():
+                return _perf_counter / perf_counter_scale
+
+            return perf_counter
 
         func = self.function_descriptions[function_name]
 
@@ -92,7 +95,7 @@ class Benchmark:
                 f"[Benchmarking] Using {len(input_sets)} input sets, each {set_size} bytes"
             )
 
-            perf_counter, perf_counter_scale = get_perf_counter()
+            perf_counter = get_perf_counter()
             print(
                 f"[Benchmarking] Warming up for {warmup_iterations} iterations...")
 
@@ -103,26 +106,26 @@ class Benchmark:
             print(
                 f"[Benchmarking] Timing for at least {min_time_in_sec}s and at least {min_timing_iterations} iterations..."
             )
-            start_time = perf_counter()
-            end_time = perf_counter()
+            start_time_secs = perf_counter()
+            end_time_secs = perf_counter()
 
             i = 0
             i_max = len(input_sets)
             iterations = 1
             batch_timings = []
-            while ((end_time - start_time) / perf_counter_scale) < min_time_in_sec and len(batch_timings) < batch_size:
-                batch_start_time = perf_counter()
+            while ((end_time_secs - start_time_secs)) < min_time_in_sec and len(batch_timings) < batch_size:
+                batch_start_time_secs = perf_counter()
                 for _ in range(min_timing_iterations):
                     self.func_dict[function_name](*input_sets[i])
                     i = iterations % i_max
                     iterations += 1
-                end_time = perf_counter()
+                end_time_secs = perf_counter()
                 batch_timings.append(
-                    (end_time - batch_start_time) / perf_counter_scale)
+                    (end_time_secs - batch_start_time_secs))
 
-            elapsed_time = ((end_time - start_time) / perf_counter_scale)
-            mean_elapsed_time = elapsed_time / iterations
-            return mean_elapsed_time, batch_timings
+            elapsed_time_secs = ((end_time_secs - start_time_secs))
+            mean_elapsed_time_secs = elapsed_time_secs / iterations
+            return mean_elapsed_time_secs, batch_timings
         else:
             print(f"[Benchmarking] Benchmarking device function. {batch_size} batches of warming up for {warmup_iterations} and then measuring with {min_timing_iterations} iterations.")
             input_sets = generate_input_sets_for_func(func)
@@ -135,9 +138,10 @@ class Benchmark:
                 f"[Benchmarking] Using input of {set_size} bytes"
             )
 
-            batch_timings = benchmark_func.benchmark(warmup_iters=warmup_iterations, iters=min_timing_iterations, batch_size=batch_size, args=input_sets)
-            time = sum(batch_timings) / (min_timing_iterations * batch_size)
-            return time, batch_timings
+            batch_timings_ms = benchmark_func.benchmark(warmup_iters=warmup_iterations, iters=min_timing_iterations, batch_size=batch_size, args=input_sets)
+            batch_timings_secs = list(map(lambda t: t / 1000, batch_timings_ms))
+            time = sum(batch_timings_secs) / (min_timing_iterations * batch_size)
+            return time, batch_timings_secs
 
 
 def write_runtime_to_hat_file(hat_path, function_name, mean_time_secs):
