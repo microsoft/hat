@@ -84,17 +84,13 @@ def get_func_from_ptx(ptx, func_name):
     return kernel
 
 
-def _arg_size(arg_info: ArgInfo):
-    return arg_info.element_num_bytes * reduce(lambda x, y: x * y, arg_info.numpy_shape)
-
-
 def _cuda_transfer_mem(usage, func, source_args: List, dest_args: List, arg_infos: List[ArgInfo], stream=None):
     for source_arg, dest_arg, arg_info in zip(source_args, dest_args, arg_infos):
         if usage in arg_info.usage.value:
             if stream:
-                err, = func(dest_arg, source_arg, _arg_size(arg_info), stream)
+                err, = func(dest_arg, source_arg, arg_info.total_byte_size, stream)
             else:
-                err, = func(dest_arg, source_arg, _arg_size(arg_info))
+                err, = func(dest_arg, source_arg, arg_info.total_byte_size)
             ASSERT_DRV(err)
 
 
@@ -124,7 +120,7 @@ def allocate_cuda_mem(arg_infos: List[ArgInfo], stream=None):
     device_mem = []
 
     for arg in arg_infos:
-        size = _arg_size(arg)
+        size = arg.total_byte_size
         err, mem = cuda.cuMemAllocAsync(size, stream) if stream else cuda.cuMemAlloc(size)
         ASSERT_DRV(err)
         device_mem.append(mem)

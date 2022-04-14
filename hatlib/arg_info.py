@@ -1,4 +1,5 @@
 import ctypes
+from functools import reduce
 import numpy as np
 import sys
 from dataclasses import dataclass
@@ -31,6 +32,8 @@ class ArgInfo:
     numpy_strides: Tuple[int]
     numpy_dtype: type
     element_num_bytes: int
+    element_strides: int
+    total_byte_size: int
     ctypes_pointer_type: Any
     usage: hat_file.UsageType = None
 
@@ -45,7 +48,13 @@ class ArgInfo:
         self.ctypes_pointer_type = ctypes.POINTER(ARG_TYPES[self.hat_declared_type][CTYPE_ENTRY])
         self.numpy_dtype = np.dtype(ARG_TYPES[self.hat_declared_type][DTYPE_ENTRY])
         self.element_num_bytes = self.numpy_dtype.itemsize
-        self.numpy_strides = tuple([self.element_num_bytes * x for x in param_description.affine_map])
+        self.element_strides = param_description.affine_map
+        self.numpy_strides = tuple([self.element_num_bytes * x for x in self.element_strides])
+
+        def product(l):
+            return reduce(lambda x1, x2: x1*x2, l)
+
+        self.total_byte_size = self.element_num_bytes * self.numpy_shape[0] * product(self.element_strides)
 
 
 # TODO: Update this to take a HATFunction instead, instead of arg_infos and function_name

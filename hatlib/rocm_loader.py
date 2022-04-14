@@ -12,10 +12,6 @@ from .pyhip.hip import *
 from .pyhip.hiprtc import *
 
 
-def _arg_size(arg_info: ArgInfo):
-    return arg_info.element_num_bytes * reduce(lambda x, y: x * y, arg_info.numpy_shape)
-
-
 def initialize_rocm():
     # Initialize ROCM Driver API
     hipInit(0)
@@ -47,7 +43,7 @@ def get_func_from_rocm_program(rocm_program, func_name):
 def allocate_rocm_mem(arg_infos: List[ArgInfo]):
     device_mem = []
     for arg in arg_infos:
-        mem = hipMalloc(_arg_size(arg))
+        mem = hipMalloc(arg.total_byte_size)
         device_mem.append(mem)
 
     return device_mem
@@ -61,13 +57,13 @@ def free_rocm_mem(args):
 def transfer_mem_host_to_rocm(device_args: List, host_args: List[np.array], arg_infos: List[ArgInfo]):
     for device_arg, host_arg, arg_info in zip(device_args, host_args, arg_infos):
         if 'input' in arg_info.usage.value:
-            hipMemcpy_htod(dst=device_arg, src=host_arg.ctypes.data, count=_arg_size(arg_info))
+            hipMemcpy_htod(dst=device_arg, src=host_arg.ctypes.data, count=arg_info.total_byte_size)
 
 
 def transfer_mem_rocm_to_host(device_args: List, host_args: List[np.array], arg_infos: List[ArgInfo]):
     for device_arg, host_arg, arg_info in zip(device_args, host_args, arg_infos):
         if 'output' in arg_info.usage.value:
-            hipMemcpy_dtoh(dst=host_arg.ctypes.data, src=device_arg, count=_arg_size(arg_info))
+            hipMemcpy_dtoh(dst=host_arg.ctypes.data, src=device_arg, count=arg_info.total_byte_size)
 
 
 def device_args_to_ptr_list(device_args: List):
