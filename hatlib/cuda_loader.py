@@ -2,7 +2,6 @@ import os
 import pathlib
 import sys
 import numpy as np
-from functools import reduce
 from typing import List
 
 # CUDA stuff
@@ -52,8 +51,7 @@ def compile_cuda_program(cuda_src_path: pathlib.Path, func_name):
     ptx = prog.compile([
         '-use_fast_math',
         '-default-device',
-        '-std=c++11',
-        '-arch=sm_52',    # TODO: is this needed?
+        '-std=c++11'
     ])
 
     return ptx
@@ -122,7 +120,11 @@ def allocate_cuda_mem(arg_infos: List[ArgInfo], stream=None):
     for arg in arg_infos:
         size = arg.total_byte_size
         err, mem = cuda.cuMemAllocAsync(size, stream) if stream else cuda.cuMemAlloc(size)
-        ASSERT_DRV(err)
+        try:
+            ASSERT_DRV(err)
+        except:
+            free_cuda_mem(device_mem, stream)
+            raise
         device_mem.append(mem)
 
     return device_mem
@@ -141,25 +143,34 @@ def device_args_to_ptr_list(device_args: List):
     return ptrs
 
 
+_PTX_CACHE = {}
+
+
 class CudaCallableFunc(CallableFunc):
 
-    def __init__(self, func: Function, kernel) -> None:
+    def __init__(self, func: Function, cuda_src_path: str) -> None:
         super().__init__()
         self.hat_func = func
         self.func_name = func.name
-        self.kernel = kernel
+        self.kernel = None
         hat_arg_descriptions = func.arguments
         self.arg_infos = [ArgInfo(d) for d in hat_arg_descriptions]
         self.launch_params = func.launch_parameters
         self.device_mem = None
         self.ptrs = None
-        self.stream = None
         self.start_event = None
         self.stop_event = None
         self.exec_time = 0.
+        self.cuda_src_path = cuda_src_path
 
     def init_runtime(self):
-        pass
+        initialize_cuda()
+
+        ptx = _PTX_CACHE.get(self.cuda_src_path)
+        if not ptx:
+            _PTX_CACHE[self.cuda_src_path] = ptx = compile_cuda_program(self.cuda_src_path, self.func_name)
+
+        self.kernel = get_func_from_ptx(ptx, self.func_name)
 
     def cleanup_runtime(self):
         pass
@@ -169,9 +180,6 @@ class CudaCallableFunc(CallableFunc):
         self.device_mem = allocate_cuda_mem(self.arg_infos)
         transfer_mem_host_to_cuda(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
         self.ptrs = device_args_to_ptr_list(self.device_mem)
-
-        err, self.stream = cuda.cuStreamCreate(0)
-        ASSERT_DRV(err)
 
         err, self.start_event = cuda.cuEventCreate(cuda.CUevent_flags.CU_EVENT_DEFAULT)
         ASSERT_DRV(err)
@@ -183,17 +191,17 @@ class CudaCallableFunc(CallableFunc):
                 self.kernel,
                 *self.launch_params,    # [ grid[x-z], block[x-z] ]
                 0,    # dynamic shared memory
-                self.stream,    # stream
+                0,    # stream
                 self.ptrs.ctypes.data,    # kernel arguments
                 0,    # extra (ignore)
             )
             ASSERT_DRV(err)
         else:
-            err, = cuda.cuStreamSynchronize(self.stream)
+            err, = cuda.cuCtxSynchronize()
             ASSERT_DRV(err)
 
     def main(self, iters=1, batch_size=1, args=[]) -> float:
-        batch_timings:List[float] = []
+        batch_timings: List[float] = []
         for _ in range(batch_size):
             err, = cuda.cuEventRecord(self.start_event, 0)
             ASSERT_DRV(err)
@@ -203,7 +211,7 @@ class CudaCallableFunc(CallableFunc):
                     self.kernel,
                     *self.launch_params,    # [ grid[x-z], block[x-z] ]
                     0,    # dynamic shared memory
-                    self.stream,    # stream
+                    0,    # stream
                     self.ptrs.ctypes.data,    # kernel arguments
                     0,    # extra (ignore)
                 )
@@ -217,28 +225,33 @@ class CudaCallableFunc(CallableFunc):
             ASSERT_DRV(err)
             batch_timings.append(batch_time)
             self.exec_time += batch_time
-        
+
+            err, = cuda.cuCtxSynchronize()
+            ASSERT_DRV(err)
+
         self.exec_time /= (iters * batch_size)
         return batch_timings
 
     def cleanup_main(self, args=[]):
-        transfer_mem_cuda_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
-        free_cuda_mem(self.device_mem)
-        cuda.cuEventDestroy(self.start_event)
-        cuda.cuEventDestroy(self.stop_event)
-        cuda.cuStreamDestroy(self.stream)
+        # If there's no device mem, that means allocation during initialization failed, which means nothing else needs to be cleaned up either
+        if self.device_mem:
+            transfer_mem_cuda_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
+            free_cuda_mem(self.device_mem)
 
-initialize_cuda()
+        err, = cuda.cuCtxSynchronize()
+        ASSERT_DRV(err)
+
+        if self.start_event:
+            cuda.cuEventDestroy(self.start_event)
+
+        if self.stop_event:
+            cuda.cuEventDestroy(self.stop_event)
+
 
 def create_loader_for_device_function(device_func: Function, hat_dir_path: str) -> CallableFunc:
     if not device_func.provider:
         raise RuntimeError("Expected a provider for the device function")
 
     cuda_src_path: pathlib.Path = pathlib.Path(hat_dir_path) / device_func.provider
-    func_name = device_func.name
 
-    ptx = compile_cuda_program(cuda_src_path, func_name)
-
-    kernel = get_func_from_ptx(ptx, func_name)
-
-    return CudaCallableFunc(device_func, kernel)
+    return CudaCallableFunc(device_func, cuda_src_path)
