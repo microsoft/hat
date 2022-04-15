@@ -28,11 +28,11 @@ DTYPE_ENTRY = 1
 class ArgInfo:
     """Extracts necessary information from the description of a function argument in a hat file"""
     hat_declared_type: str
-    numpy_shape: Tuple[int]
-    numpy_strides: Tuple[int]
+    numpy_shape: Tuple[int, ...]
+    numpy_strides: Tuple[int, ...]
     numpy_dtype: type
     element_num_bytes: int
-    element_strides: int
+    element_strides: Tuple[int, ...]
     total_byte_size: int
     ctypes_pointer_type: Any
     usage: hat_file.UsageType = None
