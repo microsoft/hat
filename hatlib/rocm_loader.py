@@ -1,7 +1,6 @@
 import ctypes
 import pathlib
 import numpy as np
-from functools import reduce
 from typing import List
 
 from .arg_info import ArgInfo, verify_args
@@ -43,7 +42,11 @@ def get_func_from_rocm_program(rocm_program, func_name):
 def allocate_rocm_mem(arg_infos: List[ArgInfo]):
     device_mem = []
     for arg in arg_infos:
-        mem = hipMalloc(arg.total_byte_size)
+        try:
+            mem = hipMalloc(arg.total_byte_size)
+        except:
+            free_rocm_mem(device_mem)
+            raise
         device_mem.append(mem)
 
     return device_mem
@@ -73,13 +76,16 @@ def device_args_to_ptr_list(device_args: List):
     return ptrs
 
 
+_HSACO_CACHE = {}
+
+
 class RocmCallableFunc(CallableFunc):
 
-    def __init__(self, func: Function, kernel) -> None:
+    def __init__(self, func: Function, rocm_src_path: str) -> None:
         super().__init__()
         self.hat_func = func
         self.func_name = func.name
-        self.kernel = kernel
+        self.kernel = None
         hat_arg_descriptions = func.arguments
         self.arg_infos = [ArgInfo(d) for d in hat_arg_descriptions]
         self.launch_params = func.launch_parameters
@@ -89,9 +95,16 @@ class RocmCallableFunc(CallableFunc):
         self.start_event = None
         self.stop_event = None
         self.exec_time = 0.
+        self.rocm_src_path = rocm_src_path
 
     def init_runtime(self):
-        pass
+        initialize_rocm()
+
+        rocm_program = _HSACO_CACHE.get(self.rocm_src_path)
+        if not rocm_program:
+            _HSACO_CACHE[self.rocm_src_path] = rocm_program = compile_rocm_program(self.rocm_src_path, self.func_name)
+
+        self.kernel = get_func_from_rocm_program(rocm_program, self.func_name)
 
     def cleanup_runtime(self):
         pass
@@ -106,8 +119,6 @@ class RocmCallableFunc(CallableFunc):
 
         self.data = DataStruct(*self.device_mem)
 
-        self.stream = hipStreamCreate()
-
         self.start_event = hipEventCreate()
         self.stop_event = hipEventCreate()
 
@@ -120,10 +131,10 @@ class RocmCallableFunc(CallableFunc):
                 self.data,    # data
             )
         else:
-            hipStreamSynchronize(self.stream)
+            hipDeviceSynchronize()
 
     def main(self, iters=1, batch_size=1, args=[]) -> float:
-        batch_timings:List[float] = []
+        batch_timings: List[float] = []
         for _ in range(batch_size):
             hipEventRecord(self.start_event)
 
@@ -142,18 +153,24 @@ class RocmCallableFunc(CallableFunc):
             batch_timings.append(batch_time)
             self.exec_time += batch_time
 
+            hipDeviceSynchronize()
+
         self.exec_time /= (iters * batch_size)
         return batch_timings
 
     def cleanup_main(self, args=[]):
-        transfer_mem_rocm_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
-        free_rocm_mem(self.device_mem)
-        hipEventDestroy(self.start_event)
-        hipEventDestroy(self.stop_event)
-        hipStreamDestroy(self.stream)
+        # If there's no device mem, that means allocation during initialization failed, which means nothing else needs to be cleaned up either
+        if self.device_mem:
+            transfer_mem_rocm_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
+            free_rocm_mem(self.device_mem)
 
+        hipDeviceSynchronize()
 
-initialize_rocm()
+        if self.start_event:
+            hipEventDestroy(self.start_event)
+
+        if self.stop_event:
+            hipEventDestroy(self.stop_event)
 
 
 def create_loader_for_device_function(device_func: Function, hat_dir_path: str):
@@ -161,10 +178,5 @@ def create_loader_for_device_function(device_func: Function, hat_dir_path: str):
         raise RuntimeError("Expected a provider for the device function")
 
     rocm_src_path: pathlib.Path = pathlib.Path(hat_dir_path) / device_func.provider
-    func_name = device_func.name
 
-    rocm_program = compile_rocm_program(rocm_src_path, func_name)
-
-    kernel = get_func_from_rocm_program(rocm_program, func_name)
-
-    return RocmCallableFunc(device_func, kernel)
+    return RocmCallableFunc(device_func, rocm_src_path)
