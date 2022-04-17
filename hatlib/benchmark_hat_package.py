@@ -231,6 +231,7 @@ def run_benchmark(hat_path,
                 "min_of_means": "-",
             }   
             )
+            raise e
     return results
 
 
