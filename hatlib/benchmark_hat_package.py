@@ -219,8 +219,7 @@ def run_benchmark(hat_path,
             print(
                 f"WARNING: Failed to run function {function_name}, skipping this benchmark."
             )
-            results.append(
-            {
+            results.append({
                 "function_name": function_name,
                 "mean": "-",
                 "median_of_means": "-",

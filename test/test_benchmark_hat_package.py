@@ -23,13 +23,14 @@ class BenchmarkHATPackage_test(unittest.TestCase):
             name="BenchmarkHATPackage_test_benchmark", output_dir="test_acccgen", format=acc.Package.Format.HAT_DYNAMIC
         )
 
-        run_benchmark(
+        results = run_benchmark(
             "test_acccgen/BenchmarkHATPackage_test_benchmark.hat",
             store_in_hat=False,
             batch_size=2,
             min_time_in_sec=1,
             input_sets_minimum_size_MB=1
         )
+        self.assertIn('test_function', results[0]['function_name'])
 
     def test_benchmark_multiple_functions(self):
         A = acc.Array(role=acc.Array.Role.INPUT, shape=(256, 256))
@@ -55,13 +56,15 @@ class BenchmarkHATPackage_test(unittest.TestCase):
             name="BenchmarkHATPackage_test_benchmark", output_dir="test_acccgen", format=acc.Package.Format.HAT_DYNAMIC
         )
 
-        run_benchmark(
+        results = run_benchmark(
             "test_acccgen/BenchmarkHATPackage_test_benchmark.hat",
             store_in_hat=False,
             batch_size=2,
             min_time_in_sec=1,
             input_sets_minimum_size_MB=1
         )
+        self.assertIn('test_function', results[0]['function_name'])
+        self.assertIn('test_function_dummy', results[1]['function_name'])
 
 
 if __name__ == '__main__':
