@@ -220,15 +220,14 @@ def run_benchmark(hat_path,
                 f"WARNING: Failed to run function {function_name}, skipping this benchmark."
             )
             results.append(
-             {
+            {
                 "function_name": function_name,
                 "mean": "-",
                 "median_of_means": "-",
                 "mean_of_small_means": "-",
                 "robust_mean": "-",
                 "min_of_means": "-",
-            }   
-            )
+            })
     return results
 
 
