@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 import unittest
-import os
-import sys
 import accera as acc
 from hatlib import run_benchmark
 
 
 class BenchmarkHATPackage_test(unittest.TestCase):
-
     def test_benchmark(self):
         A = acc.Array(role=acc.Array.Role.INPUT, shape=(256, 256))
         B = acc.Array(role=acc.Array.Role.INPUT, shape=(256, 256))
