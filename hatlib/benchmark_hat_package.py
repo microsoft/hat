@@ -140,8 +140,8 @@ class Benchmark:
 
             batch_timings_ms = benchmark_func.benchmark(warmup_iters=warmup_iterations, iters=min_timing_iterations, batch_size=batch_size, args=input_sets)
             batch_timings_secs = list(map(lambda t: t / 1000, batch_timings_ms))
-            time = sum(batch_timings_secs) / (min_timing_iterations * batch_size)
-            return time, batch_timings_secs
+            mean_timings = sum(batch_timings_secs) / (min_timing_iterations * batch_size)
+            return mean_timings, batch_timings_secs
 
 
 def write_runtime_to_hat_file(hat_path, function_name, mean_time_secs):
