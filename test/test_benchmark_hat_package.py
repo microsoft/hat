@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import unittest
 import accera as acc
+import numpy as np
 from hatlib import run_benchmark
 
 
@@ -30,7 +31,8 @@ class BenchmarkHATPackage_test(unittest.TestCase):
             min_time_in_sec=1,
             input_sets_minimum_size_MB=1
         )
-        self.assertIn('test_function', results[0]['function_name'])
+        self.assertIn("test_function", results[0]["function_name"])
+        self.assertEqual(type(results[0]["mean"]), np.float64)
 
     def test_benchmark_multiple_functions(self):
         A = acc.Array(role=acc.Array.Role.INPUT, shape=(256, 256))
@@ -63,8 +65,10 @@ class BenchmarkHATPackage_test(unittest.TestCase):
             min_time_in_sec=1,
             input_sets_minimum_size_MB=1
         )
-        self.assertIn('test_function', results[0]['function_name'])
-        self.assertIn('test_function_dummy', results[1]['function_name'])
+        self.assertIn("test_function", results[0]["function_name"])
+        self.assertIn("test_function_dummy", results[1]["function_name"])
+        for r in results:
+            self.assertEqual(type(r["mean"]), np.float64)
 
 
 if __name__ == '__main__':
