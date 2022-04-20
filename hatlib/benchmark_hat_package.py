@@ -5,9 +5,7 @@ import numpy as np
 import pandas as pd
 import sys
 import time
-import toml
 import traceback
-from pathlib import Path
 
 from .callable_func import CallableFunc
 from .hat_file import HATFile
@@ -73,7 +71,7 @@ class Benchmark:
                 _perf_counter = time.perf_counter
                 perf_counter_scale = 1
             def perf_counter():
-                return _perf_counter / perf_counter_scale
+                return _perf_counter() / perf_counter_scale
 
             return perf_counter
 
