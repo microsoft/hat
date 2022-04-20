@@ -5,9 +5,7 @@ import numpy as np
 import pandas as pd
 import sys
 import time
-import toml
 import traceback
-from pathlib import Path
 
 from .callable_func import CallableFunc
 from .hat_file import HATFile
@@ -73,7 +71,7 @@ class Benchmark:
                 _perf_counter = time.perf_counter
                 perf_counter_scale = 1
             def perf_counter():
-                return _perf_counter / perf_counter_scale
+                return _perf_counter() / perf_counter_scale
 
             return perf_counter
 
@@ -140,8 +138,8 @@ class Benchmark:
 
             batch_timings_ms = benchmark_func.benchmark(warmup_iters=warmup_iterations, iters=min_timing_iterations, batch_size=batch_size, args=input_sets)
             batch_timings_secs = list(map(lambda t: t / 1000, batch_timings_ms))
-            time = sum(batch_timings_secs) / (min_timing_iterations * batch_size)
-            return time, batch_timings_secs
+            mean_timings = sum(batch_timings_secs) / (min_timing_iterations * batch_size)
+            return mean_timings, batch_timings_secs
 
 
 def write_runtime_to_hat_file(hat_path, function_name, mean_time_secs):
@@ -221,16 +219,14 @@ def run_benchmark(hat_path,
             print(
                 f"WARNING: Failed to run function {function_name}, skipping this benchmark."
             )
-            results.append(
-             {
+            results.append({
                 "function_name": function_name,
                 "mean": "-",
                 "median_of_means": "-",
                 "mean_of_small_means": "-",
                 "robust_mean": "-",
                 "min_of_means": "-",
-            }   
-            )
+            })
     return results
 
 

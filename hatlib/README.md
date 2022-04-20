@@ -10,7 +10,7 @@ Usage:
     import hatlib as hat
 
     # load the package
-    package = hat.load("my_package.hat")
+    _, package = hat.load("my_package.hat")
 
     # print the function names
     for name in package.names():

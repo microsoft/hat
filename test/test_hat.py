@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 import accera as acc
 import numpy as np
-import os
-import sys
 import unittest
-from hatlib import load, create_dynamic_package, create_static_package
+from hatlib import load, create_dynamic_package
 
 
 class HAT_test(unittest.TestCase):
-
     def test_load(self):
 
         # Generate a HAT package
