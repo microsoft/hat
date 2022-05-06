@@ -27,7 +27,7 @@ def compile_rocm_program(rocm_src_path: pathlib.Path, func_name):
     )
     device_properties = hipGetDeviceProperties(0)
     hiprtcCompileProgram(prog, [f'--offload-arch={device_properties.gcnArchName}', '-D__HIP_PLATFORM_AMD__'])
-    print(hiprtcGetProgramLog(prog))
+    # print(hiprtcGetProgramLog(prog))
     code = hiprtcGetCode(prog)
 
     return code
