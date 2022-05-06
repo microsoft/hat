@@ -309,14 +309,11 @@ def hiprtcGetProgramLog(prog):
     log_size = ctypes.c_size_t()
     status = _libhiprtc.hiprtcGetProgramLogSize(prog, ctypes.byref(log_size))
     hiprtcCheckStatus(status)
-    if log_size.value > 1:  # only print if there is something to print (log_size=1 is a null byte)
-        log = "0" * log_size.value
-        e_log = log.encode('utf-8')
-        status = _libhiprtc.hiprtcGetProgramLog(prog, e_log)
-        hiprtcCheckStatus(status)
-        return e_log.decode('utf-8')
-    else:
-        return ""
+    log = "0" * log_size.value
+    e_log = log.encode('utf-8')
+    status = _libhiprtc.hiprtcGetProgramLog(prog, e_log)
+    hiprtcCheckStatus(status)
+    return e_log.decode('utf-8')
 
 
 _libhiprtc.hiprtcGetCodeSize.restype = int
