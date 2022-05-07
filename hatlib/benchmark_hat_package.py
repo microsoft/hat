@@ -33,7 +33,8 @@ class Benchmark:
             min_timing_iterations: int = 100,
             batch_size: int = 10,
             min_time_in_sec: int = 10,
-            input_sets_minimum_size_MB=50) -> float:
+            input_sets_minimum_size_MB=50,
+            gpuId: int=0) -> float:
         """Runs benchmarking for a function.
            Multiple inputs are run through the function until both minimum time and minimum iterations have been reached.
            The mean duration is then calculated as mean_duration = total_time_elapsed / total_iterations_performed.
@@ -43,6 +44,7 @@ class Benchmark:
             min_timing_iterations: minimum number of timing iterations
             min_time_in_sec: minimum amount of time to run the benchmark
             input_sets_minimum_size_MB: generate enough input sets to exceed this size to avoid cache hits
+            gpuId: the ID of the gpu device on which to run the benchmark
         Returns:
             Mean duration in seconds,
             Vector of timings in seconds for each batch that was run
@@ -54,7 +56,7 @@ class Benchmark:
 
         mean_elapsed_time, batch_timings = self._profile(
             function_name, warmup_iterations, min_timing_iterations, batch_size,
-            min_time_in_sec, input_sets_minimum_size_MB)
+            min_time_in_sec, input_sets_minimum_size_MB, gpuId)
         print(
             f"[Benchmarking] Mean duration per iteration: {mean_elapsed_time:.8f}s"
         )
@@ -62,7 +64,7 @@ class Benchmark:
         return mean_elapsed_time, batch_timings
 
     def _profile(self, function_name, warmup_iterations, min_timing_iterations, batch_size,
-                 min_time_in_sec, input_sets_minimum_size_MB):
+                 min_time_in_sec, input_sets_minimum_size_MB, gpuId: int):
         def get_perf_counter():
             if hasattr(time, 'perf_counter_ns'):
                 _perf_counter = time.perf_counter_ns
@@ -125,7 +127,7 @@ class Benchmark:
             mean_elapsed_time_secs = elapsed_time_secs / iterations
             return mean_elapsed_time_secs, batch_timings
         else:
-            print(f"[Benchmarking] Benchmarking device function. {batch_size} batches of warming up for {warmup_iterations} and then measuring with {min_timing_iterations} iterations.")
+            print(f"[Benchmarking] Benchmarking device function on gpu {gpuId}. {batch_size} batches of warming up for {warmup_iterations} and then measuring with {min_timing_iterations} iterations.")
             input_sets = generate_input_sets_for_func(func)
 
             set_size = 0
@@ -136,7 +138,7 @@ class Benchmark:
                 f"[Benchmarking] Using input of {set_size} bytes"
             )
 
-            batch_timings_ms = benchmark_func.benchmark(warmup_iters=warmup_iterations, iters=min_timing_iterations, batch_size=batch_size, args=input_sets)
+            batch_timings_ms = benchmark_func.benchmark(warmup_iters=warmup_iterations, iters=min_timing_iterations, batch_size=batch_size, args=input_sets, gpuId=gpuId)
             batch_timings_secs = list(map(lambda t: t / 1000, batch_timings_ms))
             mean_timings = sum(batch_timings_secs) / (min_timing_iterations * batch_size)
             return mean_timings, batch_timings_secs
@@ -168,7 +170,8 @@ def run_benchmark(hat_path,
                   store_in_hat=False,
                   batch_size=10,
                   min_time_in_sec=10,
-                  input_sets_minimum_size_MB=50):
+                  input_sets_minimum_size_MB=50,
+                  gpuId: int=0):
     results = []
 
     benchmark = Benchmark(hat_path)
@@ -185,7 +188,8 @@ def run_benchmark(hat_path,
                 min_timing_iterations=batch_size,
                 batch_size=batch_size,
                 min_time_in_sec=min_time_in_sec,
-                input_sets_minimum_size_MB=input_sets_minimum_size_MB)
+                input_sets_minimum_size_MB=input_sets_minimum_size_MB,
+                gpuId=gpuId)
 
             sorted_batch_means = np.array(sorted(batch_timings)) / batch_size
             num_batches = len(batch_timings)
