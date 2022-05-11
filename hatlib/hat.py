@@ -40,12 +40,9 @@ def generate_input_sets_for_func(func: hat_file.Function, input_sets_minimum_siz
 
     num_input_sets = (input_sets_minimum_size_MB * 1024 * 1024 // set_size) + 1 + num_additional
 
-    def product(l):
-        return reduce(lambda x1, x2: x1 * x2, l)
-
     input_sets = [[
         np.lib.stride_tricks.as_strided(
-            np.random.rand(p.numpy_shape[0] * product(p.element_strides)).astype(p.numpy_dtype),
+            np.random.rand(p.total_element_count).astype(p.numpy_dtype),
             shape=p.numpy_shape,
             strides=p.numpy_strides
         ) for p in parameters
