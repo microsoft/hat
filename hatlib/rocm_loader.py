@@ -47,7 +47,7 @@ def allocate_rocm_mem(benchmark: bool, arg_infos: List[ArgInfo], gpuId: int):
             if benchmark and arg.total_byte_size in memory_cache:
                 mem = memory_cache[arg.total_byte_size]
             else:
-            mem = hipMalloc(arg.total_byte_size)
+                mem = hipMalloc(arg.total_byte_size)
                 if benchmark:
                     memory_cache[arg.total_byte_size] = mem
         except:
@@ -105,7 +105,7 @@ class RocmCallableFunc(CallableFunc):
 
     def init_runtime(self, benchmark: bool, gpuId: int):
         if not benchmark:
-        initialize_rocm()
+            initialize_rocm()
 
         hipSetDevice(gpuId)
 
@@ -167,7 +167,7 @@ class RocmCallableFunc(CallableFunc):
             self.exec_time += batch_time
 
             if not benchmark:
-            hipDeviceSynchronize()
+                hipDeviceSynchronize()
 
         self.exec_time /= (iters * batch_size)
         return batch_timings
