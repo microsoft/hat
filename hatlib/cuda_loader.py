@@ -163,7 +163,7 @@ class CudaCallableFunc(CallableFunc):
         self.exec_time = 0.
         self.cuda_src_path = cuda_src_path
 
-    def init_runtime(self):
+    def init_runtime(self, benchmark: bool, gpu_id: int):
         initialize_cuda()
 
         ptx = _PTX_CACHE.get(self.cuda_src_path)
@@ -172,10 +172,10 @@ class CudaCallableFunc(CallableFunc):
 
         self.kernel = get_func_from_ptx(ptx, self.func_name)
 
-    def cleanup_runtime(self):
+    def cleanup_runtime(self, benchmark: bool):
         pass
 
-    def init_main(self, warmup_iters=0, args=[]):
+    def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpu_id: int=0):
         verify_args(args, self.arg_infos, self.func_name)
         self.device_mem = allocate_cuda_mem(self.arg_infos)
         transfer_mem_host_to_cuda(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
@@ -196,11 +196,8 @@ class CudaCallableFunc(CallableFunc):
                 0,    # extra (ignore)
             )
             ASSERT_DRV(err)
-        else:
-            err, = cuda.cuCtxSynchronize()
-            ASSERT_DRV(err)
 
-    def main(self, iters=1, batch_size=1, args=[]) -> float:
+    def main(self, benchmark: bool, iters=1, batch_size=1, args=[]) -> float:
         batch_timings: List[float] = []
         for _ in range(batch_size):
             err, = cuda.cuEventRecord(self.start_event, 0)
@@ -226,20 +223,20 @@ class CudaCallableFunc(CallableFunc):
             batch_timings.append(batch_time)
             self.exec_time += batch_time
 
-            err, = cuda.cuCtxSynchronize()
-            ASSERT_DRV(err)
+            if not benchmark:
+                err, = cuda.cuCtxSynchronize()
+                ASSERT_DRV(err)
 
         self.exec_time /= (iters * batch_size)
         return batch_timings
 
-    def cleanup_main(self, args=[]):
+    def cleanup_main(self, benchmark: bool, args=[]):
         # If there's no device mem, that means allocation during initialization failed, which means nothing else needs to be cleaned up either
         if self.device_mem:
             transfer_mem_cuda_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
             free_cuda_mem(self.device_mem)
-
-        err, = cuda.cuCtxSynchronize()
-        ASSERT_DRV(err)
+            err, = cuda.cuCtxSynchronize()
+            ASSERT_DRV(err)
 
         if self.start_event:
             cuda.cuEventDestroy(self.start_event)
