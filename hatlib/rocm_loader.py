@@ -39,11 +39,11 @@ def get_func_from_rocm_program(rocm_program, func_name):
 
 cached_mem=[]
 
-def allocate_rocm_mem(benchmark: bool, arg_infos: List[ArgInfo], gpuId: int):
+def allocate_rocm_mem(benchmark: bool, arg_infos: List[ArgInfo], gpu_id: int):
     device_mem = []
     for arg in arg_infos:
         try:
-            memory_cache = cached_mem[gpuId]
+            memory_cache = cached_mem[gpu_id]
             if benchmark and arg.total_byte_size in memory_cache:
                 mem = memory_cache[arg.total_byte_size]
             else:
@@ -103,14 +103,14 @@ class RocmCallableFunc(CallableFunc):
         self.exec_time = 0.
         self.rocm_src_path = rocm_src_path
 
-    def init_runtime(self, benchmark: bool, gpuId: int):
+    def init_runtime(self, benchmark: bool, gpu_id: int):
         if not benchmark:
             initialize_rocm()
 
-        hipSetDevice(gpuId)
+        hipSetDevice(gpu_id)
 
         # Add a separate cache for each gpu since device memory is not shareable (duh!)
-        while len(cached_mem) <= gpuId:
+        while len(cached_mem) <= gpu_id:
             cached_mem.append({})
 
         rocm_program = _HSACO_CACHE.get(self.rocm_src_path)
@@ -122,9 +122,9 @@ class RocmCallableFunc(CallableFunc):
     def cleanup_runtime(self, benchmark: bool):
         pass
 
-    def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpuId: int=0):
+    def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpu_id: int=0):
         verify_args(args, self.arg_infos, self.func_name)
-        self.device_mem = allocate_rocm_mem(benchmark, self.arg_infos, gpuId)
+        self.device_mem = allocate_rocm_mem(benchmark, self.arg_infos, gpu_id)
 
         if not benchmark:
             transfer_mem_host_to_rocm(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)

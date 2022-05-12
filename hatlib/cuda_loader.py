@@ -163,7 +163,7 @@ class CudaCallableFunc(CallableFunc):
         self.exec_time = 0.
         self.cuda_src_path = cuda_src_path
 
-    def init_runtime(self, benchmark: bool, gpuId: int):
+    def init_runtime(self, benchmark: bool, gpu_id: int):
         initialize_cuda()
 
         ptx = _PTX_CACHE.get(self.cuda_src_path)
@@ -175,7 +175,7 @@ class CudaCallableFunc(CallableFunc):
     def cleanup_runtime(self, benchmark: bool):
         pass
 
-    def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpuId: int=0):
+    def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpu_id: int=0):
         verify_args(args, self.arg_infos, self.func_name)
         self.device_mem = allocate_cuda_mem(self.arg_infos)
         transfer_mem_host_to_cuda(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
