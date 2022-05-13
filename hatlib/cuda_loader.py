@@ -3,12 +3,7 @@ import pathlib
 import sys
 import numpy as np
 from typing import List
-
-# CUDA stuff
-# TODO: move from pvnrtc module to cuda entirely to reduce dependencies
-from pynvrtc.compiler import Program
 from cuda import cuda, nvrtc
-
 from .arg_info import ArgInfo, verify_args
 from .callable_func import CallableFunc
 from .gpu_headers import CUDA_HEADER_MAP
@@ -43,16 +38,44 @@ def _find_cuda_incl_path() -> pathlib.Path:
 
     return cuda_path
 
-
 def compile_cuda_program(cuda_src_path: pathlib.Path, func_name):
     src = cuda_src_path.read_text()
 
-    prog = Program(src=src, name=func_name, headers=CUDA_HEADER_MAP.values(), include_names=CUDA_HEADER_MAP.keys())
-    ptx = prog.compile([
-        '-use_fast_math',
-        '-default-device',
-        '-std=c++11'
-    ])
+    opts = [
+        # https://docs.nvidia.com/cuda/nvrtc/index.html#group__options
+        b'--gpu-architecture=compute_86',
+        b'--ptxas-options=--warn-on-spills', # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#options-for-passing-specific-phase-options-ptxas-options
+        b'-use_fast_math',
+        b'--include-path=/usr/local/cuda-11.6/targets/x86_64-linux/include/',
+        b'-std=c++17',
+        b'-default-device',
+        #b'--restrict',
+        #b'--device-int128'
+    ]
+
+    # Create program
+    err, prog = nvrtc.nvrtcCreateProgram(str.encode(src), func_name.encode('utf-8'), 0, [], [])
+    ASSERT_DRV(err)
+
+    # Compile program
+    err = nvrtc.nvrtcCompileProgram(prog, len(opts), opts)
+    if err != nvrtc.nvrtcResult.NVRTC_SUCCESS:
+        err, log_size = nvrtc.nvrtcGetProgramLogSize(prog)
+        ASSERT_DRV(err)
+
+        log = "0" * log_size
+        e_log = log.encode('utf-8')
+        err = nvrtc.nvrtcGetProgramLog(prog, e_log)
+        print(e_log.decode('utf-8'))
+
+    # Get PTX from compilation
+    err, ptxSize = nvrtc.nvrtcGetPTXSize(prog)
+    ASSERT_DRV(err)
+    ptx = b" " * ptxSize
+    err = nvrtc.nvrtcGetPTX(prog, ptx)
+
+    # prog = Program(src=src, name=func_name)
+    # ptx = prog.compile(opts)
 
     return ptx
 
@@ -73,8 +96,9 @@ def initialize_cuda():
 
 
 def get_func_from_ptx(ptx, func_name):
-    # Note: Incompatible --gpu-architecture would be detected here
-    err, ptx_mod = cuda.cuModuleLoadData(ptx.encode('utf-8'))
+    # Load PTX as module data and retrieve function
+    ptx = np.char.array(ptx)
+    err, ptx_mod = cuda.cuModuleLoadData(ptx)
     ASSERT_DRV(err)
     err, kernel = cuda.cuModuleGetFunction(ptx_mod, func_name.encode('utf-8'))
     ASSERT_DRV(err)
@@ -82,57 +106,52 @@ def get_func_from_ptx(ptx, func_name):
     return kernel
 
 
-def _cuda_transfer_mem(usage, func, source_args: List, dest_args: List, arg_infos: List[ArgInfo], stream=None):
+def _cuda_transfer_mem(usage, func, source_args: List, dest_args: List, arg_infos: List[ArgInfo]):
     for source_arg, dest_arg, arg_info in zip(source_args, dest_args, arg_infos):
         if usage in arg_info.usage.value:
-            if stream:
-                err, = func(dest_arg, source_arg, arg_info.total_byte_size, stream)
-            else:
-                err, = func(dest_arg, source_arg, arg_info.total_byte_size)
+            err, = func(dest_arg, source_arg, arg_info.total_byte_size)
             ASSERT_DRV(err)
 
 
-def transfer_mem_host_to_cuda(device_args: List, host_args: List[np.array], arg_infos: List[ArgInfo], stream=None):
+def transfer_mem_host_to_cuda(device_args: List, host_args: List[np.array], arg_infos: List[ArgInfo]):
     _cuda_transfer_mem(
         usage='input',
-        func=cuda.cuMemCpyHtoDAsync if stream else cuda.cuMemcpyHtoD,
+        func=cuda.cuMemcpyHtoD,
         source_args=[a.ctypes.data for a in host_args],
         dest_args=device_args,
-        arg_infos=arg_infos,
-        stream=stream
+        arg_infos=arg_infos
     )
 
 
-def transfer_mem_cuda_to_host(device_args: List, host_args: List[np.array], arg_infos: List[ArgInfo], stream=None):
+def transfer_mem_cuda_to_host(device_args: List, host_args: List[np.array], arg_infos: List[ArgInfo]):
     _cuda_transfer_mem(
         usage='output',
-        func=cuda.cuMemcpyDtoHAsync if stream else cuda.cuMemcpyDtoH,
+        func=cuda.cuMemcpyDtoH,
         source_args=device_args,
         dest_args=[a.ctypes.data for a in host_args],
-        arg_infos=arg_infos,
-        stream=stream
+        arg_infos=arg_infos
     )
 
 
-def allocate_cuda_mem(arg_infos: List[ArgInfo], stream=None):
+def allocate_cuda_mem(arg_infos: List[ArgInfo]):
     device_mem = []
 
     for arg in arg_infos:
         size = arg.total_byte_size
-        err, mem = cuda.cuMemAllocAsync(size, stream) if stream else cuda.cuMemAlloc(size)
+        err, mem = cuda.cuMemAlloc(size)
         try:
             ASSERT_DRV(err)
         except:
-            free_cuda_mem(device_mem, stream)
+            free_cuda_mem(device_mem)
             raise
         device_mem.append(mem)
 
     return device_mem
 
 
-def free_cuda_mem(args, stream=None):
+def free_cuda_mem(args):
     for arg in args:
-        cuda.cuMemFreeAsync(arg, stream) if stream else cuda.cuMemFree(arg)
+        cuda.cuMemFree(arg)
 
 
 def device_args_to_ptr_list(device_args: List):
