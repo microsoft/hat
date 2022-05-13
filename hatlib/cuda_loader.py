@@ -46,7 +46,7 @@ def compile_cuda_program(cuda_src_path: pathlib.Path, func_name):
         b'--gpu-architecture=compute_86',
         b'--ptxas-options=--warn-on-spills', # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#options-for-passing-specific-phase-options-ptxas-options
         b'-use_fast_math',
-        b'--include-path=/usr/local/cuda-11.6/targets/x86_64-linux/include/',
+        b'--include-path=/usr/local/cuda-11.6/include/',
         b'-std=c++17',
         b'-default-device',
         #b'--restrict',
@@ -73,9 +73,6 @@ def compile_cuda_program(cuda_src_path: pathlib.Path, func_name):
     ASSERT_DRV(err)
     ptx = b" " * ptxSize
     err = nvrtc.nvrtcGetPTX(prog, ptx)
-
-    # prog = Program(src=src, name=func_name)
-    # ptx = prog.compile(opts)
 
     return ptx
 
