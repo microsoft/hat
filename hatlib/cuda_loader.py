@@ -6,7 +6,6 @@ from typing import List
 from cuda import cuda, nvrtc
 from .arg_info import ArgInfo, verify_args
 from .callable_func import CallableFunc
-from .gpu_headers import CUDA_HEADER_MAP
 from .hat_file import Function
 
 
@@ -77,19 +76,19 @@ def compile_cuda_program(cuda_src_path: pathlib.Path, func_name):
     return ptx
 
 
-def initialize_cuda():
+def initialize_cuda(gpu_id):
     # Initialize CUDA Driver API
     err, = cuda.cuInit(0)
     ASSERT_DRV(err)
 
-    # Retrieve handle for device 0
-    # TODO: add support for multiple CUDA devices?
-    err, cuDevice = cuda.cuDeviceGet(0)
+    err, cuDevice = cuda.cuDeviceGet(gpu_id)
     ASSERT_DRV(err)
 
     # Create context
+    # TODO: USE cuDevicePrimaryCtxRetain for faster intialization
     err, context = cuda.cuCtxCreate(0, cuDevice)
     ASSERT_DRV(err)
+    return context
 
 
 def get_func_from_ptx(ptx, func_name):
@@ -178,9 +177,10 @@ class CudaCallableFunc(CallableFunc):
         self.stop_event = None
         self.exec_time = 0.
         self.cuda_src_path = cuda_src_path
+        self.context = None
 
     def init_runtime(self, benchmark: bool, gpu_id: int):
-        initialize_cuda()
+        self.context = initialize_cuda(gpu_id)
 
         ptx = _PTX_CACHE.get(self.cuda_src_path)
         if not ptx:
@@ -189,12 +189,15 @@ class CudaCallableFunc(CallableFunc):
         self.kernel = get_func_from_ptx(ptx, self.func_name)
 
     def cleanup_runtime(self, benchmark: bool):
-        pass
+        cuda.cuCtxDestroy(self.context)
 
     def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpu_id: int=0):
         verify_args(args, self.arg_infos, self.func_name)
         self.device_mem = allocate_cuda_mem(self.arg_infos)
-        transfer_mem_host_to_cuda(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
+
+        if not benchmark:
+            transfer_mem_host_to_cuda(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
+
         self.ptrs = device_args_to_ptr_list(self.device_mem)
 
         err, self.start_event = cuda.cuEventCreate(cuda.CUevent_flags.CU_EVENT_DEFAULT)
@@ -211,7 +214,9 @@ class CudaCallableFunc(CallableFunc):
                 self.ptrs.ctypes.data,    # kernel arguments
                 0,    # extra (ignore)
             )
-            ASSERT_DRV(err)
+
+            if not benchmark:
+                ASSERT_DRV(err)
 
     def main(self, benchmark: bool, iters=1, batch_size=1, args=[]) -> float:
         batch_timings: List[float] = []
@@ -228,7 +233,9 @@ class CudaCallableFunc(CallableFunc):
                     self.ptrs.ctypes.data,    # kernel arguments
                     0,    # extra (ignore)
                 )
-                ASSERT_DRV(err)
+
+                if not benchmark:
+                    ASSERT_DRV(err)
 
             err, = cuda.cuEventRecord(self.stop_event, 0)
             ASSERT_DRV(err)
@@ -248,11 +255,12 @@ class CudaCallableFunc(CallableFunc):
 
     def cleanup_main(self, benchmark: bool, args=[]):
         # If there's no device mem, that means allocation during initialization failed, which means nothing else needs to be cleaned up either
-        if self.device_mem:
+        if not benchmark and self.device_mem:
             transfer_mem_cuda_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
+        if self.device_mem:
             free_cuda_mem(self.device_mem)
-            err, = cuda.cuCtxSynchronize()
-            ASSERT_DRV(err)
+        err, = cuda.cuCtxSynchronize()
+        ASSERT_DRV(err)
 
         if self.start_event:
             cuda.cuEventDestroy(self.start_event)

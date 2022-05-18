@@ -164,9 +164,7 @@ def hat_package_to_func_dict(hat_pkg: HATPackage) -> AttributeDict:
 
                 # TODO: printing to stdout only makes sense in tool mode
                 if NOTIFY_ABOUT_CUDA:
-                    print(
-                        "CUDA functionality not available on this machine. Please install the cuda and pvnrtc python modules"
-                    )
+                    print("CUDA functionality not available on this machine. Please install the cuda python modules")
                     NOTIFY_ABOUT_CUDA = False
 
                 continue
