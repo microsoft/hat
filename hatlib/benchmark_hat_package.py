@@ -34,7 +34,8 @@ class Benchmark:
             batch_size: int = 10,
             min_time_in_sec: int = 10,
             input_sets_minimum_size_MB=50,
-            gpu_id: int=0) -> float:
+            gpu_id: int=0,
+            verbose: bool=False) -> float:
         """Runs benchmarking for a function.
            Multiple inputs are run through the function until both minimum time and minimum iterations have been reached.
            The mean duration is then calculated as mean_duration = total_time_elapsed / total_iterations_performed.
@@ -56,15 +57,15 @@ class Benchmark:
 
         mean_elapsed_time, batch_timings = self._profile(
             function_name, warmup_iterations, min_timing_iterations, batch_size,
-            min_time_in_sec, input_sets_minimum_size_MB, gpu_id)
-        print(
-            f"[Benchmarking] Mean duration per iteration: {mean_elapsed_time:.8f}s"
-        )
+            min_time_in_sec, input_sets_minimum_size_MB, gpu_id, verbose)
+
+        if verbose:
+            print(f"[Benchmarking] Mean duration per iteration: {mean_elapsed_time:.8f}s")
 
         return mean_elapsed_time, batch_timings
 
     def _profile(self, function_name, warmup_iterations, min_timing_iterations, batch_size,
-                 min_time_in_sec, input_sets_minimum_size_MB, gpu_id: int):
+                 min_time_in_sec, input_sets_minimum_size_MB, gpu_id: int, verbose: bool):
         def get_perf_counter():
             if hasattr(time, 'perf_counter_ns'):
                 _perf_counter = time.perf_counter_ns
@@ -91,21 +92,20 @@ class Benchmark:
             for i in input_sets[0]:
                 set_size += i.size * i.dtype.itemsize
 
-            print(
-                f"[Benchmarking] Using {len(input_sets)} input sets, each {set_size} bytes"
-            )
+            if verbose:
+                print(f"[Benchmarking] Using {len(input_sets)} input sets, each {set_size} bytes")
 
             perf_counter = get_perf_counter()
-            print(
-                f"[Benchmarking] Warming up for {warmup_iterations} iterations...")
+            if verbose:
+                print(f"[Benchmarking] Warming up for {warmup_iterations} iterations...")
 
             for _ in range(warmup_iterations):
                 for calling_args in input_sets:
                     self.func_dict[function_name](*calling_args)
 
-            print(
-                f"[Benchmarking] Timing for at least {min_time_in_sec}s and at least {min_timing_iterations} iterations..."
-            )
+            if verbose:
+                print(f"[Benchmarking] Timing for at least {min_time_in_sec}s and at least {min_timing_iterations} iterations...")
+
             start_time_secs = perf_counter()
             end_time_secs = perf_counter()
 
@@ -127,16 +127,16 @@ class Benchmark:
             mean_elapsed_time_secs = elapsed_time_secs / iterations
             return mean_elapsed_time_secs, batch_timings
         else:
-            print(f"[Benchmarking] Benchmarking device function on gpu {gpu_id}. {batch_size} batches of warming up for {warmup_iterations} and then measuring with {min_timing_iterations} iterations.")
+            if verbose:
+                print(f"[Benchmarking] Benchmarking device function on gpu {gpu_id}. {batch_size} batches of warming up for {warmup_iterations} and then measuring with {min_timing_iterations} iterations.")
             input_sets = generate_input_sets_for_func(func)
 
             set_size = 0
             for i in input_sets:
                 set_size += i.size * i.dtype.itemsize
 
-            print(
-                f"[Benchmarking] Using input of {set_size} bytes"
-            )
+            if verbose:
+                print(f"[Benchmarking] Using input of {set_size} bytes")
 
             batch_timings_ms = benchmark_func.benchmark(warmup_iters=warmup_iterations, iters=min_timing_iterations, batch_size=batch_size, args=input_sets, gpu_id=gpu_id)
             batch_timings_secs = list(map(lambda t: t / 1000, batch_timings_ms))
@@ -171,13 +171,15 @@ def run_benchmark(hat_path,
                   batch_size=10,
                   min_time_in_sec=10,
                   input_sets_minimum_size_MB=50,
-                  gpu_id: int=0):
+                  gpu_id: int=0,
+                  verbose: bool=False):
     results = []
 
     benchmark = Benchmark(hat_path)
     functions = benchmark.hat_functions
     for function_name in functions:
-        print(f"\nBenchmarking function: {function_name}")
+        if verbose:
+            print(f"\nBenchmarking function: {function_name}")
         if "Initialize" in function_name or "_debug_check_allclose" in function_name:  # Skip init and debug functions
             continue
 
@@ -189,7 +191,8 @@ def run_benchmark(hat_path,
                 batch_size=batch_size,
                 min_time_in_sec=min_time_in_sec,
                 input_sets_minimum_size_MB=input_sets_minimum_size_MB,
-                gpu_id=gpu_id)
+                gpu_id=gpu_id,
+                verbose=verbose)
 
             sorted_batch_means = np.array(sorted(batch_timings)) / batch_size
             num_batches = len(batch_timings)
@@ -219,10 +222,10 @@ def run_benchmark(hat_path,
                                       exc_val,
                                       exc_tb,
                                       file=sys.stderr)
-            print("\nException message: ", e)
-            print(
-                f"WARNING: Failed to run function {function_name}, skipping this benchmark."
-            )
+            if verbose:
+                print("\nException message: ", e)
+                print(f"WARNING: Failed to run function {function_name}, skipping this benchmark.")
+
             results.append({
                 "function_name": function_name,
                 "mean": "-",
@@ -266,6 +269,10 @@ def main(argv):
         help=
         "Minimum size in MB of the input sets. Typically this is large enough to ensure eviction of the biggest cache on the target (e.g. L3 on an desktop CPU)",
         default=50)
+    arg_parser.add_argument(
+        "--verbose",
+        help="Enable verbose logging",
+        default=False)
 
     args = vars(arg_parser.parse_args(argv))
 
@@ -273,8 +280,8 @@ def main(argv):
                             args["store_in_hat"],
                             batch_size=int(args["batch_size"]),
                             min_time_in_sec=int(args["min_time_in_sec"]),
-                            input_sets_minimum_size_MB=int(
-                                args["input_sets_minimum_size_MB"]))
+                            input_sets_minimum_size_MB=int(args["input_sets_minimum_size_MB"]),
+                            verbose=bool(args["verbose"]))
     df = pd.DataFrame(results)
     df.to_csv(args["results_file"], index=False)
     pd.options.display.float_format = '{:8.8f}'.format
