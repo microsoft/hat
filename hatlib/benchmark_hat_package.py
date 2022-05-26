@@ -217,23 +217,16 @@ def run_benchmark(hat_path,
                 "min_of_means": min_of_means,
             })
         except Exception as e:
-            exc_type, exc_val, exc_tb = sys.exc_info()
-            traceback.print_exception(exc_type,
-                                      exc_val,
-                                      exc_tb,
-                                      file=sys.stderr)
             if verbose:
+                exc_type, exc_val, exc_tb = sys.exc_info()
+                traceback.print_exception(exc_type,
+                                        exc_val,
+                                        exc_tb,
+                                        file=sys.stderr)
                 print("\nException message: ", e)
                 print(f"WARNING: Failed to run function {function_name}, skipping this benchmark.")
 
-            results.append({
-                "function_name": function_name,
-                "mean": "-",
-                "median_of_means": "-",
-                "mean_of_small_means": "-",
-                "robust_mean": "-",
-                "min_of_means": "-",
-            })
+            raise e
     return results
 
 
