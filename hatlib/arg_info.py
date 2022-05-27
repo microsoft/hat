@@ -18,6 +18,7 @@ ARG_TYPES = {
     "uint32_t*" : [ ctypes.c_uint32, "uint32" ],
     "uint64_t*" : [ ctypes.c_uint64, "uint64" ],
     "float16_t*" : [ ctypes.c_uint16, "float16" ], # same bitwidth as uint16
+    "bfloat16_t*" : [ ctypes.c_uint16, "bfloat16" ],
     "float*" : [ ctypes.c_float, "float32" ],
     "double*" : [ ctypes.c_double, "float64" ],
 }
@@ -38,6 +39,13 @@ class ArgInfo:
     ctypes_pointer_type: Any
     usage: hat_file.UsageType = None
 
+    def _get_type(self, type_str):
+        if type_str == "bfloat16":
+            from bfloat16 import bfloat16
+            return bfloat16
+
+        return np.dtype(type_str)
+
     def __init__(self, param_description: hat_file.Parameter):
         self.hat_declared_type = param_description.declared_type
         self.numpy_shape = tuple(param_description.shape)
@@ -47,8 +55,9 @@ class ArgInfo:
             raise NotImplementedError(f"Unsupported declared_type {self.hat_declared_type} in hat file")
 
         self.ctypes_pointer_type = ctypes.POINTER(ARG_TYPES[self.hat_declared_type][CTYPE_ENTRY])
-        self.numpy_dtype = np.dtype(ARG_TYPES[self.hat_declared_type][DTYPE_ENTRY])
-        self.element_num_bytes = self.numpy_dtype.itemsize
+        dtype_entry = ARG_TYPES[self.hat_declared_type][DTYPE_ENTRY]
+        self.numpy_dtype = self._get_type(dtype_entry)
+        self.element_num_bytes = 2 if dtype_entry == "bfloat16" else self.numpy_dtype.itemsize
         self.element_strides = param_description.affine_map
         self.numpy_strides = tuple([self.element_num_bytes * x for x in self.element_strides])
 
