@@ -1,4 +1,5 @@
 import ctypes
+from bfloat16 import bfloat16
 from functools import reduce
 import numpy as np
 import sys
@@ -18,6 +19,7 @@ ARG_TYPES = {
     "uint32_t*" : [ ctypes.c_uint32, "uint32" ],
     "uint64_t*" : [ ctypes.c_uint64, "uint64" ],
     "float16_t*" : [ ctypes.c_uint16, "float16" ], # same bitwidth as uint16
+    "bfloat16_t*" : [ ctypes.c_uint16, bfloat16 ],
     "float*" : [ ctypes.c_float, "float32" ],
     "double*" : [ ctypes.c_double, "float64" ],
 }
@@ -47,8 +49,9 @@ class ArgInfo:
             raise NotImplementedError(f"Unsupported declared_type {self.hat_declared_type} in hat file")
 
         self.ctypes_pointer_type = ctypes.POINTER(ARG_TYPES[self.hat_declared_type][CTYPE_ENTRY])
-        self.numpy_dtype = np.dtype(ARG_TYPES[self.hat_declared_type][DTYPE_ENTRY])
-        self.element_num_bytes = self.numpy_dtype.itemsize
+        dtype_entry = ARG_TYPES[self.hat_declared_type][DTYPE_ENTRY]
+        self.numpy_dtype = np.dtype(dtype_entry) if type(dtype_entry) is str else dtype_entry
+        self.element_num_bytes = 2 if self.numpy_dtype is bfloat16 else self.numpy_dtype.itemsize
         self.element_strides = param_description.affine_map
         self.numpy_strides = tuple([self.element_num_bytes * x for x in self.element_strides])
 
