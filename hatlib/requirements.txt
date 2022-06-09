@@ -1,5 +1,5 @@
 numpy
 pandas
 toml
-tomlkit
+tomlkit>=0.11.0
 vswhere; sys_platform == 'win32'
