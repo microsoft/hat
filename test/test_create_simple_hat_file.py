@@ -125,5 +125,8 @@ class CreateSimpleHatFile_test(unittest.TestCase):
         self.assertEqual(parsed_hat_file.function_map[func_name].arguments[1].shape, list(param_B.shape))
         self.assertEqual(parsed_hat_file.function_map[func_name].arguments[2].shape, list(param_C.shape))
 
+        # Check that the code strings are equal. Serialization/deserialization doesn't always preserve leading/trailing whitespace so use strip() to normalize
+        self.assertEqual(parsed_hat_file.declaration.code.strip(), SAMPLE_MATMUL_DECL_CODE.strip())
+
 if __name__ == '__main__':
     unittest.main()
