@@ -538,7 +538,10 @@ class Declaration:
 
     def to_table(self):
         table = tomlkit.table()
-        code_str = tomlkit.string(self.code, multiline=True)
+        code_str = self.code
+        if len(code_str) > 0 and code_str[0] != '\n':
+            code_str = "\n" + code_str
+        code_str = tomlkit.string(code_str, multiline=True)
         table.add("code", code_str)
         return table
 
@@ -583,8 +586,6 @@ class HATFile:
 
     @property
     def functions(self):
-        if self._function_table is None:
-            return []
         return self._function_table.function_map.values()
 
     @functions.setter
@@ -601,8 +602,6 @@ class HATFile:
 
     @property
     def function_map(self):
-        if self._function_table is None:
-            return None
         return self._function_table.function_map
 
     @function_map.setter
@@ -613,9 +612,7 @@ class HATFile:
 
     @property
     def device_functions(self):
-        if self._device_function_table is None:
-            return []
-        return self._device_function_table.function_map.value()
+        return self._device_function_table.function_map.values()
 
     @device_functions.setter
     def device_functions(self, func_list_or_dict):
@@ -631,8 +628,6 @@ class HATFile:
 
     @property
     def device_function_map(self):
-        if self._device_function_table is None:
-            return None
         return self._device_function_table.function_map
 
     @device_function_map.setter
@@ -642,7 +637,7 @@ class HATFile:
         self._device_function_table.function_map = func_map
 
     def Serialize(self, filepath=None):
-        """Serilizes the HATFile to disk using the file location specified by `filepath`.
+        """Serializes the HATFile to disk using the file location specified by `filepath`.
         If `filepath` is not specified then the object's `path` attribute is used."""
         if filepath is None:
             filepath = self.path
@@ -672,7 +667,7 @@ class HATFile:
             CompiledWith.TableName, Declaration.TableName
         ]
         _check_required_table_entries(hat_toml, required_entries)
-        device_function_table = None
+        device_function_table = DeviceFunctionTable({})
         if DeviceFunctionTable.TableName in hat_toml:
             device_function_table = DeviceFunctionTable.parse_from_table(hat_toml[DeviceFunctionTable.TableName])
         hat_file = HATFile(
