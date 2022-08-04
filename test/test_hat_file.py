@@ -12,7 +12,7 @@ from hatlib import (
 
 class HATFile_test(unittest.TestCase):
 
-    def test_file_basic_serialize(self):
+    def test_basic_serialize(self):
         # Construct a HAT file from scratch
         # Start with a function definition
         my_function = Function(
@@ -69,7 +69,7 @@ class HATFile_test(unittest.TestCase):
         self.assertEqual(hat_file1.compiled_with.to_table(), hat_file2.compiled_with.to_table())
         self.assertTrue("my_function" in hat_file2.function_map)
 
-    def test_file_basic_deserialize(self):
+    def test_sample_gemm_deserialize(self):
         # Load a HAT file from the samples directory
         hat_file1 = HATFile.Deserialize(
             os.path.join(os.path.dirname(__file__), "..", "samples", "sample_gemm_library.hat")
@@ -88,6 +88,26 @@ class HATFile_test(unittest.TestCase):
         self.assertTrue("GEMM_B94D27B9934D3E08" in hat_file1.function_map)
         self.assertTrue("blas_sgemm_row_major" in hat_file1.function_map)
 
+    def test_sample_range_deserialize(self):
+        hat_file1 = HATFile.Deserialize(
+            os.path.join(os.path.dirname(__file__), "..", "samples", "sample_range_library.hat")
+        )
+
+        function1 = hat_file1.function_map["Range_0911ac6519e78bff5590e40539aee0cf"]
+        output_arg = function1.arguments[-2]
+        output_dim_arg = function1.arguments[-1]
+
+        self.assertEqual(output_dim_arg.logical_type, ParameterType.Element)
+        self.assertEqual(output_dim_arg.declared_type, "uint32_t*")
+        self.assertEqual(output_dim_arg.element_type, "uint32_t")
+        self.assertEqual(output_arg.usage, UsageType.Output)
+
+        self.assertEqual(output_arg.logical_type, ParameterType.RuntimeArray)
+        self.assertEqual(output_arg.declared_type, "int32_t**")
+        self.assertEqual(output_arg.element_type, "int32_t")
+        self.assertEqual(output_arg.usage, UsageType.Output)
+        self.assertEqual(output_arg.size, output_dim_arg.name) # references the output_dim arg for the size
+ 
 
 if __name__ == '__main__':
     unittest.main()

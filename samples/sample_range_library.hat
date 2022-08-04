@@ -18,7 +18,7 @@ license_url = "https://www.apache.org/licenses/LICENSE-2.0.html"
         {name = "start", description = "First entry for the range of output values", logical_type = "affine_array", declared_type = "int32_t*", element_type = "int32_t", usage = "input", shape = [], affine_map = [], affine_offset = 0},
         {name = "limit", description = "Exclusive upper limit for the range of output values", logical_type = "affine_array", declared_type = "int32_t*", element_type = "int32_t", usage = "input", shape = [], affine_map = [], affine_offset = 0},
         {name = "delta", description = "Value to step by", logical_type = "affine_array", declared_type = "int32_t*", element_type = "int32_t", usage = "input", shape = [], affine_map = [], affine_offset = 0},
-        {name = "output", description = "A 1-D array with same type as the inputs containing generated range of values", logical_type = "runtime_array", declared_type = "int32_t**", element_type = "int32_t", usage = "output", size = "output_dim0"},
+        {name = "output", description = "A 1-D array with same type as the inputs containing generated range of values", logical_type = "runtime_array", declared_type = "int32_t**", element_type = "int32_t", usage = "output", size = "output_dim"},
         {name = "output_dim", description = "Number of elements of the output array", logical_type = "element", declared_type = "uint32_t*", element_type = "uint32_t", usage = "output"}
     ]
     
