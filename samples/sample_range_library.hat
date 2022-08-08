@@ -1,0 +1,108 @@
+#ifndef __Range_library__
+#define __Range_library__
+
+#ifdef TOML
+
+[description]
+comment = "John Doe's Range Library"
+author = "John Doe"
+version = "1.2.3.5"
+license_url = "https://www.apache.org/licenses/LICENSE-2.0.html"
+
+[functions]
+    [functions.Range_0911ac6519e78bff5590e40539aee0cf]
+    name = "Range_0911ac6519e78bff5590e40539aee0cf"
+    description = "CPU Implementation of the Range algorithm, based on https://github.com/onnx/onnx/blob/main/docs/Operators.md#Range"
+    calling_convention = "stdcall"
+    arguments = [
+        {name = "start", description = "First entry for the range of output values", logical_type = "affine_array", declared_type = "int32_t*", element_type = "int32_t", usage = "input", shape = [], affine_map = [], affine_offset = 0},
+        {name = "limit", description = "Exclusive upper limit for the range of output values", logical_type = "affine_array", declared_type = "int32_t*", element_type = "int32_t", usage = "input", shape = [], affine_map = [], affine_offset = 0},
+        {name = "delta", description = "Value to step by", logical_type = "affine_array", declared_type = "int32_t*", element_type = "int32_t", usage = "input", shape = [], affine_map = [], affine_offset = 0},
+        {name = "output", description = "A 1-D array with same type as the inputs containing generated range of values", logical_type = "runtime_array", declared_type = "int32_t**", element_type = "int32_t", usage = "output", size = "output_dim"},
+        {name = "output_dim", description = "Number of elements of the output array", logical_type = "element", declared_type = "uint32_t*", element_type = "uint32_t", usage = "output"}
+    ]
+    
+    return = {name = "", description = "", logical_type = "void", declared_type = "void", element_type = "void", usage = "output"}
+
+    [[functions.Range_0911ac6519e78bff5590e40539aee0cf.auxiliary.onnx]]
+    op_type = "Range"
+    input_shapes = [[], [], []]
+    output_shapes = [["*"]]
+
+[target]
+    [target.required]
+    os = "linux"
+
+    [target.required.CPU]
+    architecture = ""
+    extensions = []
+
+    [target.optimized_for]
+    os = "linux"
+
+    [target.optimized_for.CPU]
+    architecture = ""
+    extensions = []
+
+# The dependencies table provides information that a consumer of this .hat file
+# will need to act on in order to properly consume the package, such as library
+# files to link and dynamic libraries to make available at runtime
+[dependencies]
+link_target = "Range_model_s.a"
+deploy_files = []
+dynamic = []
+
+    [dependencies.auxiliary]
+    dynamic = "Range_model_d.so"
+    static = "Range_model_s.a"
+
+# The compiled_with table provides information that a consumer of this .hat file
+# may find useful but may not necessarily need to act on in order to successfully
+# consume this package
+[compiled_with]
+compiler = ""
+flags = ""
+crt = ""
+libraries = []
+
+[declaration]
+code = """
+#endif // TOML
+//
+// Header for Range library 
+//
+
+#include <float.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+
+#if defined(__cplusplus)
+extern "C"
+{
+#endif // defined(__cplusplus)
+
+//
+// Functions
+//
+
+void Range_0911ac6519e78bff5590e40539aee0cf(const int32_t start[1], const int32_t limit[1], const int32_t delta[1], int32_t** output, uint32_t* output_dim );
+
+#ifndef __Range_0911ac6519e78bff5590e40539aee0cf_DEFINED__
+#define __Range_0911ac6519e78bff5590e40539aee0cf_DEFINED__
+void (*Range_0911ac6519e78bff5590e40539aee0cf)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range_0911ac6519e78bff5590e40539aee0cf;
+#endif
+
+
+#if defined(__cplusplus)
+} // extern "C"
+#endif // defined(__cplusplus)
+
+#ifdef TOML
+
+"""
+
+#endif // TOML
+
+#endif // __Range_library__
