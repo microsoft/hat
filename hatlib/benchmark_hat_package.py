@@ -199,9 +199,8 @@ def run_benchmark(hat_path,
 
             mean_of_means = sorted_batch_means.mean()
             median_of_means = sorted_batch_means[num_batches // 2]
-            mean_of_small_means = sorted_batch_means[0:num_batches // 2].mean()
-            robust_means = sorted_batch_means[(num_batches //
-                                               5):(-num_batches // 5)]
+            mean_of_small_means = sorted_batch_means[0:max(1, num_batches // 2)].mean()
+            robust_means = sorted_batch_means[(num_batches // 5):(-num_batches // 5)]
             robust_mean_of_means = robust_means.mean()
             min_of_means = sorted_batch_means[0]
 
