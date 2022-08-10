@@ -7,7 +7,8 @@ from typing import List
 from collections import OrderedDict
 
 from .hat_file import HATFile, Function, Parameter
-from .arg_info import ArgInfo, verify_args
+from .arg_info import ArgInfo
+from .function_info import FunctionInfo
 
 import os
 
@@ -65,14 +66,13 @@ class AttributeDict(OrderedDict):
         return OrderedDict.__getitem__(key)
 
 
-def _make_cpu_func(shared_lib: ctypes.CDLL, function_name: str, arg_infos: List[Parameter]):
-    arg_infos = [ArgInfo(d) for d in arg_infos]
-    fn = shared_lib[function_name]
+def _make_cpu_func(shared_lib: ctypes.CDLL, func: Function):
+    func_info = FunctionInfo(func)
+    fn = shared_lib[func_info.name]
 
     def f(*args):
-        # verify that the (numpy) input args match the description in
-        # the hat file
-        verify_args(args, arg_infos, function_name)
+        # verify that the args match the description in the hat file
+        func_info.verify(args)
 
         # prepare the args to the hat package
         hat_args = [arg.as_carg() for arg in args]
@@ -148,7 +148,7 @@ def hat_package_to_func_dict(hat_pkg: HATPackage) -> AttributeDict:
         launches = func_desc.launches
         if not launches and shared_lib:
 
-            func_dict[func_name] = _make_cpu_func(shared_lib, func_desc.name, func_desc.arguments)
+            func_dict[func_name] = _make_cpu_func(shared_lib, func_desc)
         else:
             device_func = hat_pkg.hat_file.device_function_map.get(launches)
 

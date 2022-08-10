@@ -5,9 +5,9 @@ import sys
 from dataclasses import dataclass
 from typing import Any, List, Tuple, Union
 
-from hatlib.arg_value import ArgValue
-
 from . import hat_file
+from .arg_value import ArgValue
+from .function_info import FunctionInfo
 
 # element_type : [ ctype, dtype_str ]
 ARG_TYPES = {
@@ -95,18 +95,3 @@ class ArgInfo:
                 self.element_strides = self.numpy_strides = self.numpy_shape = [1]
                 self.total_element_count = 1
                 self.total_byte_size = self.element_num_bytes * self.total_element_count
-
-# TODO: Update this to take a HATFunction instead, instead of arg_infos and function_name
-def verify_args(args: List[ArgValue], arg_infos: List[ArgInfo], function_name: str):
-    """ Verifies that a list of arguments matches a list of argument descriptions in a HAT file
-    """
-    # check number of args
-    if len(args) != len(arg_infos):
-        sys.exit(f"Error calling {function_name}(...): expected {len(arg_infos)} arguments but received {len(args)}")
-
-    # for each arg
-    for i in range(len(args)):
-        try:
-            args[i].verify(args[i])
-        except ValueError:
-            sys.exit(f"Error calling {function_name}(...): argument {i} failed verification")
