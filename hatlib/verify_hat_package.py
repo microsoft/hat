@@ -7,7 +7,7 @@ from . import hat
 
 def verify_hat_package(hat_path):
     _, funcs = hat.load(hat_path)
-    inputs = hat.generate_input_sets_for_hat_file(hat_path)
+    inputs = hat.generate_arg_sets_for_hat_file(hat_path)
     for name, fn in funcs.items():
         print(f"\n{'*' * 10}\n")
         
