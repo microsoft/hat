@@ -49,6 +49,12 @@ class ArgValue:
         else:
             pass # TODO
 
-    def cleanup(self):
+    def __repr__(self):
+        if isinstance(self.value, np.ndarray):
+            return ",".join(map(str, self.value.ravel()[:32]))
+        else:
+            return self.value # TODO: better repr
+
+    def __del__(self):
         if self.pointer_level == 2:
-            pass # TODO - freel the pointer
+            pass # TODO - free the pointer
