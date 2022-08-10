@@ -15,7 +15,7 @@ class ArgValue:
                     np.random.rand(desc.total_element_count).astype(desc.numpy_dtype),
                     shape=desc.numpy_shape,
                     strides=desc.numpy_strides)
-            elif self.pointer_level  == 2:
+            elif self.pointer_level == 2:
                 # materialize a pointer type
                 self.value = self.ctypes_type()
             else:

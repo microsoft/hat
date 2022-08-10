@@ -16,7 +16,7 @@ class FunctionInfo:
 
     def __post_init__(self):
         self.name = self.desc.name
-        self.args = map(ArgInfo, self.desc.arguments)
+        self.args = list(map(ArgInfo, self.desc.arguments))
 
     def verify_args(self, args: List[ArgValue]):
         "Verifies that a list of argument values matches the function description"

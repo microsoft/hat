@@ -44,7 +44,7 @@ def generate_arg_sets_for_func(func: hat_file.Function, input_sets_minimum_size_
     num_input_sets = (input_sets_minimum_size_MB * 1024 * 1024 // set_size) + 1 + num_additional
 
     arg_sets = [[
-        ArgValue(p) for p in in_parameters
+        ArgValue(p) for p in parameters
     ] for _ in range(num_input_sets)]
 
     return arg_sets[0] if len(arg_sets) == 1 else arg_sets
