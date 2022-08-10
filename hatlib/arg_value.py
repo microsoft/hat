@@ -1,5 +1,5 @@
-import numpy as np
 from ctypes import byref
+import numpy as np
 
 from .arg_info import ArgInfo
 
@@ -30,7 +30,7 @@ class ArgValue:
         else:
             return byref(self.value)
 
-    def verify(self, desc: ArgInfo):
+    def verify(self, desc):
         "Verifies that this argument matches an argument description"
         if desc.pointer_level == 1:
             if not isinstance(self.value, np.ndarray):
