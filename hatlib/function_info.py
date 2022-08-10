@@ -18,15 +18,15 @@ class FunctionInfo:
         self.name = self.desc.name
         self.args = list(map(ArgInfo, self.desc.arguments))
 
-    def verify_args(self, args: List[ArgValue]):
+    def verify_args(self, values: List[ArgValue]):
         "Verifies that a list of argument values matches the function description"
         # check number of args
-        if len(args) != len(self.args):
+        if len(values) != len(self.args):
             sys.exit(f"Error calling {self.name}(...): expected {len(self.args)} arguments but received {len(args)}")
 
         # for each arg
-        for i in range(len(args)):
+        for i, (arg, value) in enumerate(zip(self.args, values)):
             try:
-                args[i].verify(args[i])
-            except ValueError:
-                sys.exit(f"Error calling {self.name}(...): argument {i} failed verification")
+                value.verify(arg)
+            except ValueError as v:
+                sys.exit(f"Error calling {self.name}(...): argument {i} failed verification: {v}")

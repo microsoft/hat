@@ -13,8 +13,8 @@ class ArgValue:
                 # materialize an ndarray with random input values
                 self.value = np.lib.stride_tricks.as_strided(
                     np.random.rand(desc.total_element_count).astype(desc.numpy_dtype),
-                    shape=desc.numpy_shape,
-                    strides=desc.numpy_strides)
+                        shape=desc.numpy_shape,
+                        strides=desc.numpy_strides)
             elif self.pointer_level == 2:
                 # materialize a pointer type
                 self.value = self.ctypes_type()
@@ -34,18 +34,18 @@ class ArgValue:
         "Verifies that this argument matches an argument description"
         if desc.pointer_level == 1:
             if not isinstance(self.value, np.ndarray):
-                raise ValueError(f"Expected argument to be <class 'numpy.ndarray'> but received {type(self.value)}")
+                raise ValueError(f"expected argument to be <class 'numpy.ndarray'> but received {type(self.value)}")
 
             if desc.numpy_dtype != self.value.dtype:
-                raise ValueError(f"Expected argument to have dtype={desc.numpy_dtype} but received dtype={self.value.dtype}")
+                raise ValueError(f"expected argument to have dtype={desc.numpy_dtype} but received dtype={self.value.dtype}")
 
-            # confirm that the arg shape is correct
-            if desc.numpy_shape != self.value.shape:
-                raise ValueError(f"Expected argument to have shape={desc.numpy_shape} but received shape={self.value.shape}")
+            # confirm that the arg shape is correct (numpy represents shapes as tuples)
+            if tuple(desc.numpy_shape) != self.value.shape:
+                raise ValueError(f"expected argument to have shape={desc.numpy_shape} but received shape={self.value.shape}")
 
-            # confirm that the arg strides are correct
-            if desc.numpy_strides != self.value.strides:
-                raise ValueError(f"Expected argument to have strides={desc.numpy_strides} but received strides={self.value.strides}")
+            # confirm that the arg strides are correct (numpy represents strides as tuples)
+            if tuple(desc.numpy_strides) != self.value.strides:
+                raise ValueError(f"expected argument to have strides={desc.numpy_strides} but received strides={self.value.strides}")
         else:
             pass # TODO
 
@@ -53,7 +53,12 @@ class ArgValue:
         if isinstance(self.value, np.ndarray):
             return ",".join(map(str, self.value.ravel()[:32]))
         else:
-            return self.value # TODO: better repr
+            try:
+                s = repr(self.value.contents)
+            except: # NULL pointer
+                s = repr(self.value)
+            finally:
+                return s
 
     def __del__(self):
         if self.pointer_level == 2:
