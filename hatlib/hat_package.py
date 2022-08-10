@@ -3,9 +3,8 @@
 # Utility to parse and validate a HAT package
 
 import ctypes
-from typing import Any, List, Union
+from typing import List
 from collections import OrderedDict
-from functools import partial
 
 from .hat_file import HATFile, Function, Parameter
 from .arg_info import ArgInfo, verify_args
@@ -76,7 +75,7 @@ def _make_cpu_func(shared_lib: ctypes.CDLL, function_name: str, arg_infos: List[
         verify_args(args, arg_infos, function_name)
 
         # prepare the args to the hat package
-        hat_args = [arg.ctypes.data_as(arg_info.ctypes_pointer_type) for arg, arg_info in zip(args, arg_infos)]
+        hat_args = [arg.as_carg() for arg in args]
 
         # call the function in the hat package
         fn(*hat_args)

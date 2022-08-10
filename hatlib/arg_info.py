@@ -5,6 +5,8 @@ import sys
 from dataclasses import dataclass
 from typing import Any, List, Tuple, Union
 
+from hatlib.arg_value import ArgValue
+
 from . import hat_file
 
 # element_type : [ ctype, dtype_str ]
@@ -82,8 +84,10 @@ class ArgInfo:
                 self.element_strides = self.numpy_strides = self.numpy_shape = [1]
                 self.total_element_count = 1
             self.total_byte_size = self.element_num_bytes * self.total_element_count
+
         elif param_description.logical_type == hat_file.ParameterType.RuntimeArray:
             self.total_byte_size = f"{self.element_num_bytes} * {param_description.size}"
+
         elif param_description.logical_type == hat_file.ParameterType.Element:
             if param_description.usage == hat_file.UsageType.Input:
                 raise NotImplementedError(f"Input logical_type elements are not supported") # TODO
@@ -93,7 +97,7 @@ class ArgInfo:
                 self.total_byte_size = self.element_num_bytes * self.total_element_count
 
 # TODO: Update this to take a HATFunction instead, instead of arg_infos and function_name
-def verify_args(args: List, arg_infos: List[ArgInfo], function_name: str):
+def verify_args(args: List[ArgValue], arg_infos: List[ArgInfo], function_name: str):
     """ Verifies that a list of arguments matches a list of argument descriptions in a HAT file
     """
     # check number of args
@@ -102,29 +106,7 @@ def verify_args(args: List, arg_infos: List[ArgInfo], function_name: str):
 
     # for each arg
     for i in range(len(args)):
-        arg = args[i]
-        arg_info = arg_infos[i]
-
-        # confirm that the arg is a numpy ndarray
-        if not isinstance(arg, np.ndarray):
-            sys.exit(
-                "Error calling {function_name}(...): expected argument {i} to be <class 'numpy.ndarray'> but received {type(arg)}"
-            )
-
-        # confirm that the arg dtype matches the dexcription in the hat package
-        if arg_info.numpy_dtype != arg.dtype:
-            sys.exit(
-                f"Error calling {function_name}(...): expected argument {i} to have dtype={arg_info.numpy_dtype} but received dtype={arg.dtype}"
-            )
-
-        # confirm that the arg shape is correct
-        if arg_info.numpy_shape != arg.shape:
-            sys.exit(
-                f"Error calling {function_name}(...): expected argument {i} to have shape={arg_info.numpy_shape} but received shape={arg.shape}"
-            )
-
-        # confirm that the arg strides are correct
-        if arg_info.numpy_strides != arg.strides:
-            sys.exit(
-                f"Error calling {function_name}(...): expected argument {i} to have strides={arg_info.numpy_strides} but received strides={arg.strides}"
-            )
+        try:
+            args[i].verify(args[i])
+        except ValueError:
+            sys.exit(f"Error calling {function_name}(...): argument {i} failed verification")
