@@ -96,7 +96,7 @@ def _load_pkg_binary_module(hat_pkg: HATPackage):
     shared_lib = None
     if os.path.isfile(hat_pkg.link_target_path):
 
-        supported_extensions = [".dll", ".so"]
+        supported_extensions = [".dll", ".so", ".dylib"]
         _, extension = os.path.splitext(hat_pkg.link_target_path)
 
         if extension and extension not in supported_extensions:
