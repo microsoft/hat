@@ -84,9 +84,13 @@ class ArgInfo:
             self.total_byte_size = self.element_num_bytes * self.total_element_count
         elif param_description.logical_type == hat_file.ParameterType.RuntimeArray:
             self.total_byte_size = f"{self.element_num_bytes} * {param_description.size}"
-        else:
-            raise NotImplementedError(f"Unspported logical_type {param_description.logical_type} in hat file")
-
+        elif param_description.logical_type == hat_file.ParameterType.Element:
+            if param_description.usage == hat_file.UsageType.Input:
+                raise NotImplementedError(f"Input logical_type elements are not supported") # TODO
+            elif param_description.usage == hat_file.UsageType.Output:
+                self.element_strides = self.numpy_strides = self.numpy_shape = [1]
+                self.total_element_count = 1
+                self.total_byte_size = self.element_num_bytes * self.total_element_count
 
 # TODO: Update this to take a HATFunction instead, instead of arg_infos and function_name
 def verify_args(args: List, arg_infos: List[ArgInfo], function_name: str):

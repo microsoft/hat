@@ -35,8 +35,10 @@ from .arg_info import ArgInfo
 
 def generate_input_sets_for_func(func: hat_file.Function, input_sets_minimum_size_MB: int = 0, num_additional: int = 0):
     parameters = list(map(ArgInfo, func.arguments))
-    shapes_to_sizes = [reduce(lambda x, y: x * y, p.numpy_shape) for p in parameters]
-    set_size = reduce(lambda x, y: x + y, map(lambda size, p: size * p.element_num_bytes, shapes_to_sizes, parameters))
+    in_parameters = list(filter(lambda p: p.usage != hat_file.UsageType.Output, parameters))
+
+    shapes_to_sizes = [reduce(lambda x, y: x * y, p.numpy_shape) for p in in_parameters]
+    set_size = reduce(lambda x, y: x + y, map(lambda size, p: size * p.element_num_bytes, shapes_to_sizes, in_parameters))
 
     num_input_sets = (input_sets_minimum_size_MB * 1024 * 1024 // set_size) + 1 + num_additional
 
@@ -44,11 +46,11 @@ def generate_input_sets_for_func(func: hat_file.Function, input_sets_minimum_siz
         np.lib.stride_tricks.as_strided(
             np.random.rand(p.total_element_count).astype(p.numpy_dtype),
             shape=p.numpy_shape,
-            strides=p.numpy_strides
-        ) for p in parameters
+            strides=p.numpy_strides)
+        for p in in_parameters
     ] for _ in range(num_input_sets)]
 
-    return input_sets[0] if len(input_sets) == 1 else input_sets
+    return parameters, input_sets[0] if len(input_sets) == 1 else input_sets
 
 
 def generate_input_sets_for_hat_file(hat_path):
