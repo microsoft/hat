@@ -72,7 +72,7 @@ def _make_cpu_func(shared_lib: ctypes.CDLL, func: Function):
 
     def f(*args):
         # verify that the args match the description in the hat file
-        func_info.verify(args)
+        func_info.verify_args(args)
 
         # prepare the args to the hat package
         hat_args = [arg.as_carg() for arg in args]

@@ -205,7 +205,7 @@ class CudaCallableFunc(CallableFunc):
         cuda.cuCtxDestroy(self.context)
 
     def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpu_id: int=0):
-        self.func_info.verify(args)
+        self.func_info.verify_args(args)
         self.device_mem = allocate_cuda_mem(self.func_info.args)
 
         if not benchmark:
