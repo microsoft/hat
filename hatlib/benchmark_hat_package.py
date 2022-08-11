@@ -201,7 +201,7 @@ def run_benchmark(hat_path,
             median_of_means = sorted_batch_means[num_batches // 2]
             mean_of_small_means = sorted_batch_means[0:max(1, num_batches // 2)].mean()
             robust_means = sorted_batch_means[(num_batches // 5):(-num_batches // 5)]
-            robust_mean_of_means = robust_means.mean()
+            robust_mean_of_means = robust_means.mean() if len(robust_means) > 0 else -1
             min_of_means = sorted_batch_means[0]
 
             if store_in_hat:
