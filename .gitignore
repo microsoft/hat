@@ -362,3 +362,4 @@ dist/
 
 # test
 test_acccgen
+test_output
