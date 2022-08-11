@@ -97,7 +97,7 @@ class CreateSimpleHatFile_test(unittest.TestCase):
         hat_function.auxiliary[auxiliary_key_name] = { "name" : "matmul" }
 
         link_target_path = "./fake_link_target.lib"
-        hat_file_path = "./test_simple_hat_path.hat"
+        hat_file_path = "test_output/test_simple_hat_path.hat"
         new_hat_file = hat.HATFile(
             name="simple_hat_file",
             functions=[hat_function],

@@ -90,7 +90,6 @@ void (*Softmax)(float*, float*) = Softmax;
             shape=shape,
             affine_map=strides
         )
-
         param_output = hat.Parameter(
             name="output",
             logical_type=hat.ParameterType.AffineArray,
@@ -100,7 +99,6 @@ void (*Softmax)(float*, float*) = Softmax;
             shape=shape,
             affine_map=strides
         )
-
         hat_function = hat.Function(
             arguments=[param_input, param_output],
             calling_convention=hat.CallingConventionType.StdCall,

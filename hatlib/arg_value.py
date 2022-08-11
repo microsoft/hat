@@ -1,3 +1,4 @@
+from typing import Any
 from ctypes import byref
 import numpy as np
 
@@ -5,33 +6,50 @@ from .arg_info import ArgInfo
 
 
 class ArgValue:
-    "An argument instance, usable for calling a C function"
+    """An argument containing a scalar, ndarray, or pointer
+    uses when calling HAT functions from ctypes"""
 
-    def __init__(self, desc: ArgInfo):
-        self.pointer_level = desc.pointer_level
-        if self.pointer_level:
-            self.ctypes_type = desc.ctypes_pointer_type
-            if self.pointer_level == 1:
-                # materialize an ndarray with random input values
-                self.value = np.lib.stride_tricks.as_strided(
-                    np.random.rand(desc.total_element_count).astype(desc.numpy_dtype),
-                    shape=desc.numpy_shape,
-                    strides=desc.numpy_strides
-                )
-            elif self.pointer_level == 2:
-                # materialize a pointer type
-                self.value = self.ctypes_type()
+    def __init__(self, arg_info: ArgInfo, value: Any = None):
+        self.arg_info = arg_info
+        self.pointer_level = arg_info.pointer_level
+        self.ctypes_type = arg_info.ctypes_pointer_type
+
+        if self.pointer_level > 2:
+            raise NotImplementedError("Pointer levels > 2 are not supported")
+
+        self.value = value
+        if not self.value:
+            if not self.pointer_level:
+                raise ValueError("A value is required for non-pointers")
             else:
-                raise NotImplementedError("Pointer levels > 2 are not supported")
-        else:
-            raise NotImplementedError("Non-pointer types are not supported")    # TODO
+                self.allocate()
+
+    def allocate(self):
+        if not self.pointer_level:
+            return    # nothing to do
+        if self.value:
+            return    # value already assigned, nothing to do
+
+        if self.pointer_level == 1:
+            # allocate an ndarray with random input values (TODO: do we always want random?)
+            self.value = np.lib.stride_tricks.as_strided(
+                np.random.rand(self.arg_info.total_element_count).astype(self.arg_info.numpy_dtype),
+                shape=self.arg_info.numpy_shape,
+                strides=self.arg_info.numpy_strides
+            )
+        elif self.pointer_level == 2:
+            # allocate a pointer type
+            self.value = self.ctypes_type()
 
     def as_carg(self):
         "Return the C interface for this argument"
-        if isinstance(self.value, np.ndarray):
-            return self.value.ctypes.data_as(self.ctypes_type)
+        if self.pointer_level:
+            if isinstance(self.value, np.ndarray):
+                return self.value.ctypes.data_as(self.ctypes_type)
+            else:
+                return byref(self.value)
         else:
-            return byref(self.value)
+            raise NotImplementedError("Non pointer args are not yet supported")    # TODO
 
     def verify(self, desc):
         "Verifies that this argument matches an argument description"
@@ -56,18 +74,21 @@ class ArgValue:
                     f"expected argument to have strides={desc.numpy_strides} but received strides={self.value.strides}"
                 )
         else:
-            pass    # TODO
+            pass    # TODO - support other pointer levels
 
     def __repr__(self):
-        if isinstance(self.value, np.ndarray):
-            return ",".join(map(str, self.value.ravel()[:32]))
+        if self.pointer_level:
+            if isinstance(self.value, np.ndarray):
+                return ",".join(map(str, self.value.ravel()[:32]))
+            else:
+                try:
+                    s = repr(self.value.contents)
+                except:    # NULL pointer
+                    s = repr(self.value)
+                finally:
+                    return s
         else:
-            try:
-                s = repr(self.value.contents)
-            except:    # NULL pointer
-                s = repr(self.value)
-            finally:
-                return s
+            return repr(self.value)
 
     def __del__(self):
         if self.pointer_level == 2:

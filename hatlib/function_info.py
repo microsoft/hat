@@ -1,6 +1,6 @@
 import sys
 from dataclasses import dataclass, field
-from typing import List
+from typing import Any, List
 
 from .arg_info import ArgInfo
 from .arg_value import ArgValue
@@ -18,11 +18,13 @@ class FunctionInfo:
         self.name = self.desc.name
         self.args = list(map(ArgInfo, self.desc.arguments))
 
-    def verify_args(self, values: List[ArgValue]):
+    def verify_args(self, values: List[Any]):
         "Verifies that a list of argument values matches the function description"
         # check number of args
         if len(values) != len(self.args):
-            sys.exit(f"Error calling {self.name}(...): expected {len(self.args)} arguments but received {len(args)}")
+            sys.exit(
+                f"Error calling {self.name}(...): expected {len(self.args)} arguments but received {len(self.args)}"
+            )
 
         # for each arg
         for i, (arg, value) in enumerate(zip(self.args, values)):
