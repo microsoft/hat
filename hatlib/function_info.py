@@ -1,4 +1,3 @@
-
 import sys
 from dataclasses import dataclass, field
 from typing import List
@@ -6,6 +5,7 @@ from typing import List
 from .arg_info import ArgInfo
 from .arg_value import ArgValue
 from . import hat_file
+
 
 @dataclass
 class FunctionInfo:
