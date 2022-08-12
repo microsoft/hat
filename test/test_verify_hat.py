@@ -124,6 +124,7 @@ void (*Softmax)(float*, float*) = Softmax;
         # Generate a HAT package using C and call verify_hat
         impl_code = '''#include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #ifndef ALLOC
 #define ALLOC(size) ( malloc(size) )
@@ -144,12 +145,20 @@ DLL_EXPORT void Range(const int32_t start[1], const int32_t limit[1], const int3
     /* Ensure we don't crash with random inputs */
     int32_t start0 = start[0];
     int32_t delta0 = delta[0] == 0 ? 1 : delta[0];
-    int32_t limit0 = (limit[0] <= start0) ? (start0 + delta0) : limit[0];
+    int32_t limit0 = (limit[0] <= start0) ? (start0 + delta0 * 25) : limit[0];
 
     *output_dim = (limit0 - start0) / delta0;
     *output = (int32_t*)ALLOC(*output_dim * sizeof(int32_t));
+    printf(\"Allocated %d output elements\\n\", *output_dim);
+    printf(\"start=%d, limit=%d, delta=%d\\n\", start0, limit0, delta0);
+
     for (uint32_t i = 0; i < *output_dim; ++i) {
         (*output)[i] = start0 + (i * delta0);
+    }
+
+    for (uint32_t i = 0; i < *output_dim; ++i) {
+        (*output)[i] = start0 + (i * delta0);
+        printf(\"output[%d]=%d\\n\", i, (*output)[i]);
     }
 }
 '''
