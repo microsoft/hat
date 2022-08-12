@@ -31,7 +31,7 @@ class ArgValue:
             return    # value already assigned, nothing to do
 
         if self.pointer_level == 1:
-            # allocate an ndarray with random input values (TODO: do we always want random?)
+            # allocate an ndarray with random input values
             self.value = np.lib.stride_tricks.as_strided(
                 np.random.rand(self.arg_info.total_element_count).astype(self.arg_info.numpy_dtype),
                 shape=self.arg_info.numpy_shape,
@@ -82,9 +82,11 @@ class ArgValue:
                 return ",".join(map(str, self.value.ravel()[:32]))
             else:
                 try:
+                    # TODO: reference the dimension values so that we can pretty print the output
+                    # e.g. np.ctypeslib.as_array(self.value, shape=(output_dim0.value,...))
                     s = repr(self.value.contents)
                 except:    # NULL pointer
-                    s = repr(self.value)
+                    s = f"{repr(self.value)} nullptr"
                 finally:
                     return s
         else:
