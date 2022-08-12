@@ -118,6 +118,143 @@ void (*Softmax)(float*, float*) = Softmax;
         new_hat_file.Serialize(hat_path)
         self.assertTrue(os.path.exists(hat_path))
 
+        hat.verify_hat_package(hat_path)
+
+    def test_runtime_array(self):
+        # Generate a HAT package using C and call verify_hat
+        impl_code = '''#include <stdint.h>
+#include <stdlib.h>
+
+#ifndef ALLOC
+#define ALLOC(size) ( malloc(size) )
+#endif
+#ifndef DEALLOC
+#define DEALLOC(X) ( free(X) )
+#endif
+
+#ifdef _MSC_VER
+#define DLL_EXPORT  __declspec( dllexport )
+#else
+#define DLL_EXPORT
+#endif
+
+DLL_EXPORT void Range(const int32_t start[1], const int32_t limit[1], const int32_t delta[1], int32_t** output, uint32_t* output_dim)
+{
+    /* Range */
+    /* Ensure we don't crash with random inputs */
+    int32_t start0 = start[0];
+    int32_t delta0 = delta[0] == 0 ? 1 : delta[0];
+    int32_t limit0 = (limit[0] <= start0) ? (start0 + delta0) : limit[0];
+
+    *output_dim = (limit0 - start0) / delta0;
+    *output = (int32_t*)ALLOC(*output_dim * sizeof(int32_t));
+    for (uint32_t i = 0; i < *output_dim; ++i) {
+        (*output)[i] = start0 + (i * delta0);
+    }
+}
+'''
+        decl_code = '''#endif // TOML
+#pragma once
+
+#include <stdint.h>
+
+#if defined(__cplusplus)
+extern "C"
+{
+#endif // defined(__cplusplus)
+
+void Range(const int32_t start[1], const int32_t limit[1], const int32_t delta[1], int32_t** output, uint32_t* output_dim );
+
+#ifndef __Range_DEFINED__
+#define __Range_DEFINED__
+void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
+#endif
+
+#if defined(__cplusplus)
+} // extern "C"
+#endif // defined(__cplusplus)
+
+#ifdef TOML
+'''
+        platform = hat.get_platform()
+        if platform == hat.OperatingSystem.Windows:
+            return    # TODO
+
+        workdir = "test_output/verify_hat_test_runtime_array"
+        hat_path = f"{workdir}/range.hat"
+        source_path = f"{workdir}/range.c"
+        lib_path = f"{workdir}/range.so"
+
+        shutil.rmtree(workdir, ignore_errors=True)
+        os.makedirs(workdir, exist_ok=True)
+        with open(source_path, "w") as f:
+            print(impl_code, file=f)
+
+        if os.path.exists(lib_path):
+            os.remove(lib_path)
+        hat.run_command(f'gcc -shared -fPIC -o "{lib_path}" "{source_path}"', quiet=True)
+        self.assertTrue(os.path.isfile(lib_path))
+
+        # create the hat file
+        param_start = hat.Parameter(
+            name="start",
+            logical_type=hat.ParameterType.AffineArray,
+            declared_type="int32_t*",
+            element_type="int32_t",
+            usage=hat.UsageType.Input,
+            shape=[],
+        )
+        param_limit = hat.Parameter(
+            name="limit",
+            logical_type=hat.ParameterType.AffineArray,
+            declared_type="int32_t*",
+            element_type="int32_t",
+            usage=hat.UsageType.Input,
+            shape=[],
+        )
+        param_delta = hat.Parameter(
+            name="delta",
+            logical_type=hat.ParameterType.AffineArray,
+            declared_type="int32_t*",
+            element_type="int32_t",
+            usage=hat.UsageType.Input,
+            shape=[],
+        )
+        param_output = hat.Parameter(
+            name="output",
+            logical_type=hat.ParameterType.RuntimeArray,
+            declared_type="int32_t**",
+            element_type="int32_t",
+            usage=hat.UsageType.Output,
+            size="output_dim0"
+        )
+        param_output_dim = hat.Parameter(
+            name="output_dim",
+            logical_type=hat.ParameterType.Element,
+            declared_type="uint32_t*",
+            element_type="uint32_t",
+            usage=hat.UsageType.Output,
+            shape=[]
+        )
+        hat_function = hat.Function(
+            arguments=[param_start, param_limit, param_delta, param_output, param_output_dim],
+            calling_convention=hat.CallingConventionType.StdCall,
+            name="Range",
+            return_info=hat.Parameter.void()
+        )
+        new_hat_file = hat.HATFile(
+            name="range",
+            functions=[hat_function],
+            dependencies=hat.Dependencies(link_target=os.path.basename(lib_path)),
+            declaration=hat.Declaration(code=decl_code),
+            path=hat_path
+        )
+
+        if os.path.exists(hat_path):
+            os.remove(hat_path)
+        new_hat_file.Serialize(hat_path)
+        self.assertTrue(os.path.exists(hat_path))
+
         # verify
         hat.verify_hat_package(hat_path)
 
