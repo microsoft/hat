@@ -3,14 +3,13 @@
 # Utility to parse and validate a HAT package
 
 import ctypes
-from typing import List
 from collections import OrderedDict
-
-from .hat_file import HATFile, Function, Parameter
-from .arg_info import ArgInfo
-from .function_info import FunctionInfo
-
+import numpy as np
 import os
+
+from .hat_file import HATFile, Function
+from .arg_value import ArgValue
+from .function_info import FunctionInfo
 
 
 class HATPackage:
@@ -72,10 +71,10 @@ def _make_cpu_func(shared_lib: ctypes.CDLL, func: Function):
 
     def f(*args):
         # verify that the args match the description in the hat file
-        func_info.verify_args(args)
+        func_info.verify(args)
 
         # prepare the args to the hat package
-        hat_args = [arg.as_carg() for arg in args]
+        hat_args = func_info.as_cargs(args)
 
         # call the function in the hat package
         fn(*hat_args)

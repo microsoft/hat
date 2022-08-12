@@ -18,7 +18,7 @@ class ArgValue:
             raise NotImplementedError("Pointer levels > 2 are not supported")
 
         self.value = value
-        if not self.value:
+        if self.value is None:
             if not self.pointer_level:
                 raise ValueError("A value is required for non-pointers")
             else:
