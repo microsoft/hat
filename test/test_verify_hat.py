@@ -63,7 +63,7 @@ void (*Softmax)(float*, float*) = Softmax;
         if platform == hat.OperatingSystem.Windows:
             return    # TODO
 
-        workdir = "test_output/verify_hat_test_basic"
+        workdir = "./test_output/verify_hat_test_basic"
         hat_path = f"{workdir}/softmax.hat"
         source_path = f"{workdir}/softmax.c"
         lib_path = f"{workdir}/softmax.so"

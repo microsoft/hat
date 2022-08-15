@@ -28,17 +28,18 @@ void MatMul(const float* A, const float* B, float* C);
 #ifdef TOML
 '''
 
+
 class CreateSimpleHatFile_test(unittest.TestCase):
 
     def test_create_simple_hat_file(self):
         a_shape = (1024, 512)
-        a_strides = (a_shape[1], 1) # "first major" / "row major"
+        a_strides = (a_shape[1], 1)    # "first major" / "row major"
 
         b_shape = (512, 256)
-        b_strides = (1, b_shape[0]) # "last major" / "column major"
+        b_strides = (1, b_shape[0])    # "last major" / "column major"
 
         c_shape = (1024, 256)
-        c_strides = (c_shape[1], 1) # "first major" / "row major"
+        c_strides = (c_shape[1], 1)    # "first major" / "row major"
 
         param_A = hat.Parameter(
             name="A",
@@ -48,7 +49,7 @@ class CreateSimpleHatFile_test(unittest.TestCase):
             element_type="float",
             usage=hat.UsageType.Input,
 
-            # Affine array parameter keys
+        # Affine array parameter keys
             shape=a_shape,
             affine_map=a_strides,
             affine_offset=0
@@ -62,7 +63,7 @@ class CreateSimpleHatFile_test(unittest.TestCase):
             element_type="float",
             usage=hat.UsageType.Input,
 
-            # Affine array parameter keys
+        # Affine array parameter keys
             shape=b_shape,
             affine_map=b_strides,
             affine_offset=0
@@ -76,7 +77,7 @@ class CreateSimpleHatFile_test(unittest.TestCase):
             element_type="float",
             usage=hat.UsageType.InputOutput,
 
-            # Affine array parameter keys
+        # Affine array parameter keys
             shape=c_shape,
             affine_map=c_strides,
             affine_offset=0
@@ -94,10 +95,15 @@ class CreateSimpleHatFile_test(unittest.TestCase):
             return_info=return_arg
         )
         auxiliary_key_name = "test_auxiliary_key"
-        hat_function.auxiliary[auxiliary_key_name] = { "name" : "matmul" }
+        hat_function.auxiliary[auxiliary_key_name] = {
+            "name": "matmul"
+        }
+
+        workdir = "./test_output"
+        os.makedirs(workdir, exist_ok=True)
 
         link_target_path = "./fake_link_target.lib"
-        hat_file_path = "./test_simple_hat_path.hat"
+        hat_file_path = f"{workdir}/test_simple_hat_path.hat"
         new_hat_file = hat.HATFile(
             name="simple_hat_file",
             functions=[hat_function],
@@ -127,6 +133,7 @@ class CreateSimpleHatFile_test(unittest.TestCase):
 
         # Check that the code strings are equal. Serialization/deserialization doesn't always preserve leading/trailing whitespace so use strip() to normalize
         self.assertEqual(parsed_hat_file.declaration.code.strip(), SAMPLE_MATMUL_DECL_CODE.strip())
+
 
 if __name__ == '__main__':
     unittest.main()
