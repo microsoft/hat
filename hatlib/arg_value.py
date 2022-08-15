@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, List
 from ctypes import byref
 import numpy as np
 
@@ -25,6 +25,7 @@ class ArgValue:
             else:
                 # no value provided, allocate the pointer
                 self.allocate()
+        self._dim_values = None
 
     def allocate(self):
         if not self.pointer_level:
@@ -36,7 +37,7 @@ class ArgValue:
             # allocate an ndarray with random input values
             self.value = np.lib.stride_tricks.as_strided(
                 np.random.rand(self.arg_info.total_element_count).astype(self.arg_info.numpy_dtype),
-                shape=self.arg_info.numpy_shape,
+                shape=self.arg_info.shape,
                 strides=self.arg_info.numpy_strides
             )
         elif self.pointer_level == 2:
@@ -53,6 +54,10 @@ class ArgValue:
         else:
             raise NotImplementedError("Non pointer args are not yet supported")    # TODO
 
+    def set_dimension_values(self, dimension_values: List["ArgValue"]):
+        "Sets other ArgValues as the dimensions for this argumeng"
+        self._dim_values = dimension_values
+
     def verify(self, desc):
         "Verifies that this argument matches an argument description"
         if desc.pointer_level == 1:
@@ -65,10 +70,8 @@ class ArgValue:
                 )
 
             # confirm that the arg shape is correct (numpy represents shapes as tuples)
-            if tuple(desc.numpy_shape) != self.value.shape:
-                raise ValueError(
-                    f"expected argument to have shape={desc.numpy_shape} but received shape={self.value.shape}"
-                )
+            if tuple(desc.shape) != self.value.shape:
+                raise ValueError(f"expected argument to have shape={desc.shape} but received shape={self.value.shape}")
 
             # confirm that the arg strides are correct (numpy represents strides as tuples)
             if tuple(desc.numpy_strides) != self.value.strides:
@@ -84,11 +87,18 @@ class ArgValue:
                 return ",".join(map(str, self.value.ravel()[:32]))
             else:
                 try:
-                    # TODO: cross-reference the dimension output values so that we can pretty print the output
-                    # e.g. np.ctypeslib.as_array(self.value, shape=(output_dim0.value,...))
-                    s = repr(self.value.contents)
-                except:    # NULL pointer
-                    s = f"{repr(self.value)} nullptr"
+                    if self._dim_values:
+                        # cross-reference the dimension output values to pretty print the output
+                        shape = self._dim_values[0].value if len(self._dim_values
+                                                                 ) == 1 else [d.value for d in self._dim_values]
+                        s = repr(np.ctypeslib.as_array(self.value, shape))
+                    else:
+                        s = repr(self.value.contents)
+                except Exception as e:
+                    if e.args[0].startswith("NULL pointer"):
+                        s = f"{repr(self.value)} nullptr"
+                    else:
+                        s = repr(e)
                 finally:
                     return s
         else:

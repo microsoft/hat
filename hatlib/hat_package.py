@@ -1,14 +1,10 @@
-#!/usr/bin/env python3
-
 # Utility to parse and validate a HAT package
 
 import ctypes
 from collections import OrderedDict
-import numpy as np
 import os
 
 from .hat_file import HATFile, Function
-from .arg_value import ArgValue
 from .function_info import FunctionInfo
 
 

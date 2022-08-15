@@ -1,5 +1,6 @@
 import ctypes
 import numpy as np
+import re
 from dataclasses import dataclass
 from typing import Any, Tuple, Union
 
@@ -27,8 +28,9 @@ DTYPE_ENTRY = 1
 @dataclass
 class ArgInfo:
     """Extracts necessary information from the description of a function argument in a hat file"""
+    name: str
     hat_declared_type: str
-    numpy_shape: Tuple[int, ...]
+    shape: Tuple[Union[int, str], ...]
     numpy_strides: Tuple[int, ...]
     numpy_dtype: type
     element_num_bytes: int
@@ -53,8 +55,9 @@ class ArgInfo:
         return declared_type[pos:].count("*")
 
     def __init__(self, param_description: hat_file.Parameter):
+        self.name = param_description.name
         self.hat_declared_type = param_description.declared_type
-        self.numpy_shape = tuple(param_description.shape)
+        self.shape = tuple(param_description.shape)
         self.usage = param_description.usage
         self.pointer_level = self._get_pointer_level(self.hat_declared_type)
         element_type = self.hat_declared_type[:(-1 * self.pointer_level)] \
@@ -69,25 +72,27 @@ class ArgInfo:
         self.element_num_bytes = 2 if dtype_entry == "bfloat16" else self.numpy_dtype.itemsize
 
         if param_description.logical_type == hat_file.ParameterType.AffineArray:
-            if self.numpy_shape:
+            if self.shape:
                 self.element_strides = param_description.affine_map
                 self.numpy_strides = tuple([self.element_num_bytes * x for x in self.element_strides])
 
                 major_dim = self.element_strides.index(max(self.element_strides))
-                self.total_element_count = self.numpy_shape[major_dim] * self.element_strides[major_dim]
+                self.total_element_count = self.shape[major_dim] * self.element_strides[major_dim]
 
             else:
-                self.element_strides = self.numpy_strides = self.numpy_shape = [1]
+                self.element_strides = self.numpy_strides = self.shape = [1]
                 self.total_element_count = 1
             self.total_byte_size = self.element_num_bytes * self.total_element_count
 
         elif param_description.logical_type == hat_file.ParameterType.RuntimeArray:
             self.total_byte_size = f"{self.element_num_bytes} * {param_description.size}"
+            # assume the sizes are in shape order
+            self.shape = re.split(r"\s?\*\s?", param_description.size)
 
         elif param_description.logical_type == hat_file.ParameterType.Element:
             if param_description.usage == hat_file.UsageType.Input:
-                raise NotImplementedError(f"Input logical_type elements are not supported") # TODO
+                raise NotImplementedError(f"Input logical_type elements are not supported")    # TODO
             elif param_description.usage == hat_file.UsageType.Output:
-                self.element_strides = self.numpy_strides = self.numpy_shape = [1]
+                self.element_strides = self.numpy_strides = self.shape = [1]
                 self.total_element_count = 1
                 self.total_byte_size = self.element_num_bytes * self.total_element_count
