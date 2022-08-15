@@ -28,6 +28,7 @@ DTYPE_ENTRY = 1
 @dataclass
 class ArgInfo:
     """Extracts necessary information from the description of a function argument in a hat file"""
+    func: "FunctionInfo"
     hat_declared_type: str
     shape: Tuple[Union[int, str], ...]
     numpy_strides: Tuple[int, ...]
