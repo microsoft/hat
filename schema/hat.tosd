@@ -56,8 +56,8 @@ version = "0.0.0.3"
         optional = true
 
         # A string describing the number of elements in the buffer for a runtime_array logical type.
-        # Typically expected to reference other parameters in the function.
-        # e.g. "N", "lda * K"
+        # Typically expected to reference other parameters in the function in their shape order.
+        # e.g. "N", "lda * K" for shape (lda, K)
         [types.paramType.size]
         type = "string"
         optional = true

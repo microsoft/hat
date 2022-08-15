@@ -36,7 +36,7 @@ class ArgValue:
             # allocate an ndarray with random input values
             self.value = np.lib.stride_tricks.as_strided(
                 np.random.rand(self.arg_info.total_element_count).astype(self.arg_info.numpy_dtype),
-                shape=self.arg_info.numpy_shape,
+                shape=self.arg_info.shape,
                 strides=self.arg_info.numpy_strides
             )
         elif self.pointer_level == 2:
@@ -65,9 +65,9 @@ class ArgValue:
                 )
 
             # confirm that the arg shape is correct (numpy represents shapes as tuples)
-            if tuple(desc.numpy_shape) != self.value.shape:
+            if tuple(desc.shape) != self.value.shape:
                 raise ValueError(
-                    f"expected argument to have shape={desc.numpy_shape} but received shape={self.value.shape}"
+                    f"expected argument to have shape={desc.shape} but received shape={self.value.shape}"
                 )
 
             # confirm that the arg strides are correct (numpy represents strides as tuples)

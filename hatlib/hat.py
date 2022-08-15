@@ -38,7 +38,7 @@ def generate_arg_sets_for_func(func: hat_file.Function, input_sets_minimum_size_
 
     # use input params to compute the set size (output params are unknown size)
     in_parameters = list(filter(lambda p: p.usage != hat_file.UsageType.Output, parameters))
-    shapes_to_sizes = [reduce(lambda x, y: x * y, p.numpy_shape) for p in in_parameters]
+    shapes_to_sizes = [reduce(lambda x, y: x * y, p.shape) for p in in_parameters]
     set_size = reduce(
         lambda x, y: x + y, map(lambda size, p: size * p.element_num_bytes, shapes_to_sizes, in_parameters)
     )
