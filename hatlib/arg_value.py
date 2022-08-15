@@ -6,15 +6,15 @@ from .arg_info import ArgInfo
 
 
 class ArgValue:
-    """An argument containing a scalar, ndarray, or pointer
-    uses when calling HAT functions from ctypes"""
+    """An argument containing a scalar, ndarray, or pointer value.
+    Used for calling HAT functions from ctypes"""
 
     def __init__(self, arg_info: ArgInfo, value: Any = None):
         self.arg_info = arg_info
         self.pointer_level = arg_info.pointer_level
         self.ctypes_type = arg_info.ctypes_pointer_type
 
-        if self.pointer_level > 2:
+        if self.pointer_level > 2:    # punt until we really need this
             raise NotImplementedError("Pointer levels > 2 are not supported")
 
         self.value = value
@@ -22,6 +22,7 @@ class ArgValue:
             if not self.pointer_level:
                 raise ValueError("A value is required for non-pointers")
             else:
+                # no value provided, allocate the pointer
                 self.allocate()
 
     def allocate(self):
@@ -38,7 +39,7 @@ class ArgValue:
                 strides=self.arg_info.numpy_strides
             )
         elif self.pointer_level == 2:
-            # allocate a pointer type
+            # allocate a pointer. C function will perform the actual allocation.
             self.value = self.ctypes_type()
 
     def as_carg(self):
@@ -82,7 +83,7 @@ class ArgValue:
                 return ",".join(map(str, self.value.ravel()[:32]))
             else:
                 try:
-                    # TODO: reference the dimension values so that we can pretty print the output
+                    # TODO: cross-reference the dimension output values so that we can pretty print the output
                     # e.g. np.ctypeslib.as_array(self.value, shape=(output_dim0.value,...))
                     s = repr(self.value.contents)
                 except:    # NULL pointer
