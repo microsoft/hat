@@ -8,7 +8,7 @@ import shutil
 class VerifyHat_test(unittest.TestCase):
 
     def test_basic(self):
-        # Generate a HAT package using C and call verify_hat
+        # Generate a HAT package with a C implementation and call verify_hat
         impl_code = '''#include <math.h>
 #include <stdint.h>
 
