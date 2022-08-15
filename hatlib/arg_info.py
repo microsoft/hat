@@ -28,7 +28,7 @@ DTYPE_ENTRY = 1
 @dataclass
 class ArgInfo:
     """Extracts necessary information from the description of a function argument in a hat file"""
-    func: "FunctionInfo"
+    name: str
     hat_declared_type: str
     shape: Tuple[Union[int, str], ...]
     numpy_strides: Tuple[int, ...]
@@ -55,6 +55,7 @@ class ArgInfo:
         return declared_type[pos:].count("*")
 
     def __init__(self, param_description: hat_file.Parameter):
+        self.name = param_description.name
         self.hat_declared_type = param_description.declared_type
         self.shape = tuple(param_description.shape)
         self.usage = param_description.usage

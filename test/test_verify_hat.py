@@ -158,7 +158,6 @@ DLL_EXPORT void Range(const int32_t start[1], const int32_t limit[1], const int3
 
     for (uint32_t i = 0; i < *output_dim; ++i) {
         (*output)[i] = start0 + (i * delta0);
-        printf(\"output[%d]=%d\\n\", i, (*output)[i]);
     }
 }
 '''
@@ -172,7 +171,7 @@ extern "C"
 {
 #endif // defined(__cplusplus)
 
-void Range(const int32_t start[1], const int32_t limit[1], const int32_t delta[1], int32_t** output, uint32_t* output_dim );
+void Range(const int32_t start[1], const int32_t limit[1], const int32_t delta[1], int32_t** output, uint32_t* output_dim);
 
 #ifndef __Range_DEFINED__
 #define __Range_DEFINED__
@@ -235,7 +234,7 @@ void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
             declared_type="int32_t**",
             element_type="int32_t",
             usage=hat.UsageType.Output,
-            size="output_dim0"
+            size="output_dim"
         )
         param_output_dim = hat.Parameter(
             name="output_dim",
