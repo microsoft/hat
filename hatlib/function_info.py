@@ -12,21 +12,21 @@ from . import hat_file
 class FunctionInfo:
     "Information about a HAT function"
     desc: hat_file.Function
-    arg_infos: List[ArgInfo] = field(default_factory=list)
+    arguments: List[ArgInfo] = field(default_factory=list)
     name: str = ""
 
     def __post_init__(self):
         self.name = self.desc.name
-        self.arg_infos = list(map(ArgInfo, self.desc.arguments))
+        self.arguments = list(map(ArgInfo, self.desc.arguments))
 
     def verify(self, args: List[Any]):
         "Verifies that a list of argument values matches the function description"
-        if len(args) != len(self.arg_infos):
+        if len(args) != len(self.arguments):
             sys.exit(
-                f"Error calling {self.name}(...): expected {len(self.arg_infos)} arguments but received {len(self.arg_infos)}"
+                f"Error calling {self.name}(...): expected {len(self.arguments)} arguments but received {len(args)}"
             )
 
-        for i, (info, value) in enumerate(zip(self.arg_infos, args)):
+        for i, (info, value) in enumerate(zip(self.arguments, args)):
             try:
                 if isinstance(value, np.ndarray):
                     value = ArgValue(info, value)
@@ -39,6 +39,6 @@ class FunctionInfo:
         "Converts arguments to their C interfaces"
         arg_values = [
             ArgValue(info, value) if isinstance(value, np.ndarray) else value
-            for info, value in zip(self.arg_infos, args)
+            for info, value in zip(self.arguments, args)
         ]
         return [value.as_carg() for value in arg_values]
