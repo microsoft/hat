@@ -29,12 +29,13 @@ from functools import reduce
 
 from . import hat_file
 from . import hat_package
-from .arg_info import ArgInfo
 from .arg_value import ArgValue
+from .function_info import FunctionInfo
 
 
 def generate_arg_sets_for_func(func: hat_file.Function, input_sets_minimum_size_MB: int = 0, num_additional: int = 0):
-    parameters = list(map(ArgInfo, func.arguments))
+    func_info = FunctionInfo(func)
+    parameters = func_info.arguments
 
     # use input params to compute the set size (output params are unknown size)
     in_parameters = list(filter(lambda p: p.usage != hat_file.UsageType.Output, parameters))
