@@ -10,6 +10,7 @@ class ArgValue:
     Used for calling HAT functions from ctypes"""
 
     def __init__(self, arg_info: ArgInfo, value: Any = None):
+        # TODO: set the free and alloc function symbols here?
         self.arg_info = arg_info
         self.pointer_level = arg_info.pointer_level
         self.ctypes_type = arg_info.ctypes_pointer_type
@@ -39,7 +40,7 @@ class ArgValue:
                 strides=self.arg_info.numpy_strides
             )
         elif self.pointer_level == 2:
-            # allocate a pointer. C function will perform the actual allocation.
+            # allocate a pointer. HAT function will perform the actual allocation.
             self.value = self.ctypes_type()
 
     def as_carg(self):
@@ -95,4 +96,4 @@ class ArgValue:
 
     def __del__(self):
         if self.pointer_level == 2:
-            pass    # TODO - free the pointer
+            pass    # TODO - free the pointer, presumably calling a symbol passed into this ArgValue
