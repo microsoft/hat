@@ -25,7 +25,7 @@ class ArgValue:
             else:
                 # no value provided, allocate the pointer
                 self.allocate()
-        self._dim_values = None
+        self.dim_values = None
 
     def allocate(self):
         if not self.pointer_level:
@@ -53,10 +53,6 @@ class ArgValue:
                 return byref(self.value)
         else:
             raise NotImplementedError("Non pointer args are not yet supported")    # TODO
-
-    def set_dimension_values(self, dimension_values: List["ArgValue"]):
-        "Sets other ArgValues as the dimensions for this argumeng"
-        self._dim_values = dimension_values
 
     def verify(self, desc):
         "Verifies that this argument matches an argument description"
@@ -87,10 +83,11 @@ class ArgValue:
                 return ",".join(map(str, self.value.ravel()[:32]))
             else:
                 try:
-                    if self._dim_values:
+                    if self.dim_values:
                         # cross-reference the dimension output values to pretty print the output
-                        shape = self._dim_values[0].value if len(self._dim_values
-                                                                 ) == 1 else [d.value for d in self._dim_values]
+                        # Note: np.ctypeslib expects vector shapes to be single values instead of tuples
+                        shape = self.dim_values[0].value if len(self.dim_values
+                                                                ) == 1 else [d.value for d in self.dim_values]
                         s = repr(np.ctypeslib.as_array(self.value, shape))
                     else:
                         s = repr(self.value.contents)

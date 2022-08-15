@@ -61,6 +61,6 @@ class FunctionInfo:
                         )    # likely an invalid HAT file
                     dim_values.append(dim[0])
                 if dim_values:
-                    value.set_dimension_values(dim_values)
+                    value.dim_values = dim_values
         
         return values
