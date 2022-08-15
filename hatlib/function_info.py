@@ -23,7 +23,7 @@ class FunctionInfo:
         "Verifies that a list of argument values matches the function description"
         if len(args) != len(self.arg_infos):
             sys.exit(
-                f"Error calling {self.name}(...): expected {len(self.arg_infos)} arguments but received {len(self.arg_infos)}"
+                f"Error calling {self.name}(...): expected {len(self.arg_infos)} arguments but received {len(args)}"
             )
 
         for i, (info, value) in enumerate(zip(self.arg_infos, args)):
