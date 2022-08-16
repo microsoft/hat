@@ -95,7 +95,7 @@ class FunctionInfo:
 
         # collect the dimension ArgValues for each output runtime_array ArgValue
         for value in values:
-            if value.arg_info.usage == hat_file.UsageType.Input and not value.arg_info.is_constant_shaped:
+            if value.arg_info.usage == hat_file.UsageType.Output and not value.arg_info.is_constant_shaped:
                 dim_values = [values[i] for i in self._get_dimension_arg_indices(value.arg_info)]
                 assert dim_values, f"Runtime array {value.arg_info.name} has no dimensions"
                 value.dim_values = dim_values

@@ -283,7 +283,7 @@ DLL_EXPORT void /* Unsqueeze_18 */ Unsqueeze(const int64_t* data, const int64_t 
     *expanded = (int64_t*)ALLOC((*dim0) * (*dim1) * sizeof(int64_t));
     int64_t* data_ = (int64_t*)data;
     int64_t* expanded_ = (int64_t*)(*expanded);
-    for (uint32_t i = 0; i < data_dim0; ++i)
+    for (int64_t i = 0; i < data_dim0; ++i)
         expanded_[i] = data_[i];
 }
 '''
