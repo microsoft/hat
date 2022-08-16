@@ -30,12 +30,12 @@ class ArgInfo:
     """Extracts necessary information from the description of a function argument in a hat file"""
     name: str
     hat_declared_type: str
-    shape: Tuple[Union[int, str], ...]
+    shape: Tuple[Union[int, str], ...]    # int for affine_arrays, str symbols for runtime_arrays
     numpy_strides: Tuple[int, ...]
     numpy_dtype: type
     element_num_bytes: int
     element_strides: Tuple[int, ...]
-    total_element_count: Union[int, str]    # int for affine_arrays, str for runtime_arrays
+    total_element_count: Union[int, str]
     total_byte_size: Union[int, str]
     ctypes_type: Any
     pointer_level: int
@@ -106,4 +106,12 @@ class ArgInfo:
 
     @property
     def is_constant_shaped(self):
-        return all(type(s) == int for s in self.shape)
+        def integer_like(s: Any):
+            # handle types such as tomlkit.items.Integer
+            try:
+                int(s)
+                return True
+            except:
+                return False
+
+        return all(integer_like(s) for s in self.shape)
