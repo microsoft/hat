@@ -29,7 +29,7 @@ from functools import reduce
 
 from . import hat_file
 from . import hat_package
-from .arg_value import ArgValue
+from .arg_value import generate_arg_values
 from .function_info import FunctionInfo
 
 
@@ -46,7 +46,7 @@ def generate_arg_sets_for_func(func: hat_file.Function, input_sets_minimum_size_
     )
     num_input_sets = (input_sets_minimum_size_MB * 1024 * 1024 // set_size) + 1 + num_additional
 
-    arg_sets = [func_info.generate_arg_values() for _ in range(num_input_sets)]
+    arg_sets = [generate_arg_values(parameters) for _ in range(num_input_sets)]
 
     return arg_sets[0] if len(arg_sets) == 1 else arg_sets
 
