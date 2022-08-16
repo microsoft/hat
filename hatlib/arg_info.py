@@ -111,6 +111,7 @@ class ArgInfo:
             # handle types such as tomlkit.items.Integer
             try:
                 int(s)
+                return True
             except:
                 return False
 
