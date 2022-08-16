@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-from email.mime import base
-import os
-from posixpath import basename
-import unittest
 import hatlib as hat
+import os
 import shutil
+import unittest
 
 
 class VerifyHat_test(unittest.TestCase):
@@ -73,7 +71,7 @@ extern "C"
 {
 #endif // defined(__cplusplus)
 
-void Softmax(const float input[2][2], float output[2][2] );
+void Softmax(const float input[2][2], float output[2][2]);
 
 #ifndef __Softmax_DEFINED__
 #define __Softmax_DEFINED__
@@ -89,7 +87,7 @@ void (*Softmax)(float*, float*) = Softmax;
         if hat.get_platform() == hat.OperatingSystem.Windows:
             return    # TODO
 
-        workdir = "./test_output/verify_hat_test_basic"
+        workdir = "./test_output/verify_hat_basic"
         name = "softmax"
         lib_path = self.build(impl_code, workdir, name)
         hat_path = f"{workdir}/{name}.hat"
@@ -128,11 +126,10 @@ void (*Softmax)(float*, float*) = Softmax;
             declaration=hat.Declaration(code=decl_code),
             path=hat_path
         )
-
         self.create_hat_file(hat_input, hat_path, name)
         hat.verify_hat_package(hat_path)
 
-    def test_output_runtime_array(self):
+    def test_runtime_array(self):
         # Generate a HAT package using C and call verify_hat
         impl_code = '''#include <stdint.h>
 #include <stdlib.h>
@@ -199,7 +196,7 @@ void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
         if hat.get_platform() == hat.OperatingSystem.Windows:
             return    # TODO
 
-        workdir = "test_output/verify_hat_test_output_runtime_array"
+        workdir = "test_output/verify_hat_runtime_array"
         name = "range"
         lib_path = self.build(impl_code, workdir, name)
         hat_path = f"{workdir}/{name}.hat"
@@ -258,13 +255,10 @@ void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
             declaration=hat.Declaration(code=decl_code),
             path=hat_path
         )
-
         self.create_hat_file(hat_input, hat_path, name)
-
-        # verify
         hat.verify_hat_package(hat_path)
 
-    def test_input_output_runtime_arrays(self):
+    def test_inout_runtime_arrays(self):
         impl_code = '''#include <stdint.h>
 #include <stdlib.h>
 
@@ -281,15 +275,15 @@ void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
 #define DLL_EXPORT
 #endif
 
-DLL_EXPORT void /* Unsqueeze_18 */ Unsqueeze( const int64_t* data, const int64_t output_dim0, int64_t** expanded, int64_t* dim0, int64_t* dim1 )
+DLL_EXPORT void /* Unsqueeze_18 */ Unsqueeze(const int64_t* data, const int64_t data_dim0, int64_t** expanded, int64_t* dim0, int64_t* dim1)
 {
     /* Unsqueeze */
     *dim0 = 1;
-    *dim1 = output_dim0;
+    *dim1 = data_dim0;
     *expanded = (int64_t*)ALLOC((*dim0) * (*dim1) * sizeof(int64_t));
     int64_t* data_ = (int64_t*)data;
     int64_t* expanded_ = (int64_t*)(*expanded);
-    for (uint32_t i = 0; i < output_dim0; ++i)
+    for (uint32_t i = 0; i < data_dim0; ++i)
         expanded_[i] = data_[i];
 }
 '''
@@ -303,11 +297,11 @@ extern "C"
 {
 #endif // defined(__cplusplus)
 
-void Unsqueeze(const int64_t* data, const int64_t output_dim0, int64_t** expanded, int64_t* dim0, int64_t* dim1 );
+void Unsqueeze(const int64_t* data, const int64_t data_dim0, int64_t** expanded, int64_t* dim0, int64_t* dim1);
 
 #ifndef __Unsqueeze_DEFINED__
 #define __Unsqueeze_DEFINED__
-void (*Unsqueeze)(int64_t**, int64_t**, int64_t**, int64_t**, int64_t**) = Unsqueeze;
+void (*Unsqueeze_)(int64_t*, int64_t, int64_t**, int64_t*, int64_t*) = Unsqueeze;
 #endif
 
 #if defined(__cplusplus)
@@ -319,12 +313,67 @@ void (*Unsqueeze)(int64_t**, int64_t**, int64_t**, int64_t**, int64_t**) = Unsqu
         if hat.get_platform() == hat.OperatingSystem.Windows:
             return    # TODO
 
-        workdir = "test_output/verify_hat_test_input_output_runtime_arrays"
+        workdir = "test_output/verify_hat_inout_runtime_arrays"
         name = "unsqueeze"
         lib_path = self.build(impl_code, workdir, name)
         hat_path = f"{workdir}/{name}.hat"
 
         # create the hat file
+        param_data = hat.Parameter(
+            name="data",
+            logical_type=hat.ParameterType.RuntimeArray,
+            declared_type="int64_t*",
+            element_type="int64_t",
+            usage=hat.UsageType.Input,
+            size="data_dim"
+        )
+        param_data_dim = hat.Parameter(
+            name="data_dim",
+            logical_type=hat.ParameterType.Element,
+            declared_type="int64_t",
+            element_type="int64_t",
+            usage=hat.UsageType.Input,
+            shape=[]
+        )
+        param_expanded = hat.Parameter(
+            name="expanded",
+            logical_type=hat.ParameterType.RuntimeArray,
+            declared_type="int64_t**",
+            element_type="int64_t",
+            usage=hat.UsageType.Output,
+            size="dim0*dim1"
+        )
+        param_dim0 = hat.Parameter(
+            name="dim0",
+            logical_type=hat.ParameterType.Element,
+            declared_type="int64_t*",
+            element_type="int64_t",
+            usage=hat.UsageType.Output,
+            shape=[]
+        )
+        param_dim1 = hat.Parameter(
+            name="dim1",
+            logical_type=hat.ParameterType.Element,
+            declared_type="int64_t*",
+            element_type="int64_t",
+            usage=hat.UsageType.Output,
+            shape=[]
+        )
+        hat_function = hat.Function(
+            arguments=[param_data, param_data_dim, param_expanded, param_dim0, param_dim1],
+            calling_convention=hat.CallingConventionType.StdCall,
+            name="Unsqueeze",
+            return_info=hat.Parameter.void()
+        )
+        hat_input = hat.HATFile(
+            name=name,
+            functions=[hat_function],
+            dependencies=hat.Dependencies(link_target=os.path.basename(lib_path)),
+            declaration=hat.Declaration(code=decl_code),
+            path=hat_path
+        )
+        self.create_hat_file(hat_input, hat_path, name)
+        hat.verify_hat_package(hat_path)
 
 
 if __name__ == '__main__':
