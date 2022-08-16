@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import re
 import hatlib as hat
 import os
 import shutil
@@ -7,7 +8,38 @@ import unittest
 
 class VerifyHat_test(unittest.TestCase):
 
-    def build(self, impl_code: str, workdir: str, name: str) -> str:
+    def build(self, impl_code: str, workdir: str, name: str, func_name: str) -> str:
+        hat.ensure_compiler_in_path()
+        if hat.get_platform() == hat.OperatingSystem.Windows:
+            return self.windows_build(impl_code, workdir, name, func_name)
+        else:
+            return self.linux_build(impl_code, workdir, name)
+
+    def windows_build(self, impl_code: str, workdir: str, name: str, func_name: str) -> str:
+        source_path = f"{workdir}/{name}.c"
+        lib_path = f"{workdir}/{name}.dll"
+
+        shutil.rmtree(workdir, ignore_errors=True)
+        os.makedirs(workdir, exist_ok=True)
+        with open(source_path, "w") as f:
+            print(impl_code, file=f)
+
+        dllmain_path = f"{workdir}/dllmain.cpp"
+        with open(dllmain_path, "w") as f:
+            print("#include <windows.h>\n", file=f)
+            print("BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }\n", file=f)
+
+        if os.path.exists(lib_path):
+            os.remove(lib_path)
+
+        hat.run_command(
+            f'cl.exe "{source_path}" "{dllmain_path}" /nologo /link /DLL /EXPORT:{func_name} /OUT:"{lib_path}"',
+            quiet=True
+        )
+        self.assertTrue(os.path.isfile(lib_path))
+        return lib_path
+
+    def linux_build(self, impl_code: str, workdir: str, name: str) -> str:
         source_path = f"{workdir}/{name}.c"
         lib_path = f"{workdir}/{name}.so"
 
@@ -19,14 +51,12 @@ class VerifyHat_test(unittest.TestCase):
         if os.path.exists(lib_path):
             os.remove(lib_path)
 
-        if hat.get_platform() == hat.OperatingSystem.Windows:
-            raise NotImplementedError("Windows support not yet added")
-
         hat.run_command(f'gcc -shared -fPIC -o "{lib_path}" "{source_path}"', quiet=True)
         self.assertTrue(os.path.isfile(lib_path))
         return lib_path
 
-    def create_hat_file(self, hat_input: hat.HATFile, hat_path: str, name: str) -> str:
+    def create_hat_file(self, hat_input: hat.HATFile):
+        hat_path = hat_input.path
         if os.path.exists(hat_path):
             os.remove(hat_path)
         hat_input.Serialize(hat_path)
@@ -84,17 +114,15 @@ void (*Softmax)(float*, float*) = Softmax;
 
 #ifdef TOML
 '''
-        if hat.get_platform() == hat.OperatingSystem.Windows:
-            return    # TODO
-
         workdir = "./test_output/verify_hat_basic"
         name = "softmax"
-        lib_path = self.build(impl_code, workdir, name)
+        func_name = "Softmax"
+        lib_path = self.build(impl_code, workdir, name, func_name)
         hat_path = f"{workdir}/{name}.hat"
 
         # create the hat file
-        shape = (2, 2)
-        strides = (shape[1], 1)    # first major
+        shape = [2, 2]
+        strides = [shape[1], 1]    # first major
         param_input = hat.Parameter(
             name="input",
             logical_type=hat.ParameterType.AffineArray,
@@ -116,7 +144,7 @@ void (*Softmax)(float*, float*) = Softmax;
         hat_function = hat.Function(
             arguments=[param_input, param_output],
             calling_convention=hat.CallingConventionType.StdCall,
-            name="Softmax",
+            name=func_name,
             return_info=hat.Parameter.void()
         )
         hat_input = hat.HATFile(
@@ -126,7 +154,7 @@ void (*Softmax)(float*, float*) = Softmax;
             declaration=hat.Declaration(code=decl_code),
             path=hat_path
         )
-        self.create_hat_file(hat_input, hat_path, name)
+        self.create_hat_file(hat_input)
         hat.verify_hat_package(hat_path)
 
     def test_runtime_array(self):
@@ -193,12 +221,10 @@ void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
 
 #ifdef TOML
 '''
-        if hat.get_platform() == hat.OperatingSystem.Windows:
-            return    # TODO
-
         workdir = "test_output/verify_hat_runtime_array"
         name = "range"
-        lib_path = self.build(impl_code, workdir, name)
+        func_name = "Range"
+        lib_path = self.build(impl_code, workdir, name, func_name)
         hat_path = f"{workdir}/{name}.hat"
 
         # create the hat file
@@ -245,7 +271,7 @@ void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
         hat_function = hat.Function(
             arguments=[param_start, param_limit, param_delta, param_output, param_output_dim],
             calling_convention=hat.CallingConventionType.StdCall,
-            name="Range",
+            name=func_name,
             return_info=hat.Parameter.void()
         )
         hat_input = hat.HATFile(
@@ -255,7 +281,7 @@ void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
             declaration=hat.Declaration(code=decl_code),
             path=hat_path
         )
-        self.create_hat_file(hat_input, hat_path, name)
+        self.create_hat_file(hat_input)
         hat.verify_hat_package(hat_path)
 
     def test_input_runtime_arrays(self):
@@ -311,13 +337,10 @@ void (*Unsqueeze_)(float*, int64_t, float**, int64_t*, int64_t*) = Unsqueeze;
 #ifdef TOML
 '''
         for usage in [hat.UsageType.Input, hat.UsageType.InputOutput]:
-
-            if hat.get_platform() == hat.OperatingSystem.Windows:
-                return    # TODO
-
             workdir = "test_output/verify_hat_inout_runtime_arrays"
             name = "unsqueeze"
-            lib_path = self.build(impl_code, workdir, name)
+            func_name = "Unsqueeze"
+            lib_path = self.build(impl_code, workdir, name, func_name)
             hat_path = f"{workdir}/{name}.hat"
 
             # create the hat file
@@ -364,7 +387,7 @@ void (*Unsqueeze_)(float*, int64_t, float**, int64_t*, int64_t*) = Unsqueeze;
             hat_function = hat.Function(
                 arguments=[param_data, param_data_dim, param_expanded, param_dim0, param_dim1],
                 calling_convention=hat.CallingConventionType.StdCall,
-                name="Unsqueeze",
+                name=func_name,
                 return_info=hat.Parameter.void()
             )
             hat_input = hat.HATFile(
@@ -374,7 +397,7 @@ void (*Unsqueeze_)(float*, int64_t, float**, int64_t*, int64_t*) = Unsqueeze;
                 declaration=hat.Declaration(code=decl_code),
                 path=hat_path
             )
-            self.create_hat_file(hat_input, hat_path, name)
+            self.create_hat_file(hat_input)
             hat.verify_hat_package(hat_path)
 
 
