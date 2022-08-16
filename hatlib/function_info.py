@@ -97,7 +97,7 @@ class FunctionInfo:
                 # runtime_array: output
                 # find the corresponding output elements for its dimension
                 dim_values = [values[i] for i in self._get_dimension_arg_indices(value.arg_info)]
-                assert(dim_values, f"Runtime array {value.arg_info.name} has no dimensions")
+                assert dim_values, f"Runtime array {value.arg_info.name} has no dimensions"
                 value.dim_values = dim_values
 
         return values
