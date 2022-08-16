@@ -69,7 +69,7 @@ class FunctionInfo:
 
         for arg in self.arguments:
             if arg.usage == hat_file.UsageType.Input and not arg.is_constant_shaped:
-                # runtime_array: input
+                # input runtime arrays
                 dim_args = [self.arguments[i] for i in self._get_dimension_arg_indices(arg)]
 
                 # assign generated shape values to the corresponding dimension arguments
@@ -81,20 +81,21 @@ class FunctionInfo:
                     else:
                         shape.append(dim_names_to_values[d.name].value)
 
-                # generate array inputs using the generated shape
+                # materialize an array input using the generated shape
+                # TODO: move this logic into ArgValue
                 runtime_array_inputs = np.random.random(tuple(shape)).astype(arg.numpy_dtype)
                 values.append(ArgValue(arg, runtime_array_inputs))
 
             elif arg.name in dim_names_to_values:
-                # element: input (already has a value generated as a dimension)
+                # input element that is a dimension value (populated when its input runtime array is created)
                 values.append(dim_names_to_values[arg.name])
             else:
-                # affine_arrays and input elements not used as a dimension
+                # everything else is known size or a pointer
                 values.append(ArgValue(arg))
 
-        # collect the dimension ArgValues for each runtime_array ArgValue
+        # collect the dimension ArgValues for each output runtime_array ArgValue
         for value in values:
-            if not value.arg_info.is_constant_shaped:
+            if value.arg_info.usage == hat_file.UsageType.Input and not value.arg_info.is_constant_shaped:
                 dim_values = [values[i] for i in self._get_dimension_arg_indices(value.arg_info)]
                 assert dim_values, f"Runtime array {value.arg_info.name} has no dimensions"
                 value.dim_values = dim_values

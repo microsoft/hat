@@ -13,7 +13,7 @@ class ArgValue:
         # TODO: set the free and alloc function symbols here?
         self.arg_info = arg_info
         self.pointer_level = arg_info.pointer_level
-        self.ctypes_type = arg_info.ctypes_pointer_type
+        self.ctypes_type = arg_info.ctypes_type
 
         if self.pointer_level > 2:    # punt until we really need this
             raise NotImplementedError("Pointer levels > 2 are not supported")
@@ -52,7 +52,7 @@ class ArgValue:
             else:
                 return byref(self.value)
         else:
-            raise NotImplementedError("Non pointer args are not yet supported")    # TODO
+            return self.ctypes_type(self.value)
 
     def verify(self, desc: ArgInfo):
         "Verifies that this argument matches an argument description"
@@ -88,9 +88,7 @@ class ArgValue:
                 try:
                     if self.dim_values:
                         # cross-reference the dimension output values to pretty print the output
-                        # Note: np.ctypeslib expects vector shapes to be single values instead of tuples
-                        shape = self.dim_values[0].value if len(self.dim_values
-                                                                ) == 1 else [d.value for d in self.dim_values]
+                        shape = [d.value[0] for d in self.dim_values]  # stored as single-element ndarrays
                         s = repr(np.ctypeslib.as_array(self.value, shape))
                     else:
                         s = repr(self.value.contents)

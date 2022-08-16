@@ -37,7 +37,7 @@ class ArgInfo:
     element_strides: Tuple[int, ...]
     total_element_count: Union[int, str]    # int for affine_arrays, str for runtime_arrays
     total_byte_size: Union[int, str]
-    ctypes_pointer_type: Any
+    ctypes_type: Any
     pointer_level: int
     usage: hat_file.UsageType = None
 
@@ -66,12 +66,13 @@ class ArgInfo:
         if not element_type in ARG_TYPES:
             raise NotImplementedError(f"Unsupported element_type {element_type} in hat file")
 
-        self.ctypes_pointer_type = ctypes.POINTER(ARG_TYPES[element_type][CTYPE_ENTRY])
+        ctypes_type = ARG_TYPES[element_type][CTYPE_ENTRY]
         dtype_entry = ARG_TYPES[element_type][DTYPE_ENTRY]
         self.numpy_dtype = self._get_type(dtype_entry)
         self.element_num_bytes = 2 if dtype_entry == "bfloat16" else self.numpy_dtype.itemsize
 
         if param_description.logical_type == hat_file.ParameterType.AffineArray:
+            self.ctypes_type = ctypes.POINTER(ctypes_type)
             if self.shape:
                 self.element_strides = param_description.affine_map
                 self.numpy_strides = tuple([self.element_num_bytes * x for x in self.element_strides])
@@ -85,15 +86,23 @@ class ArgInfo:
             self.total_byte_size = self.element_num_bytes * self.total_element_count
 
         elif param_description.logical_type == hat_file.ParameterType.RuntimeArray:
+            self.ctypes_type = ctypes.POINTER(ctypes_type)
             self.total_byte_size = f"{self.element_num_bytes} * {param_description.size}"
             self.total_element_count = param_description.size
             # assume the sizes are in shape order
             self.shape = re.split(r"\s?\*\s?", param_description.size)
 
         elif param_description.logical_type == hat_file.ParameterType.Element:
+            if param_description.usage == hat_file.UsageType.Input:
+                self.ctypes_type = ctypes_type
+            else:
+                self.ctypes_type = ctypes.POINTER(ctypes_type)
             self.element_strides = self.numpy_strides = self.shape = [1]
             self.total_element_count = 1
             self.total_byte_size = self.element_num_bytes * self.total_element_count
+
+        else:
+            raise ValueError(f"Unknown logical type {param_description.logical_type} in hat file")
 
     @property
     def is_constant_shaped(self):
