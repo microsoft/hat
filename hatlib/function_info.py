@@ -44,23 +44,3 @@ class FunctionInfo:
 
         return [value.as_carg() for value in arg_values]
 
-    def generate_arg_values(self):
-        "Generate argument values from argument descriptions"
-        values = [ArgValue(a) for a in self.arguments]
-
-        # resolve the reference values for dimensions by looking up the shape symbol names
-        for value in values:
-            if type(value.arg_info.total_byte_size) == str:
-                dim_values = []
-                for sym_name in value.arg_info.shape:
-                    # Note: only support all str shapes, not a mixture of str/int
-                    dim = list(filter(lambda v: v.arg_info.name == sym_name, values))
-                    if not dim:
-                        raise RuntimeError(
-                            f"{sym_name} is not an argument, cannot resolve shape for {value.arg_info.name}"
-                        )    # likely an invalid HAT file
-                    dim_values.append(dim[0])
-                if dim_values:
-                    value.dim_values = dim_values
-        
-        return values

@@ -1,8 +1,10 @@
 from typing import Any, List
 from ctypes import byref
 import numpy as np
+import random
 
 from .arg_info import ArgInfo
+from . import hat_file
 
 
 class ArgValue:
@@ -13,7 +15,7 @@ class ArgValue:
         # TODO: set the free and alloc function symbols here?
         self.arg_info = arg_info
         self.pointer_level = arg_info.pointer_level
-        self.ctypes_type = arg_info.ctypes_pointer_type
+        self.ctypes_type = arg_info.ctypes_type
 
         if self.pointer_level > 2:    # punt until we really need this
             raise NotImplementedError("Pointer levels > 2 are not supported")
@@ -52,9 +54,9 @@ class ArgValue:
             else:
                 return byref(self.value)
         else:
-            raise NotImplementedError("Non pointer args are not yet supported")    # TODO
+            return self.ctypes_type(self.value)
 
-    def verify(self, desc):
+    def verify(self, desc: ArgInfo):
         "Verifies that this argument matches an argument description"
         if desc.pointer_level == 1:
             if not isinstance(self.value, np.ndarray):
@@ -65,15 +67,18 @@ class ArgValue:
                     f"expected argument to have dtype={desc.numpy_dtype} but received dtype={self.value.dtype}"
                 )
 
-            # confirm that the arg shape is correct (numpy represents shapes as tuples)
-            if tuple(desc.shape) != self.value.shape:
-                raise ValueError(f"expected argument to have shape={desc.shape} but received shape={self.value.shape}")
+            if desc.is_constant_shaped:
+                # confirm that the arg shape is correct (numpy represents shapes as tuples)
+                if tuple(desc.shape) != self.value.shape:
+                    raise ValueError(
+                        f"expected argument to have shape={desc.shape} but received shape={self.value.shape}"
+                    )
 
-            # confirm that the arg strides are correct (numpy represents strides as tuples)
-            if tuple(desc.numpy_strides) != self.value.strides:
-                raise ValueError(
-                    f"expected argument to have strides={desc.numpy_strides} but received strides={self.value.strides}"
-                )
+                # confirm that the arg strides are correct (numpy represents strides as tuples)
+                if tuple(desc.numpy_strides) != self.value.strides:
+                    raise ValueError(
+                        f"expected argument to have strides={desc.numpy_strides} but received strides={self.value.strides}"
+                    )
         else:
             pass    # TODO - support other pointer levels
 
@@ -85,9 +90,7 @@ class ArgValue:
                 try:
                     if self.dim_values:
                         # cross-reference the dimension output values to pretty print the output
-                        # Note: np.ctypeslib expects vector shapes to be single values instead of tuples
-                        shape = self.dim_values[0].value if len(self.dim_values
-                                                                ) == 1 else [d.value for d in self.dim_values]
+                        shape = [d.value[0] for d in self.dim_values]    # stored as single-element ndarrays
                         s = repr(np.ctypeslib.as_array(self.value, shape))
                     else:
                         s = repr(self.value.contents)
@@ -95,12 +98,73 @@ class ArgValue:
                     if e.args[0].startswith("NULL pointer"):
                         s = f"{repr(self.value)} nullptr"
                     else:
-                        s = repr(e)
-                finally:
-                    return s
+                        raise (e)
+                return s
         else:
             return repr(self.value)
 
     def __del__(self):
         if self.pointer_level == 2:
             pass    # TODO - free the pointer, presumably calling a symbol passed into this ArgValue
+
+
+def get_dimension_arg_indices(array_arg: ArgInfo, all_arguments: List[ArgInfo]) -> List[int]:
+    # Returns the dimension argument indices in shape order for an array argument
+    indices = []
+    for sym_name in array_arg.shape:
+        for i, info in enumerate(all_arguments):
+            if info.name == sym_name:    # limitation: only string shapes are supported
+                indices.append(i)
+                break
+        else:
+            # not found
+            raise RuntimeError(f"{sym_name} is not an argument to the function")    # likely an invalid HAT file
+    return indices
+
+
+def generate_arg_values(arguments: List[ArgInfo]) -> List[ArgValue]:
+    """Generate argument values from argument descriptions
+    Input and input/output affine_arrays: initialized with random inputs
+    Input and input/output runtime_arrays: initialized with arbitrary dimensions and random inputs
+    Output elements and runtime_arrays: pointers are allocated
+    """
+
+    def generate_dim_value():
+        return random.choice([128, 256, 1234])    # example dimension values
+
+    dim_names_to_values = {}
+    values = []
+
+    for arg in arguments:
+        if arg.usage != hat_file.UsageType.Output and not arg.is_constant_shaped:
+            # input runtime arrays
+            dim_args = [arguments[i] for i in get_dimension_arg_indices(arg, arguments)]
+
+            # assign generated shape values to the corresponding dimension arguments
+            shape = []
+            for d in dim_args:
+                if d.name not in dim_names_to_values:
+                    shape.append(generate_dim_value())
+                    dim_names_to_values[d.name] = ArgValue(d, shape[-1])
+                else:
+                    shape.append(dim_names_to_values[d.name].value)
+
+            # materialize an array input using the generated shape
+            runtime_array_inputs = np.random.random(tuple(shape)).astype(arg.numpy_dtype)
+            values.append(ArgValue(arg, runtime_array_inputs))
+
+        elif arg.name in dim_names_to_values:
+            # input element that is a dimension value (populated when its input runtime array is created)
+            values.append(dim_names_to_values[arg.name])
+        else:
+            # everything else is known size or a pointer
+            values.append(ArgValue(arg))
+
+    # collect the dimension ArgValues for each output runtime_array ArgValue
+    for value in values:
+        if value.arg_info.usage == hat_file.UsageType.Output and not value.arg_info.is_constant_shaped:
+            dim_values = [values[i] for i in get_dimension_arg_indices(value.arg_info, arguments)]
+            assert dim_values, f"Runtime array {value.arg_info.name} has no dimensions"
+            value.dim_values = dim_values
+
+    return values
