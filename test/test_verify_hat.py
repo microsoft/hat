@@ -275,14 +275,14 @@ void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
 #define DLL_EXPORT
 #endif
 
-DLL_EXPORT void /* Unsqueeze_18 */ Unsqueeze(const int64_t* data, const int64_t data_dim0, int64_t** expanded, int64_t* dim0, int64_t* dim1)
+DLL_EXPORT void /* Unsqueeze_18 */ Unsqueeze(const float* data, const int64_t data_dim0, float** expanded, int64_t* dim0, int64_t* dim1)
 {
     /* Unsqueeze */
     *dim0 = 1;
     *dim1 = data_dim0;
-    *expanded = (int64_t*)ALLOC((*dim0) * (*dim1) * sizeof(int64_t));
-    int64_t* data_ = (int64_t*)data;
-    int64_t* expanded_ = (int64_t*)(*expanded);
+    *expanded = (float*)ALLOC((*dim0) * (*dim1) * sizeof(float));
+    float* data_ = (float*)data;
+    float* expanded_ = (float*)(*expanded);
     for (int64_t i = 0; i < data_dim0; ++i)
         expanded_[i] = data_[i];
 }
@@ -297,11 +297,11 @@ extern "C"
 {
 #endif // defined(__cplusplus)
 
-void Unsqueeze(const int64_t* data, const int64_t data_dim0, int64_t** expanded, int64_t* dim0, int64_t* dim1);
+void Unsqueeze(const float* data, const int64_t data_dim0, float** expanded, int64_t* dim0, int64_t* dim1);
 
 #ifndef __Unsqueeze_DEFINED__
 #define __Unsqueeze_DEFINED__
-void (*Unsqueeze_)(int64_t*, int64_t, int64_t**, int64_t*, int64_t*) = Unsqueeze;
+void (*Unsqueeze_)(float*, int64_t, float**, int64_t*, int64_t*) = Unsqueeze;
 #endif
 
 #if defined(__cplusplus)
@@ -322,8 +322,8 @@ void (*Unsqueeze_)(int64_t*, int64_t, int64_t**, int64_t*, int64_t*) = Unsqueeze
         param_data = hat.Parameter(
             name="data",
             logical_type=hat.ParameterType.RuntimeArray,
-            declared_type="int64_t*",
-            element_type="int64_t",
+            declared_type="float*",
+            element_type="float",
             usage=hat.UsageType.Input,
             size="data_dim"
         )
@@ -338,8 +338,8 @@ void (*Unsqueeze_)(int64_t*, int64_t, int64_t**, int64_t*, int64_t*) = Unsqueeze
         param_expanded = hat.Parameter(
             name="expanded",
             logical_type=hat.ParameterType.RuntimeArray,
-            declared_type="int64_t**",
-            element_type="int64_t",
+            declared_type="float**",
+            element_type="float",
             usage=hat.UsageType.Output,
             size="dim0*dim1"
         )

@@ -10,29 +10,28 @@ def verify_hat_package(hat_path):
     args = hat.generate_arg_sets_for_hat_file(hat_path)
     for name, fn in funcs.items():
         print(f"\n{'*' * 10}\n")
-        
+
         print(f"[*] Verifying function {name} --")
         func_args = args[name]
 
         print("[*] Args before function call:")
         for i, func_arg in enumerate(func_args):
-            print(f"[*]\tInput {i}: {func_arg}")
+            print(f"[*]\tArg {i}: {func_arg}")
 
         try:
-        
             time = fn(*args[name])
 
         except RuntimeError as e:
             print(f"[!] Error while running {name}: {e}")
             continue
-        
+
         print("Args after function call:")
         for i, func_arg in enumerate(func_args):
-            print(f"[*]\tInput {i}: {func_arg}")
+            print(f"[*]\tArg {i}: {func_arg}")
 
         if time:
             print(f"[*] Function execution time: {time:4f}ms")
-        
+
         del args[name]
 
     else:
