@@ -336,9 +336,9 @@ void (*Unsqueeze_)(float*, int64_t, float**, int64_t*, int64_t*) = Unsqueeze;
 
 #ifdef TOML
 '''
-        for usage in [hat.UsageType.Input, hat.UsageType.InputOutput]:
+        for id, usage in enumerate([hat.UsageType.Input, hat.UsageType.InputOutput]):
             workdir = "test_output/verify_hat_inout_runtime_arrays"
-            name = "unsqueeze"
+            name = f"unsqueeze_{id}" # uniqify for Windows to avoid load conflict
             func_name = "Unsqueeze"
             lib_path = self.build(impl_code, workdir, name, func_name)
             hat_path = f"{workdir}/{name}.hat"
