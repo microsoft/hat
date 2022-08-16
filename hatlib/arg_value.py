@@ -54,7 +54,7 @@ class ArgValue:
         else:
             raise NotImplementedError("Non pointer args are not yet supported")    # TODO
 
-    def verify(self, desc):
+    def verify(self, desc: ArgInfo):
         "Verifies that this argument matches an argument description"
         if desc.pointer_level == 1:
             if not isinstance(self.value, np.ndarray):
@@ -65,15 +65,18 @@ class ArgValue:
                     f"expected argument to have dtype={desc.numpy_dtype} but received dtype={self.value.dtype}"
                 )
 
-            # confirm that the arg shape is correct (numpy represents shapes as tuples)
-            if tuple(desc.shape) != self.value.shape:
-                raise ValueError(f"expected argument to have shape={desc.shape} but received shape={self.value.shape}")
+            if desc.is_constant_shaped:
+                # confirm that the arg shape is correct (numpy represents shapes as tuples)
+                if tuple(desc.shape) != self.value.shape:
+                    raise ValueError(
+                        f"expected argument to have shape={desc.shape} but received shape={self.value.shape}"
+                    )
 
-            # confirm that the arg strides are correct (numpy represents strides as tuples)
-            if tuple(desc.numpy_strides) != self.value.strides:
-                raise ValueError(
-                    f"expected argument to have strides={desc.numpy_strides} but received strides={self.value.strides}"
-                )
+                # confirm that the arg strides are correct (numpy represents strides as tuples)
+                if tuple(desc.numpy_strides) != self.value.strides:
+                    raise ValueError(
+                        f"expected argument to have strides={desc.numpy_strides} but received strides={self.value.strides}"
+                    )
         else:
             pass    # TODO - support other pointer levels
 
@@ -95,9 +98,8 @@ class ArgValue:
                     if e.args[0].startswith("NULL pointer"):
                         s = f"{repr(self.value)} nullptr"
                     else:
-                        s = repr(e)
-                finally:
-                    return s
+                        raise(e)
+                return s
         else:
             return repr(self.value)
 

@@ -35,7 +35,7 @@ class ArgInfo:
     numpy_dtype: type
     element_num_bytes: int
     element_strides: Tuple[int, ...]
-    total_element_count: Union[int, str]  # int for affine_arrays, str for runtime_arrays
+    total_element_count: Union[int, str]    # int for affine_arrays, str for runtime_arrays
     total_byte_size: Union[int, str]
     ctypes_pointer_type: Any
     pointer_level: int
@@ -96,5 +96,5 @@ class ArgInfo:
             self.total_byte_size = self.element_num_bytes * self.total_element_count
 
     @property
-    def constant_sized(self):
+    def is_constant_shaped(self):
         return all(type(s) == int for s in self.shape)

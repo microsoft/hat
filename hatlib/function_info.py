@@ -62,13 +62,13 @@ class FunctionInfo:
         "Generate argument values from argument descriptions"
 
         def generate_dim_value():
-            return random.choice([128, 256, 1234])
+            return random.choice([128, 256, 1234])    # example dimension values
 
         dim_names_to_values = {}
         values = []
 
         for arg in self.arguments:
-            if arg.usage == hat_file.UsageType.Input and not arg.constant_sized:
+            if arg.usage == hat_file.UsageType.Input and not arg.is_constant_shaped:
                 # runtime_array: input
                 dim_args = [self.arguments[i] for i in self._get_dimension_arg_indices(arg)]
 
@@ -92,10 +92,9 @@ class FunctionInfo:
                 # affine_arrays and input elements not used as a dimension
                 values.append(ArgValue(arg))
 
+        # collect the dimension ArgValues for each runtime_array ArgValue
         for value in values:
-            if value.arg_info.usage == hat_file.UsageType.Output and not value.arg_info.constant_sized:
-                # runtime_array: output
-                # find the corresponding output elements for its dimension
+            if not value.arg_info.is_constant_shaped:
                 dim_values = [values[i] for i in self._get_dimension_arg_indices(value.arg_info)]
                 assert dim_values, f"Runtime array {value.arg_info.name} has no dimensions"
                 value.dim_values = dim_values
