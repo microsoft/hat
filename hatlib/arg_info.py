@@ -96,5 +96,5 @@ class ArgInfo:
             self.total_byte_size = self.element_num_bytes * self.total_element_count
 
     @property
-    def is_constant_sized(self):
+    def constant_sized(self):
         return all(type(s) == int for s in self.shape)

@@ -68,32 +68,32 @@ class FunctionInfo:
         values = []
 
         for arg in self.arguments:
-            if arg.usage == hat_file.UsageType.Input and not arg.is_constant_sized():
+            if arg.usage == hat_file.UsageType.Input and not arg.constant_sized:
                 # runtime_array: input
-                # generate the shapes and arrays
                 dim_args = [self.arguments[i] for i in self._get_dimension_arg_indices(arg)]
 
+                # assign generated shape values to the corresponding dimension arguments
                 shape = []
                 for d in dim_args:
-                    # En
                     if d.name not in dim_names_to_values:
                         shape.append(generate_dim_value())
                         dim_names_to_values[d.name] = ArgValue(d, shape[-1])
                     else:
                         shape.append(dim_names_to_values[d.name].value)
 
-                generated_input = np.random.rand(shape).astype(arg.numpy_dtype)
-                values.append(ArgValue(arg, generated_input))
+                # generate array inputs using the generated shape
+                runtime_array_inputs = np.random.random(tuple(shape)).astype(arg.numpy_dtype)
+                values.append(ArgValue(arg, runtime_array_inputs))
 
             elif arg.name in dim_names_to_values:
-                # element: input (used as a dimension)
+                # element: input (already has a value generated as a dimension)
                 values.append(dim_names_to_values[arg.name])
             else:
                 # affine_arrays and input elements not used as a dimension
                 values.append(ArgValue(arg))
 
         for value in values:
-            if value.arg_info.usage == hat_file.UsageType.Output and not value.arg_info.is_constant_sized():
+            if value.arg_info.usage == hat_file.UsageType.Output and not value.arg_info.constant_sized:
                 # runtime_array: output
                 # find the corresponding output elements for its dimension
                 dim_values = [values[i] for i in self._get_dimension_arg_indices(value.arg_info)]

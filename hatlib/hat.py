@@ -38,7 +38,7 @@ def generate_arg_sets_for_func(func: hat_file.Function, input_sets_minimum_size_
     parameters = func_info.arguments
 
     # use constant-sized params to estimate the minimum set size
-    const_sized_parameters = list(filter(lambda p: p.is_constant_sized, parameters))
+    const_sized_parameters = list(filter(lambda p: p.constant_sized, parameters))
 
     shapes_to_sizes = [reduce(lambda x, y: x * y, p.shape) for p in const_sized_parameters]
     set_size = reduce(
