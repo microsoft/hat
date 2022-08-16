@@ -1,4 +1,5 @@
 import numpy as np
+import random
 import sys
 from dataclasses import dataclass, field
 from typing import Any, List
@@ -44,23 +45,59 @@ class FunctionInfo:
 
         return [value.as_carg() for value in arg_values]
 
+    def _get_dimension_arg_indices(self, array_arg: ArgInfo) -> List[int]:
+        # Returns the dimension argument indices in shape order for an array argument
+        indices = []
+        for sym_name in array_arg.shape:
+            for i, info in enumerate(self.arguments):
+                if info.name == sym_name:    # limitation: only string shapes are supported
+                    indices.append(i)
+                    break
+            else:
+                # not found
+                raise RuntimeError(f"{sym_name} is not an argument to the function")    # likely an invalid HAT file
+        return indices
+
     def generate_arg_values(self):
         "Generate argument values from argument descriptions"
-        values = [ArgValue(a) for a in self.arguments]
 
-        # resolve the reference values for dimensions by looking up the shape symbol names
+        def generate_dim_value():
+            return random.choice([128, 256, 1234])
+
+        dim_names_to_values = {}
+        values = []
+
+        for arg in self.arguments:
+            if arg.usage == hat_file.UsageType.Input and not arg.is_constant_sized():
+                # runtime_array: input
+                # generate the shapes and arrays
+                dim_args = [self.arguments[i] for i in self._get_dimension_arg_indices(arg)]
+
+                shape = []
+                for d in dim_args:
+                    # En
+                    if d.name not in dim_names_to_values:
+                        shape.append(generate_dim_value())
+                        dim_names_to_values[d.name] = ArgValue(d, shape[-1])
+                    else:
+                        shape.append(dim_names_to_values[d.name].value)
+
+                generated_input = np.random.rand(shape).astype(arg.numpy_dtype)
+                values.append(ArgValue(arg, generated_input))
+
+            elif arg.name in dim_names_to_values:
+                # element: input (used as a dimension)
+                values.append(dim_names_to_values[arg.name])
+            else:
+                # affine_arrays and input elements not used as a dimension
+                values.append(ArgValue(arg))
+
         for value in values:
-            if type(value.arg_info.total_byte_size) == str:
-                dim_values = []
-                for sym_name in value.arg_info.shape:
-                    # Note: only support all str shapes, not a mixture of str/int
-                    dim = list(filter(lambda v: v.arg_info.name == sym_name, values))
-                    if not dim:
-                        raise RuntimeError(
-                            f"{sym_name} is not an argument, cannot resolve shape for {value.arg_info.name}"
-                        )    # likely an invalid HAT file
-                    dim_values.append(dim[0])
-                if dim_values:
-                    value.dim_values = dim_values
-        
+            if value.arg_info.usage == hat_file.UsageType.Output and not value.arg_info.is_constant_sized():
+                # runtime_array: output
+                # find the corresponding output elements for its dimension
+                dim_values = [values[i] for i in self._get_dimension_arg_indices(value.arg_info)]
+                assert(dim_values, f"Runtime array {value.arg_info.name} has no dimensions")
+                value.dim_values = dim_values
+
         return values

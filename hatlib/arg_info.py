@@ -35,7 +35,7 @@ class ArgInfo:
     numpy_dtype: type
     element_num_bytes: int
     element_strides: Tuple[int, ...]
-    total_element_count: int
+    total_element_count: Union[int, str]  # int for affine_arrays, str for runtime_arrays
     total_byte_size: Union[int, str]
     ctypes_pointer_type: Any
     pointer_level: int
@@ -86,13 +86,15 @@ class ArgInfo:
 
         elif param_description.logical_type == hat_file.ParameterType.RuntimeArray:
             self.total_byte_size = f"{self.element_num_bytes} * {param_description.size}"
+            self.total_element_count = param_description.size
             # assume the sizes are in shape order
             self.shape = re.split(r"\s?\*\s?", param_description.size)
 
         elif param_description.logical_type == hat_file.ParameterType.Element:
-            if param_description.usage == hat_file.UsageType.Input:
-                raise NotImplementedError(f"Input logical_type elements are not supported")    # TODO
-            elif param_description.usage == hat_file.UsageType.Output:
-                self.element_strides = self.numpy_strides = self.shape = [1]
-                self.total_element_count = 1
-                self.total_byte_size = self.element_num_bytes * self.total_element_count
+            self.element_strides = self.numpy_strides = self.shape = [1]
+            self.total_element_count = 1
+            self.total_byte_size = self.element_num_bytes * self.total_element_count
+
+    @property
+    def is_constant_sized(self):
+        return all(type(s) == int for s in self.shape)

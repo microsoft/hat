@@ -37,11 +37,12 @@ def generate_arg_sets_for_func(func: hat_file.Function, input_sets_minimum_size_
     func_info = FunctionInfo(func)
     parameters = func_info.arguments
 
-    # use input params to compute the set size (output params are unknown size)
-    in_parameters = list(filter(lambda p: p.usage != hat_file.UsageType.Output, parameters))
-    shapes_to_sizes = [reduce(lambda x, y: x * y, p.shape) for p in in_parameters]
+    # use constant-sized params to estimate the minimum set size
+    const_sized_parameters = list(filter(lambda p: p.is_constant_sized, parameters))
+
+    shapes_to_sizes = [reduce(lambda x, y: x * y, p.shape) for p in const_sized_parameters]
     set_size = reduce(
-        lambda x, y: x + y, map(lambda size, p: size * p.element_num_bytes, shapes_to_sizes, in_parameters)
+        lambda x, y: x + y, map(lambda size, p: size * p.element_num_bytes, shapes_to_sizes, const_sized_parameters)
     )
     num_input_sets = (input_sets_minimum_size_MB * 1024 * 1024 // set_size) + 1 + num_additional
 
