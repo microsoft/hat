@@ -258,7 +258,7 @@ void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
         self.create_hat_file(hat_input, hat_path, name)
         hat.verify_hat_package(hat_path)
 
-    def test_inout_runtime_arrays(self):
+    def test_input_runtime_arrays(self):
         impl_code = '''#include <stdint.h>
 #include <stdlib.h>
 
@@ -310,70 +310,72 @@ void (*Unsqueeze_)(float*, int64_t, float**, int64_t*, int64_t*) = Unsqueeze;
 
 #ifdef TOML
 '''
-        if hat.get_platform() == hat.OperatingSystem.Windows:
-            return    # TODO
+        for usage in [hat.UsageType.Input, hat.UsageType.InputOutput]:
 
-        workdir = "test_output/verify_hat_inout_runtime_arrays"
-        name = "unsqueeze"
-        lib_path = self.build(impl_code, workdir, name)
-        hat_path = f"{workdir}/{name}.hat"
+            if hat.get_platform() == hat.OperatingSystem.Windows:
+                return    # TODO
 
-        # create the hat file
-        param_data = hat.Parameter(
-            name="data",
-            logical_type=hat.ParameterType.RuntimeArray,
-            declared_type="float*",
-            element_type="float",
-            usage=hat.UsageType.Input,
-            size="data_dim"
-        )
-        param_data_dim = hat.Parameter(
-            name="data_dim",
-            logical_type=hat.ParameterType.Element,
-            declared_type="int64_t",
-            element_type="int64_t",
-            usage=hat.UsageType.Input,
-            shape=[]
-        )
-        param_expanded = hat.Parameter(
-            name="expanded",
-            logical_type=hat.ParameterType.RuntimeArray,
-            declared_type="float**",
-            element_type="float",
-            usage=hat.UsageType.Output,
-            size="dim0*dim1"
-        )
-        param_dim0 = hat.Parameter(
-            name="dim0",
-            logical_type=hat.ParameterType.Element,
-            declared_type="int64_t*",
-            element_type="int64_t",
-            usage=hat.UsageType.Output,
-            shape=[]
-        )
-        param_dim1 = hat.Parameter(
-            name="dim1",
-            logical_type=hat.ParameterType.Element,
-            declared_type="int64_t*",
-            element_type="int64_t",
-            usage=hat.UsageType.Output,
-            shape=[]
-        )
-        hat_function = hat.Function(
-            arguments=[param_data, param_data_dim, param_expanded, param_dim0, param_dim1],
-            calling_convention=hat.CallingConventionType.StdCall,
-            name="Unsqueeze",
-            return_info=hat.Parameter.void()
-        )
-        hat_input = hat.HATFile(
-            name=name,
-            functions=[hat_function],
-            dependencies=hat.Dependencies(link_target=os.path.basename(lib_path)),
-            declaration=hat.Declaration(code=decl_code),
-            path=hat_path
-        )
-        self.create_hat_file(hat_input, hat_path, name)
-        hat.verify_hat_package(hat_path)
+            workdir = "test_output/verify_hat_inout_runtime_arrays"
+            name = "unsqueeze"
+            lib_path = self.build(impl_code, workdir, name)
+            hat_path = f"{workdir}/{name}.hat"
+
+            # create the hat file
+            param_data = hat.Parameter(
+                name="data",
+                logical_type=hat.ParameterType.RuntimeArray,
+                declared_type="float*",
+                element_type="float",
+                usage=usage,
+                size="data_dim"
+            )
+            param_data_dim = hat.Parameter(
+                name="data_dim",
+                logical_type=hat.ParameterType.Element,
+                declared_type="int64_t",
+                element_type="int64_t",
+                usage=hat.UsageType.Input,
+                shape=[]
+            )
+            param_expanded = hat.Parameter(
+                name="expanded",
+                logical_type=hat.ParameterType.RuntimeArray,
+                declared_type="float**",
+                element_type="float",
+                usage=hat.UsageType.Output,
+                size="dim0*dim1"
+            )
+            param_dim0 = hat.Parameter(
+                name="dim0",
+                logical_type=hat.ParameterType.Element,
+                declared_type="int64_t*",
+                element_type="int64_t",
+                usage=hat.UsageType.Output,
+                shape=[]
+            )
+            param_dim1 = hat.Parameter(
+                name="dim1",
+                logical_type=hat.ParameterType.Element,
+                declared_type="int64_t*",
+                element_type="int64_t",
+                usage=hat.UsageType.Output,
+                shape=[]
+            )
+            hat_function = hat.Function(
+                arguments=[param_data, param_data_dim, param_expanded, param_dim0, param_dim1],
+                calling_convention=hat.CallingConventionType.StdCall,
+                name="Unsqueeze",
+                return_info=hat.Parameter.void()
+            )
+            hat_input = hat.HATFile(
+                name=name,
+                functions=[hat_function],
+                dependencies=hat.Dependencies(link_target=os.path.basename(lib_path)),
+                declaration=hat.Declaration(code=decl_code),
+                path=hat_path
+            )
+            self.create_hat_file(hat_input, hat_path, name)
+            hat.verify_hat_package(hat_path)
 
 
 if __name__ == '__main__':
