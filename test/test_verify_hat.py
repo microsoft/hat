@@ -23,7 +23,7 @@ class VerifyHat_test(unittest.TestCase):
         os.makedirs(workdir, exist_ok=True)
         with open(source_path, "w") as f:
             print(impl_code, file=f)
- 
+
         dllmain_path = f"{workdir}/dllmain.cpp"
         with open(dllmain_path, "w") as f:
             print("#include <windows.h>\n", file=f)
@@ -31,8 +31,11 @@ class VerifyHat_test(unittest.TestCase):
 
         if os.path.exists(lib_path):
             os.remove(lib_path)
-            
-        hat.run_command(f'cl.exe "{source_path}" "{dllmain_path}" /nologo /link /DLL /EXPORT:{func_name} /OUT:"{lib_path}"', quiet=True)
+
+        hat.run_command(
+            f'cl.exe "{source_path}" "{dllmain_path}" /nologo /link /DLL /EXPORT:{func_name} /OUT:"{lib_path}"',
+            quiet=True
+        )
         self.assertTrue(os.path.isfile(lib_path))
         return lib_path
 
@@ -118,8 +121,8 @@ void (*Softmax)(float*, float*) = Softmax;
         hat_path = f"{workdir}/{name}.hat"
 
         # create the hat file
-        shape = (2, 2)
-        strides = (shape[1], 1)    # first major
+        shape = [2, 2]
+        strides = [shape[1], 1]    # first major
         param_input = hat.Parameter(
             name="input",
             logical_type=hat.ParameterType.AffineArray,
