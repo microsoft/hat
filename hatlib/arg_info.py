@@ -106,11 +106,11 @@ class ArgInfo:
 
     @property
     def is_constant_shaped(self):
+
         def integer_like(s: Any):
             # handle types such as tomlkit.items.Integer
             try:
                 int(s)
-                return True
             except:
                 return False
 
