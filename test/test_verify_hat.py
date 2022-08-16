@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import re
 import hatlib as hat
 import os
 import shutil
@@ -8,6 +9,34 @@ import unittest
 class VerifyHat_test(unittest.TestCase):
 
     def build(self, impl_code: str, workdir: str, name: str) -> str:
+        if hat.get_platform() == hat.OperatingSystem.Windows:
+            return self.windows_build(self, impl_code, workdir, name)
+        else:
+            return self.linux_build(self, impl_code, workdir, name)
+
+    def windows_build(self, impl_code: str, workdir: str, name: str) -> str:
+        source_path = f"{workdir}/{name}.c"
+        lib_path = f"{workdir}/{name}.dll"
+
+        shutil.rmtree(workdir, ignore_errors=True)
+        os.makedirs(workdir, exist_ok=True)
+        with open(source_path, "w") as f:
+            print("#include <windows.h>\n", file=f)
+            print(impl_code, file=f)
+            print("BOOL APIENTRY DllMain(HMODULE, DWORD, LPVOID) { return TRUE; }\n", file=f)
+
+        if os.path.exists(lib_path):
+            os.remove(lib_path)
+
+        hat.run_command(
+                f'cl.exe /nologo /Fodllmain.obj /c dllmain.cpp',
+                quiet=True)
+            
+        hat.run_command(f'cl.exe /nologo -shared -fPIC -o "{lib_path}" "{source_path}"', quiet=True)
+        self.assertTrue(os.path.isfile(lib_path))
+        return lib_path
+
+    def linux_build(self, impl_code: str, workdir: str, name: str) -> str:
         source_path = f"{workdir}/{name}.c"
         lib_path = f"{workdir}/{name}.so"
 
@@ -18,9 +47,6 @@ class VerifyHat_test(unittest.TestCase):
 
         if os.path.exists(lib_path):
             os.remove(lib_path)
-
-        if hat.get_platform() == hat.OperatingSystem.Windows:
-            raise NotImplementedError("Windows support not yet added")
 
         hat.run_command(f'gcc -shared -fPIC -o "{lib_path}" "{source_path}"', quiet=True)
         self.assertTrue(os.path.isfile(lib_path))
@@ -84,9 +110,6 @@ void (*Softmax)(float*, float*) = Softmax;
 
 #ifdef TOML
 '''
-        if hat.get_platform() == hat.OperatingSystem.Windows:
-            return    # TODO
-
         workdir = "./test_output/verify_hat_basic"
         name = "softmax"
         lib_path = self.build(impl_code, workdir, name)
@@ -193,9 +216,6 @@ void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
 
 #ifdef TOML
 '''
-        if hat.get_platform() == hat.OperatingSystem.Windows:
-            return    # TODO
-
         workdir = "test_output/verify_hat_runtime_array"
         name = "range"
         lib_path = self.build(impl_code, workdir, name)
@@ -311,10 +331,6 @@ void (*Unsqueeze_)(float*, int64_t, float**, int64_t*, int64_t*) = Unsqueeze;
 #ifdef TOML
 '''
         for usage in [hat.UsageType.Input, hat.UsageType.InputOutput]:
-
-            if hat.get_platform() == hat.OperatingSystem.Windows:
-                return    # TODO
-
             workdir = "test_output/verify_hat_inout_runtime_arrays"
             name = "unsqueeze"
             lib_path = self.build(impl_code, workdir, name)
