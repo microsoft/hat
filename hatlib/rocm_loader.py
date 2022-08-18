@@ -38,7 +38,9 @@ def get_func_from_rocm_program(rocm_program, func_name):
     kernel = hipModuleGetFunction(rocm_module, func_name)
     return kernel
 
-cached_mem=[]
+
+cached_mem = []
+
 
 def allocate_rocm_mem(benchmark: bool, arg_infos: List[ArgInfo], gpu_id: int):
     device_mem = []
@@ -114,22 +116,23 @@ class RocmCallableFunc(CallableFunc):
 
         rocm_program = _HSACO_CACHE.get(self.rocm_src_path)
         if not rocm_program:
-            _HSACO_CACHE[self.rocm_src_path] = rocm_program = compile_rocm_program(self.rocm_src_path, self.func_info.name)
+            _HSACO_CACHE[self.rocm_src_path
+                         ] = rocm_program = compile_rocm_program(self.rocm_src_path, self.func_info.name)
 
         self.kernel = get_func_from_rocm_program(rocm_program, self.func_info.name)
 
     def cleanup_runtime(self, benchmark: bool):
         pass
 
-    def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpu_id: int=0):
+    def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpu_id: int = 0):
         self.func_info.verify(args)
-        self.device_mem = allocate_rocm_mem(benchmark, self.func_info.args, gpu_id)
+        self.device_mem = allocate_rocm_mem(benchmark, self.func_info.arguments, gpu_id)
 
         if not benchmark:
-            transfer_mem_host_to_rocm(device_args=self.device_mem, host_args=args, arg_infos=self.func_info.args)
+            transfer_mem_host_to_rocm(device_args=self.device_mem, host_args=args, arg_infos=self.func_info.arguments)
 
         class DataStruct(ctypes.Structure):
-            _fields_ = [(f"arg{i}", ctypes.c_void_p) for i in range(len(self.func_info.args))]
+            _fields_ = [(f"arg{i}", ctypes.c_void_p) for i in range(len(self.func_info.arguments))]
 
         self.data = DataStruct(*self.device_mem)
 
@@ -174,7 +177,7 @@ class RocmCallableFunc(CallableFunc):
     def cleanup_main(self, benchmark: bool, args=[]):
         # If there's no device mem, that means allocation during initialization failed, which means nothing else needs to be cleaned up either
         if not benchmark and self.device_mem:
-            transfer_mem_rocm_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.func_info.args)
+            transfer_mem_rocm_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.func_info.arguments)
             free_rocm_mem(self.device_mem)
         hipDeviceSynchronize()
 

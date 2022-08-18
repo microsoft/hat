@@ -208,10 +208,10 @@ class CudaCallableFunc(CallableFunc):
 
     def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpu_id: int = 0):
         self.func_info.verify(args)
-        self.device_mem = allocate_cuda_mem(self.func_info.args)
+        self.device_mem = allocate_cuda_mem(self.func_info.arguments)
 
         if not benchmark:
-            transfer_mem_host_to_cuda(device_args=self.device_mem, host_args=args, arg_infos=self.func_info.args)
+            transfer_mem_host_to_cuda(device_args=self.device_mem, host_args=args, arg_infos=self.func_info.arguments)
 
         self.ptrs = device_args_to_ptr_list(self.device_mem)
 
@@ -271,7 +271,7 @@ class CudaCallableFunc(CallableFunc):
     def cleanup_main(self, benchmark: bool, args=[]):
         # If there's no device mem, that means allocation during initialization failed, which means nothing else needs to be cleaned up either
         if not benchmark and self.device_mem:
-            transfer_mem_cuda_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.func_info.args)
+            transfer_mem_cuda_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.func_info.arguments)
         if self.device_mem:
             free_cuda_mem(self.device_mem)
         err, = cuda.cuCtxSynchronize()
