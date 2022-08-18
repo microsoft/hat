@@ -122,7 +122,7 @@ class RocmCallableFunc(CallableFunc):
         pass
 
     def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpu_id: int=0):
-        self.func_info.verify_args(args)
+        self.func_info.verify(args)
         self.device_mem = allocate_rocm_mem(benchmark, self.func_info.args, gpu_id)
 
         if not benchmark:

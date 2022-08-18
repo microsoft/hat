@@ -39,6 +39,7 @@ def _find_cuda_incl_path() -> pathlib.Path:
 
     return cuda_path
 
+
 def _get_compute_capability(gpu_id) -> int:
     err, major = cuda.cuDeviceGetAttribute(cuda.CUdevice_attribute.CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, gpu_id)
     ASSERT_DRV(err)
@@ -48,6 +49,7 @@ def _get_compute_capability(gpu_id) -> int:
 
     return (major * 10) + minor
 
+
 def compile_cuda_program(cuda_src_path: pathlib.Path, func_name, gpu_id):
     src = cuda_src_path.read_text()
 
@@ -56,15 +58,15 @@ def compile_cuda_program(cuda_src_path: pathlib.Path, func_name, gpu_id):
         raise RuntimeError("Unable to determine CUDA include path. Please set CUDA_PATH environment variable.")
 
     opts = [
-        # https://docs.nvidia.com/cuda/nvrtc/index.html#group__options
+    # https://docs.nvidia.com/cuda/nvrtc/index.html#group__options
         f'--gpu-architecture=compute_{_get_compute_capability(gpu_id)}'.encode(),
-        b'--ptxas-options=--warn-on-spills', # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#options-for-passing-specific-phase-options-ptxas-options
+        b'--ptxas-options=--warn-on-spills',    # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#options-for-passing-specific-phase-options-ptxas-options
         b'-use_fast_math',
         b'--include-path=' + str(cuda_incl_path).encode(),
         b'-std=c++17',
         b'-default-device',
-        #b'--restrict',
-        #b'--device-int128'
+    #b'--restrict',
+    #b'--device-int128'
     ]
 
     # Create program
@@ -204,8 +206,8 @@ class CudaCallableFunc(CallableFunc):
     def cleanup_runtime(self, benchmark: bool):
         cuda.cuCtxDestroy(self.context)
 
-    def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpu_id: int=0):
-        self.func_info.verify_args(args)
+    def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpu_id: int = 0):
+        self.func_info.verify(args)
         self.device_mem = allocate_cuda_mem(self.func_info.args)
 
         if not benchmark:
