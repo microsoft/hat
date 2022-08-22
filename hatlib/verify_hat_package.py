@@ -7,33 +7,32 @@ from . import hat
 
 def verify_hat_package(hat_path):
     _, funcs = hat.load(hat_path)
-    inputs = hat.generate_input_sets_for_hat_file(hat_path)
+    args = hat.generate_arg_sets_for_hat_file(hat_path)
     for name, fn in funcs.items():
         print(f"\n{'*' * 10}\n")
-        
-        print(f"[*] Verifying function {name} --")
-        func_inputs = inputs[name]
 
-        print("[*] Inputs before function call:")
-        for i, func_input in enumerate(func_inputs):
-            print(f"[*]\tInput {i}: {','.join(map(str, func_input.ravel()[:32]))}")
+        print(f"[*] Verifying function {name} --")
+        func_args = args[name]
+
+        print("[*] Args before function call:")
+        for i, func_arg in enumerate(func_args):
+            print(f"[*]\tArg {i}: {func_arg}")
 
         try:
-        
-            time = fn(*inputs[name])
+            time = fn(*args[name])
 
         except RuntimeError as e:
             print(f"[!] Error while running {name}: {e}")
             continue
-        
-        print("Inputs after function call:")
-        for i, func_input in enumerate(func_inputs):
-            print(f"[*]\tInput {i}: {','.join(map(str, func_input.ravel()[:32]))}")
+
+        print("Args after function call:")
+        for i, func_arg in enumerate(func_args):
+            print(f"[*]\tArg {i}: {func_arg}")
 
         if time:
             print(f"[*] Function execution time: {time:4f}ms")
-        
-        del inputs[name]
+
+        del args[name]
 
     else:
         print(f"\n{'*' * 10}\n")

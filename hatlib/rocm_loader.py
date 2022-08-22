@@ -3,8 +3,9 @@ import pathlib
 import numpy as np
 from typing import List
 
-from .arg_info import ArgInfo, verify_args
+from .arg_info import ArgInfo
 from .callable_func import CallableFunc
+from .function_info import FunctionInfo
 from .hat_file import Function
 from .gpu_headers import ROCM_HEADER_MAP
 from .pyhip.hip import *
@@ -37,7 +38,9 @@ def get_func_from_rocm_program(rocm_program, func_name):
     kernel = hipModuleGetFunction(rocm_module, func_name)
     return kernel
 
-cached_mem=[]
+
+cached_mem = []
+
 
 def allocate_rocm_mem(benchmark: bool, arg_infos: List[ArgInfo], gpu_id: int):
     device_mem = []
@@ -90,10 +93,8 @@ class RocmCallableFunc(CallableFunc):
     def __init__(self, func: Function, rocm_src_path: str) -> None:
         super().__init__()
         self.hat_func = func
-        self.func_name = func.name
+        self.func_info = FunctionInfo(func)
         self.kernel = None
-        hat_arg_descriptions = func.arguments
-        self.arg_infos = [ArgInfo(d) for d in hat_arg_descriptions]
         self.launch_params = func.launch_parameters
         self.device_mem = None
         self.ptrs = None
@@ -115,22 +116,23 @@ class RocmCallableFunc(CallableFunc):
 
         rocm_program = _HSACO_CACHE.get(self.rocm_src_path)
         if not rocm_program:
-            _HSACO_CACHE[self.rocm_src_path] = rocm_program = compile_rocm_program(self.rocm_src_path, self.func_name)
+            _HSACO_CACHE[self.rocm_src_path
+                         ] = rocm_program = compile_rocm_program(self.rocm_src_path, self.func_info.name)
 
-        self.kernel = get_func_from_rocm_program(rocm_program, self.func_name)
+        self.kernel = get_func_from_rocm_program(rocm_program, self.func_info.name)
 
     def cleanup_runtime(self, benchmark: bool):
         pass
 
-    def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpu_id: int=0):
-        verify_args(args, self.arg_infos, self.func_name)
-        self.device_mem = allocate_rocm_mem(benchmark, self.arg_infos, gpu_id)
+    def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpu_id: int = 0):
+        self.func_info.verify(args)
+        self.device_mem = allocate_rocm_mem(benchmark, self.func_info.arguments, gpu_id)
 
         if not benchmark:
-            transfer_mem_host_to_rocm(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
+            transfer_mem_host_to_rocm(device_args=self.device_mem, host_args=args, arg_infos=self.func_info.arguments)
 
         class DataStruct(ctypes.Structure):
-            _fields_ = [(f"arg{i}", ctypes.c_void_p) for i in range(len(self.arg_infos))]
+            _fields_ = [(f"arg{i}", ctypes.c_void_p) for i in range(len(self.func_info.arguments))]
 
         self.data = DataStruct(*self.device_mem)
 
@@ -175,7 +177,7 @@ class RocmCallableFunc(CallableFunc):
     def cleanup_main(self, benchmark: bool, args=[]):
         # If there's no device mem, that means allocation during initialization failed, which means nothing else needs to be cleaned up either
         if not benchmark and self.device_mem:
-            transfer_mem_rocm_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
+            transfer_mem_rocm_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.func_info.arguments)
             free_rocm_mem(self.device_mem)
         hipDeviceSynchronize()
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import sys
 import unittest
 from pathlib import Path
 from hatlib import (

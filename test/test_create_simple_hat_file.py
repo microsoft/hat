@@ -28,6 +28,7 @@ void MatMul(const float* A, const float* B, float* C);
 #ifdef TOML
 '''
 
+
 class CreateSimpleHatFile_test(unittest.TestCase):
 
     def test_create_simple_hat_file(self):
@@ -94,10 +95,13 @@ class CreateSimpleHatFile_test(unittest.TestCase):
             return_info=return_arg
         )
         auxiliary_key_name = "test_auxiliary_key"
-        hat_function.auxiliary[auxiliary_key_name] = { "name" : "matmul" }
+        hat_function.auxiliary[auxiliary_key_name] = { "name": "matmul" }
+
+        workdir = "./test_output"
+        os.makedirs(workdir, exist_ok=True)
 
         link_target_path = "./fake_link_target.lib"
-        hat_file_path = "./test_simple_hat_path.hat"
+        hat_file_path = f"{workdir}/test_simple_hat_path.hat"
         new_hat_file = hat.HATFile(
             name="simple_hat_file",
             functions=[hat_function],
@@ -127,6 +131,7 @@ class CreateSimpleHatFile_test(unittest.TestCase):
 
         # Check that the code strings are equal. Serialization/deserialization doesn't always preserve leading/trailing whitespace so use strip() to normalize
         self.assertEqual(parsed_hat_file.declaration.code.strip(), SAMPLE_MATMUL_DECL_CODE.strip())
+
 
 if __name__ == '__main__':
     unittest.main()

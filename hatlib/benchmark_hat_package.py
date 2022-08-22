@@ -9,7 +9,7 @@ import traceback
 
 from .callable_func import CallableFunc
 from .hat_file import HATFile
-from .hat import load, generate_input_sets_for_func
+from .hat import load, generate_arg_sets_for_func
 
 
 class Benchmark:
@@ -84,13 +84,13 @@ class Benchmark:
         if not isinstance(benchmark_func, CallableFunc):
             # generate sufficient input sets to overflow the L3 cache, since we don't know the size of the model
             # we'll make a guess based on the minimum input set size
-            input_sets = generate_input_sets_for_func(func,
+            input_sets = generate_arg_sets_for_func(func,
                                                     input_sets_minimum_size_MB,
                                                     num_additional=10)
 
             set_size = 0
             for i in input_sets[0]:
-                set_size += i.size * i.dtype.itemsize
+                set_size += i.value.size * i.value.dtype.itemsize
 
             if verbose:
                 print(f"[Benchmarking] Using {len(input_sets)} input sets, each {set_size} bytes")
@@ -129,11 +129,11 @@ class Benchmark:
         else:
             if verbose:
                 print(f"[Benchmarking] Benchmarking device function on gpu {gpu_id}. {batch_size} batches of warming up for {warmup_iterations} and then measuring with {min_timing_iterations} iterations.")
-            input_sets = generate_input_sets_for_func(func)
+            input_sets = generate_arg_sets_for_func(func)
 
             set_size = 0
             for i in input_sets:
-                set_size += i.size * i.dtype.itemsize
+                set_size += i.value.size * i.value.dtype.itemsize
 
             if verbose:
                 print(f"[Benchmarking] Using input of {set_size} bytes")

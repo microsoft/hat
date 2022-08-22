@@ -4,8 +4,9 @@ import sys
 import numpy as np
 from typing import List
 from cuda import cuda, nvrtc
-from .arg_info import ArgInfo, verify_args
+from .arg_info import ArgInfo
 from .callable_func import CallableFunc
+from .function_info import FunctionInfo
 from .hat_file import Function
 
 
@@ -38,6 +39,7 @@ def _find_cuda_incl_path() -> pathlib.Path:
 
     return cuda_path
 
+
 def _get_compute_capability(gpu_id) -> int:
     err, major = cuda.cuDeviceGetAttribute(cuda.CUdevice_attribute.CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, gpu_id)
     ASSERT_DRV(err)
@@ -47,6 +49,7 @@ def _get_compute_capability(gpu_id) -> int:
 
     return (major * 10) + minor
 
+
 def compile_cuda_program(cuda_src_path: pathlib.Path, func_name, gpu_id):
     src = cuda_src_path.read_text()
 
@@ -55,15 +58,15 @@ def compile_cuda_program(cuda_src_path: pathlib.Path, func_name, gpu_id):
         raise RuntimeError("Unable to determine CUDA include path. Please set CUDA_PATH environment variable.")
 
     opts = [
-        # https://docs.nvidia.com/cuda/nvrtc/index.html#group__options
+    # https://docs.nvidia.com/cuda/nvrtc/index.html#group__options
         f'--gpu-architecture=compute_{_get_compute_capability(gpu_id)}'.encode(),
-        b'--ptxas-options=--warn-on-spills', # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#options-for-passing-specific-phase-options-ptxas-options
+        b'--ptxas-options=--warn-on-spills',    # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#options-for-passing-specific-phase-options-ptxas-options
         b'-use_fast_math',
         b'--include-path=' + str(cuda_incl_path).encode(),
         b'-std=c++17',
         b'-default-device',
-        #b'--restrict',
-        #b'--device-int128'
+    #b'--restrict',
+    #b'--device-int128'
     ]
 
     # Create program
@@ -180,10 +183,8 @@ class CudaCallableFunc(CallableFunc):
     def __init__(self, func: Function, cuda_src_path: str) -> None:
         super().__init__()
         self.hat_func = func
-        self.func_name = func.name
+        self.func_info = FunctionInfo(func)
         self.kernel = None
-        hat_arg_descriptions = func.arguments
-        self.arg_infos = [ArgInfo(d) for d in hat_arg_descriptions]
         self.launch_params = func.launch_parameters
         self.device_mem = None
         self.ptrs = None
@@ -198,19 +199,19 @@ class CudaCallableFunc(CallableFunc):
 
         ptx = _PTX_CACHE.get(self.cuda_src_path)
         if not ptx:
-            _PTX_CACHE[self.cuda_src_path] = ptx = compile_cuda_program(self.cuda_src_path, self.func_name, gpu_id)
+            _PTX_CACHE[self.cuda_src_path] = ptx = compile_cuda_program(self.cuda_src_path, self.func_info.name, gpu_id)
 
-        self.kernel = get_func_from_ptx(ptx, self.func_name)
+        self.kernel = get_func_from_ptx(ptx, self.func_info.name)
 
     def cleanup_runtime(self, benchmark: bool):
         cuda.cuCtxDestroy(self.context)
 
-    def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpu_id: int=0):
-        verify_args(args, self.arg_infos, self.func_name)
-        self.device_mem = allocate_cuda_mem(self.arg_infos)
+    def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpu_id: int = 0):
+        self.func_info.verify(args)
+        self.device_mem = allocate_cuda_mem(self.func_info.arguments)
 
         if not benchmark:
-            transfer_mem_host_to_cuda(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
+            transfer_mem_host_to_cuda(device_args=self.device_mem, host_args=args, arg_infos=self.func_info.arguments)
 
         self.ptrs = device_args_to_ptr_list(self.device_mem)
 
@@ -270,7 +271,7 @@ class CudaCallableFunc(CallableFunc):
     def cleanup_main(self, benchmark: bool, args=[]):
         # If there's no device mem, that means allocation during initialization failed, which means nothing else needs to be cleaned up either
         if not benchmark and self.device_mem:
-            transfer_mem_cuda_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.arg_infos)
+            transfer_mem_cuda_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.func_info.arguments)
         if self.device_mem:
             free_cuda_mem(self.device_mem)
         err, = cuda.cuCtxSynchronize()
