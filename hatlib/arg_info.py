@@ -110,8 +110,7 @@ class ArgInfo:
         def integer_like(s: Any):
             # handle types such as tomlkit.items.Integer
             try:
-                int(s)
-                return True
+                return int(s) == s
             except:
                 return False
 
