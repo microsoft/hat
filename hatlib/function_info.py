@@ -28,7 +28,7 @@ class FunctionInfo:
 
         for i, (info, value) in enumerate(zip(self.arguments, args)):
             try:
-                if isinstance(value, np.ndarray):
+                if isinstance(value, np.ndarray) or isinstance(value, np.int64):
                     value = ArgValue(info, value)
 
                 value.verify(info)
@@ -38,7 +38,7 @@ class FunctionInfo:
     def as_cargs(self, args: List[Any]):
         "Converts arguments to their C interfaces"
         arg_values = [
-            ArgValue(info, value) if isinstance(value, np.ndarray) else value
+            ArgValue(info, value) if isinstance(value, np.ndarray) or isinstance(value, np.int64) else value
             for info, value in zip(self.arguments, args)
         ]
 
