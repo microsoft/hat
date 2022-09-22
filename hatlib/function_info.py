@@ -19,12 +19,9 @@ class FunctionInfo:
         self.name = self.desc.name
         self.arguments = list(map(ArgInfo, self.desc.arguments))
 
-
     def preprocess(self, args: List[Any]) -> List[ArgValue]:
         # TODO: do a best effort expando of the arguments based on hat metadata
-
-        pass
-
+        return args
 
     def verify(self, args: List[Any]):
         "Verifies that a list of argument values matches the function description"
@@ -50,4 +47,3 @@ class FunctionInfo:
         ]
 
         return [value.as_carg() for value in arg_values]
-
