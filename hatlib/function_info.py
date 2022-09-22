@@ -19,12 +19,16 @@ class FunctionInfo:
         self.name = self.desc.name
         self.arguments = list(map(ArgInfo, self.desc.arguments))
 
+
+    def preprocess(self, args: List[Any]) -> List[ArgValue]:
+        # TODO: do a best effort expando of the arguments based on hat metadata
+
+        pass
+
+
     def verify(self, args: List[Any]):
         "Verifies that a list of argument values matches the function description"
         if len(args) != len(self.arguments):
-
-            # TODO: do a best effort expando of the arguments based on hat metadata
-
             sys.exit(
                 f"Error calling {self.name}(...): expected {len(self.arguments)} arguments but received {len(args)}"
             )

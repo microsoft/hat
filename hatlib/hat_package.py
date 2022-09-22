@@ -66,11 +66,14 @@ def _make_cpu_func(shared_lib: ctypes.CDLL, func: Function):
     fn = shared_lib[func_info.name]
 
     def f(*args):
+        # perform any necessary pre-processing and conversion
+        args_ = func_info.preprocess(args)
+
         # verify that the args match the description in the hat file
-        func_info.verify(args)
+        func_info.verify(args_)
 
         # prepare the args to the hat package
-        hat_args = func_info.as_cargs(args)
+        hat_args = func_info.as_cargs(args_)
 
         # call the function in the hat package
         fn(*hat_args)
