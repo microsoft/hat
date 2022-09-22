@@ -22,6 +22,9 @@ class FunctionInfo:
     def verify(self, args: List[Any]):
         "Verifies that a list of argument values matches the function description"
         if len(args) != len(self.arguments):
+
+            # TODO: do a best effort expando of the arguments based on hat metadata
+
             sys.exit(
                 f"Error calling {self.name}(...): expected {len(self.arguments)} arguments but received {len(args)}"
             )
