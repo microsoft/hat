@@ -400,6 +400,140 @@ void (*Unsqueeze_)(float*, int64_t, float**, int64_t*, int64_t*) = Unsqueeze;
             self.create_hat_file(hat_input)
             hat.verify_hat_package(hat_path)
 
+    def test_partial_dynamic_runtime_arrays(self):
+        impl_code = '''#include <stdint.h>
+#include <stdlib.h>
+
+#ifndef ALLOC
+#define ALLOC(size) ( malloc(size) )
+#endif
+#ifndef DEALLOC
+#define DEALLOC(X) ( free(X) )
+#endif
+
+#ifdef _MSC_VER
+#define DLL_EXPORT  __declspec( dllexport )
+#else
+#define DLL_EXPORT
+#endif
+
+#define DIM1 100
+#define DIM2 16
+
+DLL_EXPORT void /* Add_155 */ Add_partial_dynamic( const float* A, uint32_t A_dim0, const float* B, float** C, uint32_t* C_dim0, uint32_t* C_dim1, uint32_t* C_dim2 )
+{
+    (*C_dim0) = A_dim0;
+    (*C_dim1) = DIM1;
+    (*C_dim2) = DIM2;
+    (*C) = (float*)ALLOC((*C_dim0)*(*C_dim1)*(*C_dim2)*4);
+    for (unsigned i0 = 0; i0 < (*C_dim0); ++i0) {
+    for (unsigned i1 = 0; i1 < (*C_dim1); ++i1) {
+    for (unsigned i2 = 0; i2 < (*C_dim2); ++i2) {
+        *(*C + i0*(*C_dim1)*(*C_dim2)*1 + i1*(*C_dim2)*1 + i2*1) = *(A + (A_dim0 == 1 ? 0 : i0)*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) + *(B + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1);
+    }
+    }
+    }
+}
+
+'''
+        decl_code = '''#endif // TOML
+#pragma once
+
+#include <stdint.h>
+
+#if defined(__cplusplus)
+extern "C"
+{
+#endif // defined(__cplusplus)
+
+void Add_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, float** C, uint32_t* C_dim0, uint32_t* C_dim1, uint32_t* C_dim2 );
+
+#if defined(__cplusplus)
+} // extern "C"
+#endif // defined(__cplusplus)
+
+#ifdef TOML
+'''
+        workdir = "test_output/test_partial_dynamic_runtime_arrays"
+        name = f"add"
+        func_name = "Add_partial_dynamic"
+        lib_path = self.build(impl_code, workdir, name, func_name)
+        hat_path = f"{workdir}/{name}.hat"
+        DIM1 = 100
+        DIM2 = 16
+
+        # create the hat file
+        param_A = hat.Parameter(
+            name="A",
+            logical_type=hat.ParameterType.RuntimeArray,
+            declared_type="float*",
+            element_type="float",
+            usage=hat.UsageType.Input,
+            size=f"A_dim0*{DIM1}*{DIM2}"
+        )
+        param_A_dim0 = hat.Parameter(
+            name="A_dim0",
+            logical_type=hat.ParameterType.Element,
+            declared_type="uint32_t",
+            element_type="uint32_t",
+            usage=hat.UsageType.Input,
+            shape=[]
+        )
+        param_B = hat.Parameter(
+            name="B",
+            logical_type=hat.ParameterType.RuntimeArray,
+            declared_type="float*",
+            element_type="float",
+            usage=hat.UsageType.Input,
+            size=f"A_dim0*{DIM1}*{DIM2}"
+        )
+        param_C = hat.Parameter(
+            name="C",
+            logical_type=hat.ParameterType.RuntimeArray,
+            declared_type="float**",
+            element_type="float",
+            usage=hat.UsageType.Output,
+            size=f"C_dim0*C_dim1*C_dim2"
+        )
+        param_C_dim0 = hat.Parameter(
+            name="C_dim0",
+            logical_type=hat.ParameterType.Element,
+            declared_type="uint32_t*",
+            element_type="uint32_t",
+            usage=hat.UsageType.Output,
+            shape=[]
+        )
+        param_C_dim1 = hat.Parameter(
+            name="C_dim1",
+            logical_type=hat.ParameterType.Element,
+            declared_type="uint32_t*",
+            element_type="uint32_t",
+            usage=hat.UsageType.Output,
+            shape=[]
+        )
+        param_C_dim2 = hat.Parameter(
+            name="C_dim2",
+            logical_type=hat.ParameterType.Element,
+            declared_type="uint32_t*",
+            element_type="uint32_t",
+            usage=hat.UsageType.Output,
+            shape=[]
+        )
+        hat_function = hat.Function(
+            arguments=[param_A, param_A_dim0, param_B, param_C, param_C_dim0, param_C_dim1, param_C_dim2],
+            calling_convention=hat.CallingConventionType.StdCall,
+            name=func_name,
+            return_info=hat.Parameter.void()
+        )
+        hat_input = hat.HATFile(
+            name=name,
+            functions=[hat_function],
+            dependencies=hat.Dependencies(link_target=os.path.basename(lib_path)),
+            declaration=hat.Declaration(code=decl_code),
+            path=hat_path
+        )
+        self.create_hat_file(hat_input)
+        hat.verify_hat_package(hat_path)
 
 if __name__ == '__main__':
     unittest.main()

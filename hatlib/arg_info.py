@@ -106,12 +106,12 @@ class ArgInfo:
 
     @property
     def is_constant_shaped(self):
-
-        def integer_like(s: Any):
-            # handle types such as tomlkit.items.Integer
-            try:
-                return int(s) == s
-            except:
-                return False
-
         return all(integer_like(s) for s in self.shape)
+
+
+def integer_like(s: Any):
+    # handle types such as tomlkit.items.Integer
+    try:
+        return int(s) == s or type(s) == str and s.isdigit()
+    except:
+        return False

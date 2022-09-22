@@ -1,9 +1,9 @@
-from typing import Any, List
+from typing import Any, List, Mapping
 from ctypes import byref
 import numpy as np
 import random
 
-from .arg_info import ArgInfo
+from .arg_info import ArgInfo, integer_like
 from . import hat_file
 
 
@@ -111,7 +111,7 @@ class ArgValue:
 def get_dimension_arg_indices(array_arg: ArgInfo, all_arguments: List[ArgInfo]) -> List[int]:
     # Returns the dimension argument indices in shape order for an array argument
     indices = []
-    for sym_name in array_arg.shape:
+    for sym_name in filter(lambda x: not integer_like(x), array_arg.shape):
         for i, info in enumerate(all_arguments):
             if info.name == sym_name:    # limitation: only string shapes are supported
                 indices.append(i)
@@ -138,16 +138,23 @@ def generate_arg_values(arguments: List[ArgInfo]) -> List[ArgValue]:
     for arg in arguments:
         if arg.usage != hat_file.UsageType.Output and not arg.is_constant_shaped:
             # input runtime arrays
-            dim_args = [arguments[i] for i in get_dimension_arg_indices(arg, arguments)]
+            dim_args: Mapping[str, ArgInfo] = {
+                arguments[i].name: arguments[i]
+                    for i in get_dimension_arg_indices(arg, arguments)
+            }
 
-            # assign generated shape values to the corresponding dimension arguments
+            # assign shape values to the corresponding dimension arguments
             shape = []
-            for d in dim_args:
-                if d.name not in dim_names_to_values:
-                    shape.append(generate_dim_value())
-                    dim_names_to_values[d.name] = ArgValue(d, shape[-1])
+            for d in arg.shape:
+                if integer_like(d):
+                    shape.append(int(d))
                 else:
-                    shape.append(dim_names_to_values[d.name].value)
+                    assert d in dim_args
+                    if d not in dim_names_to_values:
+                        shape.append(generate_dim_value())
+                        dim_names_to_values[d] = ArgValue(dim_args[d], shape[-1])
+                    else:
+                        shape.append(dim_names_to_values[d].value)
 
             # materialize an array input using the generated shape
             runtime_array_inputs = np.random.random(tuple(shape)).astype(arg.numpy_dtype)
@@ -155,6 +162,7 @@ def generate_arg_values(arguments: List[ArgInfo]) -> List[ArgValue]:
 
         elif arg.name in dim_names_to_values:
             # input element that is a dimension value (populated when its input runtime array is created)
+            # BUGBUG / TODO: this assumes dimension values are ordered *after* their arrays
             values.append(dim_names_to_values[arg.name])
         else:
             # everything else is known size or a pointer
