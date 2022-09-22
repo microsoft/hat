@@ -34,8 +34,7 @@ from .arg_info import integer_like
 from .function_info import FunctionInfo
 
 
-PLACEHOLDER_SIZE = 128 # arbitrary, to be replaced with a better way to estimate size
-
+PLACEHOLDER_SIZE = 128 # arbitrary, to be replaced with a better way to estimate size for runtime arrays
 
 def generate_arg_sets_for_func(func: hat_file.Function, input_sets_minimum_size_MB: int = 0, num_additional: int = 0):
     func_info = FunctionInfo(func)

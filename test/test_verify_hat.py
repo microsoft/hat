@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import re
 import hatlib as hat
+import numpy as np
 import os
 import shutil
 import unittest
@@ -534,6 +534,17 @@ void Add_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, float*
         )
         self.create_hat_file(hat_input)
         hat.verify_hat_package(hat_path)
+
+        # verify correctness
+        _, func_map = hat.load(hat_path)
+        A = np.random.rand(5, DIM1, DIM2).astype("float32")
+        B = np.random.rand(5, DIM1, DIM2).astype("float32")
+        C_ref = A + B
+        C = np.zeros(shape=(5, DIM1, DIM2)).astype("float32")
+
+        func_map.Add_partial_dynamic(A, B, C)
+        # np.testing.assert_allclose(C, C_ref) # TODO
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -65,6 +65,10 @@ class FunctionInfo:
 
         return expanded_args
 
+    def postprocess(self, original_args: List[Any], expanded_args: List[Any]):
+        # TODO
+        pass
+
     def verify(self, args: List[Any]):
         "Verifies that a list of argument values matches the function description"
         if len(args) != len(self.arguments):
