@@ -30,6 +30,12 @@ class FunctionInfo:
         # do a best effort parameter expansion based on hat metadata
         i_value = 0
         expanded_args = [None] * len(self.arguments)
+
+        # determine if the caller is passing in output arrays as arguments
+        # (useful for automation scenarios)
+        num_array_args = list(filter(lambda x: x.logical_type == hat_file.ParameterType.RuntimeArray or x.logical_type == hat_file.ParameterType.AffineArray, self.desc.arguments))
+        has_output_array_args = num_array_args == len(args)
+
         # maps argument names to indices
         names_to_indices = {info.name: i for i, info in enumerate(self.arguments)}
         for i, (hat_desc, info) in enumerate(zip(self.desc.arguments, self.arguments)):
@@ -39,6 +45,8 @@ class FunctionInfo:
                     expanded_args[i] = ArgValue(info)
                     expanded_args[i].dim_values = []
                     array_shape = info.shape
+                    if has_output_array_args: # skip over the output arg
+                        i_value = i_value + 1
                 else:
                     array = args[i_value]
                     expanded_args[i] = array
