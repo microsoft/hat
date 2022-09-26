@@ -33,44 +33,44 @@ class FunctionInfo:
         # maps argument names to indices
         names_to_indices = {info.name: i for i, info in enumerate(self.arguments)}
         for i, (hat_desc, info) in enumerate(zip(self.desc.arguments, self.arguments)):
-            array = args[i_value]
             if hat_desc.logical_type == hat_file.ParameterType.RuntimeArray:
-                if isinstance(array, np.ndarray):
+                if hat_desc.usage == hat_file.UsageType.Output:
+                    # insert an output pointer for the C function
+                    expanded_args[i] = ArgValue(info)
+                    expanded_args[i].dim_values = []
+                    array_shape = info.shape
+                else:
+                    array = args[i_value]
+                    expanded_args[i] = array
+                    array_shape = array.shape
+                    i_value = i_value + 1
+
+                # expand the dimension args
+                for dim_name, dim_val in zip(info.shape, array_shape):
+                    if integer_like(dim_name):
+                        assert int(dim_name) == int(dim_val)
+                        continue  # constant dimension
+
+                    # dynamic dimension
+                    # initialize a dimension ArgValue at its index (with value if is input)
+                    i_dim = names_to_indices[dim_name]
+                    dim_arg_info = self.arguments[i_dim]
+                    dim_hat_desc = self.desc.arguments[i_dim]
+                    assert dim_hat_desc.logical_type == hat_file.ParameterType.Element
+
                     if hat_desc.usage == hat_file.UsageType.Output:
-                        # replace the ndarray with a pointer
-                        expanded_args[i] = ArgValue(info)
-                        expanded_args[i].dim_values = []
+                        assert dim_hat_desc.usage == hat_file.UsageType.Output
+                        expanded_args[i_dim] = ArgValue(dim_arg_info)
+                        # add a cross reference so that we can resolve shapes for the output array
+                        # after the function is called
+                        expanded_args[i].dim_values.append(expanded_args[i_dim])
                     else:
-                        expanded_args[i] = array
-
-                    # get the shape of the ndarray and use the values to expand the dimension args
-                    for dim_name, dim_val in zip(info.shape, array.shape):
-                        if integer_like(dim_name):
-                            assert int(dim_name) == int(dim_val)
-                            continue  # constant dimension
-
-                        # dynamic dimension, initialize a dimension ArgValue at its index (and value if input)
-                        i_dim = names_to_indices[dim_name]
-                        dim_arg_info = self.arguments[i_dim]
-                        dim_hat_desc = self.desc.arguments[i_dim]
-                        assert dim_hat_desc.logical_type == hat_file.ParameterType.Element
-
-                        if hat_desc.usage == hat_file.UsageType.Output:
-                            assert dim_hat_desc.usage == hat_file.UsageType.Output
-                            expanded_args[i_dim] = ArgValue(dim_arg_info)
-                            # add a cross reference so that we can resolve shapes for the output array
-                            expanded_args[i].dim_values.append(expanded_args[i_dim])
-                        else:
-                            assert dim_hat_desc.usage == hat_file.UsageType.Input
-                            expanded_args[i_dim] = ArgValue(dim_arg_info, dim_val)
-                i_value = i_value + 1
+                        assert dim_hat_desc.usage == hat_file.UsageType.Input
+                        expanded_args[i_dim] = ArgValue(dim_arg_info, dim_val)
             elif hat_desc.logical_type == hat_file.ParameterType.AffineArray:
                 expanded_args[i] = array
                 i_value = i_value + 1
             # else hat_file.ParameterType.Element handled above
-
-            if i_value == len(args):
-                break  #  pre-processing complete
 
         return expanded_args
 
@@ -91,7 +91,7 @@ class FunctionInfo:
                 # override the output array argument for the caller
                 results.append(np.ctypeslib.as_array(expanded_arg.value, shape))
 
-        return results
+        return results[0] if len(results) == 1 else results
 
     def verify(self, args: List[Any]):
         "Verifies that a list of argument values matches the function description"

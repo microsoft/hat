@@ -544,9 +544,8 @@ void Add_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, float*
         A = np.random.rand(5, DIM1, DIM2).astype("float32")
         B = np.random.rand(5, DIM1, DIM2).astype("float32")
         C_ref = A + B
-        C = np.zeros(shape=(5, DIM1, DIM2)).astype("float32")
 
-        C = func_map.Add_partial_dynamic(A, B, C)[0]
+        C = func_map.Add_partial_dynamic(A, B)
         np.testing.assert_allclose(C, C_ref)
 
 
