@@ -85,6 +85,9 @@ class FunctionInfo:
                 i_value = i_value + 1
             # else hat_file.ParameterType.Element handled above
 
+        if None in expanded_args:
+            raise RuntimeError(f"Could not resolve some arguments for {self.name} (see arguments marked 'None'): {expanded_args}")
+
         return expanded_args
 
     def postprocess(self, expanded_args: List[Any], caller_args: List[Any]) -> None:
