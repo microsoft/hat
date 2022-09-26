@@ -33,7 +33,12 @@ class FunctionInfo:
 
         # determine if the caller is passing in all arrays as arguments (including outputs)
         # (useful for automation scenarios)
-        num_array_args = list(filter(lambda x: x.logical_type == hat_file.ParameterType.RuntimeArray or x.logical_type == hat_file.ParameterType.AffineArray, self.desc.arguments))
+        num_array_args = len(list(
+            filter(
+                lambda x: x.logical_type == hat_file.ParameterType.RuntimeArray or \
+                     x.logical_type == hat_file.ParameterType.AffineArray, self.desc.arguments
+            )
+        ))
         has_full_array_args = num_array_args == len(args)
 
         # maps argument names to indices
@@ -85,7 +90,7 @@ class FunctionInfo:
                 i_value = i_value + 1
             # else hat_file.ParameterType.Element handled above
 
-        if None in expanded_args:
+        if any(a is None for a in expanded_args):
             raise RuntimeError(f"Could not resolve some arguments for {self.name} (see arguments marked 'None'): {expanded_args}")
 
         return expanded_args
