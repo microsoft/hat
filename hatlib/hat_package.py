@@ -77,7 +77,8 @@ def _make_cpu_func(shared_lib: ctypes.CDLL, func: Function):
         # call the function in the hat package
         fn(*hat_args)
 
-        func_info.postprocess(args_, args)
+        # get any results after post-processing
+        return func_info.postprocess(args_, args)
 
     return f
 

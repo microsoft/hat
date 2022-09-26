@@ -338,7 +338,7 @@ void (*Unsqueeze_)(float*, int64_t, float**, int64_t*, int64_t*) = Unsqueeze;
 '''
         for id, usage in enumerate([hat.UsageType.Input, hat.UsageType.InputOutput]):
             workdir = "test_output/verify_hat_inout_runtime_arrays"
-            name = f"unsqueeze_{id}" # uniqify for Windows to avoid load conflict
+            name = f"unsqueeze_{id}"    # uniqify for Windows to avoid load conflict
             func_name = "Unsqueeze"
             lib_path = self.build(impl_code, workdir, name, func_name)
             hat_path = f"{workdir}/{name}.hat"
@@ -403,6 +403,7 @@ void (*Unsqueeze_)(float*, int64_t, float**, int64_t*, int64_t*) = Unsqueeze;
     def test_partial_dynamic_runtime_arrays(self):
         impl_code = '''#include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #ifndef ALLOC
 #define ALLOC(size) ( malloc(size) )
@@ -430,6 +431,9 @@ DLL_EXPORT void /* Add_155 */ Add_partial_dynamic( const float* A, uint32_t A_di
     for (unsigned i1 = 0; i1 < (*C_dim1); ++i1) {
     for (unsigned i2 = 0; i2 < (*C_dim2); ++i2) {
         *(*C + i0*(*C_dim1)*(*C_dim2)*1 + i1*(*C_dim2)*1 + i2*1) = *(A + (A_dim0 == 1 ? 0 : i0)*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) + *(B + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1);
+        // printf(\"A[%d][%d][%d]=%f, \", i0, i1, i2, (double)(*(A + (A_dim0 == 1 ? 0 : i0)*DIM1*DIM2*1 + i1*DIM2*1 + i2*1)));
+        // printf(\"B[%d][%d][%d]=%f, \", i0, i1, i2, (double)(*(B + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1)));
+        // printf(\"C[%d][%d][%d]=%f\\n\", i0, i1, i2, (double)(*(*C + i0*(*C_dim1)*(*C_dim2)*1 + i1*(*C_dim2)*1 + i2*1)));
     }
     }
     }
@@ -542,8 +546,8 @@ void Add_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, float*
         C_ref = A + B
         C = np.zeros(shape=(5, DIM1, DIM2)).astype("float32")
 
-        func_map.Add_partial_dynamic(A, B, C)
-        # np.testing.assert_allclose(C, C_ref) # TODO
+        C = func_map.Add_partial_dynamic(A, B, C)[0]
+        np.testing.assert_allclose(C, C_ref)
 
 
 if __name__ == '__main__':
