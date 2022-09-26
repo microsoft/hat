@@ -57,6 +57,9 @@ class FunctionInfo:
                 for dim_name, dim_val in zip(info.shape, array_shape):
                     if integer_like(dim_name):
                         assert int(dim_name) == int(dim_val)
+                        if hat_desc.usage == hat_file.UsageType.Output:
+                            # add the constant dimension to the array dim_values
+                            expanded_args[i].dim_values.append(int(dim_val))
                         continue  # constant dimension
 
                     # dynamic dimension
@@ -68,13 +71,15 @@ class FunctionInfo:
 
                     if hat_desc.usage == hat_file.UsageType.Output:
                         assert dim_hat_desc.usage == hat_file.UsageType.Output
-                        expanded_args[i_dim] = ArgValue(dim_arg_info)
+                        if expanded_args[i_dim] is None: # arg not yet initialized
+                            expanded_args[i_dim] = ArgValue(dim_arg_info)
                         # add a cross reference so that we can resolve shapes for the output array
                         # after the function is called
                         expanded_args[i].dim_values.append(expanded_args[i_dim])
                     else:
                         assert dim_hat_desc.usage == hat_file.UsageType.Input
-                        expanded_args[i_dim] = ArgValue(dim_arg_info, dim_val)
+                        if expanded_args[i_dim] is None: # arg not yet initialized
+                            expanded_args[i_dim] = ArgValue(dim_arg_info, dim_val)
             elif hat_desc.logical_type == hat_file.ParameterType.AffineArray:
                 expanded_args[i] = array
                 i_value = i_value + 1
@@ -95,7 +100,7 @@ class FunctionInfo:
         for hat_desc, expanded_arg in zip(self.desc.arguments, expanded_args):
             if hat_desc.logical_type == hat_file.ParameterType.RuntimeArray and hat_desc.usage == hat_file.UsageType.Output:
                 # resolve shape using the output dimensions
-                shape = [d.value[0] for d in expanded_arg.dim_values]
+                shape = [d.value[0] if isinstance(d, ArgValue) else d for d in expanded_arg.dim_values]
                 # override the output array argument for the caller
                 results.append(np.ctypeslib.as_array(expanded_arg.value, shape))
 

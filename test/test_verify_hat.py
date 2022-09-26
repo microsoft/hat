@@ -421,19 +421,17 @@ void (*Unsqueeze_)(float*, int64_t, float**, int64_t*, int64_t*) = Unsqueeze;
 #define DIM1 100
 #define DIM2 16
 
-DLL_EXPORT void /* Add_155 */ Add_partial_dynamic( const float* A, uint32_t A_dim0, const float* B, float** C, uint32_t* C_dim0, uint32_t* C_dim1, uint32_t* C_dim2 )
+DLL_EXPORT void /* Add_155 */ Add_partial_dynamic( const float* A, uint32_t A_dim0, const float* B, float** C, uint32_t* C_dim0 )
 {
     (*C_dim0) = A_dim0;
-    (*C_dim1) = DIM1;
-    (*C_dim2) = DIM2;
-    (*C) = (float*)ALLOC((*C_dim0)*(*C_dim1)*(*C_dim2)*4);
+    (*C) = (float*)ALLOC((*C_dim0)*DIM1*DIM2*4);
     for (unsigned i0 = 0; i0 < (*C_dim0); ++i0) {
-    for (unsigned i1 = 0; i1 < (*C_dim1); ++i1) {
-    for (unsigned i2 = 0; i2 < (*C_dim2); ++i2) {
-        *(*C + i0*(*C_dim1)*(*C_dim2)*1 + i1*(*C_dim2)*1 + i2*1) = *(A + (A_dim0 == 1 ? 0 : i0)*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) + *(B + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1);
+    for (unsigned i1 = 0; i1 < DIM1; ++i1) {
+    for (unsigned i2 = 0; i2 < DIM2; ++i2) {
+        *(*C + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) = *(A + (A_dim0 == 1 ? 0 : i0)*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) + *(B + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1);
         // printf(\"A[%d][%d][%d]=%f, \", i0, i1, i2, (double)(*(A + (A_dim0 == 1 ? 0 : i0)*DIM1*DIM2*1 + i1*DIM2*1 + i2*1)));
         // printf(\"B[%d][%d][%d]=%f, \", i0, i1, i2, (double)(*(B + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1)));
-        // printf(\"C[%d][%d][%d]=%f\\n\", i0, i1, i2, (double)(*(*C + i0*(*C_dim1)*(*C_dim2)*1 + i1*(*C_dim2)*1 + i2*1)));
+        // printf(\"C[%d][%d][%d]=%f\\n\", i0, i1, i2, (double)(*(*C + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1)));
     }
     }
     }
@@ -497,7 +495,7 @@ void Add_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, float*
             declared_type="float**",
             element_type="float",
             usage=hat.UsageType.Output,
-            size=f"C_dim0*C_dim1*C_dim2"
+            size=f"C_dim0*{DIM1}*{DIM2}"
         )
         param_C_dim0 = hat.Parameter(
             name="C_dim0",
@@ -507,24 +505,8 @@ void Add_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, float*
             usage=hat.UsageType.Output,
             shape=[]
         )
-        param_C_dim1 = hat.Parameter(
-            name="C_dim1",
-            logical_type=hat.ParameterType.Element,
-            declared_type="uint32_t*",
-            element_type="uint32_t",
-            usage=hat.UsageType.Output,
-            shape=[]
-        )
-        param_C_dim2 = hat.Parameter(
-            name="C_dim2",
-            logical_type=hat.ParameterType.Element,
-            declared_type="uint32_t*",
-            element_type="uint32_t",
-            usage=hat.UsageType.Output,
-            shape=[]
-        )
         hat_function = hat.Function(
-            arguments=[param_A, param_A_dim0, param_B, param_C, param_C_dim0, param_C_dim1, param_C_dim2],
+            arguments=[param_A, param_A_dim0, param_B, param_C, param_C_dim0],
             calling_convention=hat.CallingConventionType.StdCall,
             name=func_name,
             return_info=hat.Parameter.void()
@@ -568,21 +550,16 @@ void Add_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, float*
 #define DIM1 100
 #define DIM2 16
 
-DLL_EXPORT void Add_Sub_partial_dynamic( const float* A, uint32_t A_dim0, const float* B, float** C, uint32_t* C_dim0, uint32_t* C_dim1, uint32_t* C_dim2, float** D, uint32_t* D_dim0, uint32_t* D_dim1, uint32_t* D_dim2 )
+DLL_EXPORT void Add_Sub_partial_dynamic( const float* A, uint32_t A_dim0, const float* B, float** C, uint32_t* C_dim0, float** D )
 {
     (*C_dim0) = A_dim0;
-    (*C_dim1) = DIM1;
-    (*C_dim2) = DIM2;
-    (*D_dim0) = A_dim0;
-    (*D_dim1) = DIM1;
-    (*D_dim2) = DIM2;
-    (*C) = (float*)ALLOC((*C_dim0)*(*C_dim1)*(*C_dim2)*4);
-    (*D) = (float*)ALLOC((*D_dim0)*(*D_dim1)*(*D_dim2)*4);
+    (*C) = (float*)ALLOC((*C_dim0)*DIM1*DIM2*4);
+    (*D) = (float*)ALLOC((*C_dim0)*DIM1*DIM2*4);
     for (unsigned i0 = 0; i0 < (*C_dim0); ++i0) {
-    for (unsigned i1 = 0; i1 < (*C_dim1); ++i1) {
-    for (unsigned i2 = 0; i2 < (*C_dim2); ++i2) {
-        *(*C + i0*(*C_dim1)*(*C_dim2)*1 + i1*(*C_dim2)*1 + i2*1) = *(A + (A_dim0 == 1 ? 0 : i0)*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) + *(B + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1);
-        *(*D + i0*(*D_dim1)*(*D_dim2)*1 + i1*(*D_dim2)*1 + i2*1) = *(A + (A_dim0 == 1 ? 0 : i0)*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) - *(B + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1);
+    for (unsigned i1 = 0; i1 < DIM1; ++i1) {
+    for (unsigned i2 = 0; i2 < DIM2; ++i2) {
+        *(*C + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) = *(A + (A_dim0 == 1 ? 0 : i0)*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) + *(B + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1);
+        *(*D + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) = *(A + (A_dim0 == 1 ? 0 : i0)*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) - *(B + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1);
     }
     }
     }
@@ -599,7 +576,7 @@ extern "C"
 {
 #endif // defined(__cplusplus)
 
-void Add_Sub_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, float** C, uint32_t* C_dim0, uint32_t* C_dim1, uint32_t* C_dim2, float** D, uint32_t* D_dim0, uint32_t* D_dim1, uint32_t* D_dim2 );
+void Add_Sub_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, float** C, uint32_t* C_dim0, float** D, uint32_t* D_dim0 );
 
 #if defined(__cplusplus)
 } // extern "C"
@@ -646,26 +623,10 @@ void Add_Sub_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, fl
             declared_type="float**",
             element_type="float",
             usage=hat.UsageType.Output,
-            size=f"C_dim0*C_dim1*C_dim2"
+            size=f"C_dim0*{DIM1}*{DIM2}"
         )
         param_C_dim0 = hat.Parameter(
             name="C_dim0",
-            logical_type=hat.ParameterType.Element,
-            declared_type="uint32_t*",
-            element_type="uint32_t",
-            usage=hat.UsageType.Output,
-            shape=[]
-        )
-        param_C_dim1 = hat.Parameter(
-            name="C_dim1",
-            logical_type=hat.ParameterType.Element,
-            declared_type="uint32_t*",
-            element_type="uint32_t",
-            usage=hat.UsageType.Output,
-            shape=[]
-        )
-        param_C_dim2 = hat.Parameter(
-            name="C_dim2",
             logical_type=hat.ParameterType.Element,
             declared_type="uint32_t*",
             element_type="uint32_t",
@@ -678,37 +639,10 @@ void Add_Sub_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, fl
             declared_type="float**",
             element_type="float",
             usage=hat.UsageType.Output,
-            size=f"D_dim0*D_dim1*D_dim2"
-        )
-        param_D_dim0 = hat.Parameter(
-            name="D_dim0",
-            logical_type=hat.ParameterType.Element,
-            declared_type="uint32_t*",
-            element_type="uint32_t",
-            usage=hat.UsageType.Output,
-            shape=[]
-        )
-        param_D_dim1 = hat.Parameter(
-            name="D_dim1",
-            logical_type=hat.ParameterType.Element,
-            declared_type="uint32_t*",
-            element_type="uint32_t",
-            usage=hat.UsageType.Output,
-            shape=[]
-        )
-        param_D_dim2 = hat.Parameter(
-            name="D_dim2",
-            logical_type=hat.ParameterType.Element,
-            declared_type="uint32_t*",
-            element_type="uint32_t",
-            usage=hat.UsageType.Output,
-            shape=[]
+            size=f"C_dim0*{DIM1}*{DIM2}"
         )
         hat_function = hat.Function(
-            arguments=[
-                param_A, param_A_dim0, param_B, param_C, param_C_dim0, param_C_dim1, param_C_dim2, param_D,
-                param_D_dim0, param_D_dim1, param_D_dim2
-            ],
+            arguments=[param_A, param_A_dim0, param_B, param_C, param_C_dim0, param_D],
             calling_convention=hat.CallingConventionType.StdCall,
             name=func_name,
             return_info=hat.Parameter.void()
