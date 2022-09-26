@@ -400,7 +400,6 @@ void (*Unsqueeze_)(float*, int64_t, float**, int64_t*, int64_t*) = Unsqueeze;
             self.create_hat_file(hat_input)
             hat.verify_hat_package(hat_path)
 
-
     def test_partial_dynamic_runtime_arrays(self):
         impl_code = '''#include <stdint.h>
 #include <stdlib.h>
@@ -548,7 +547,6 @@ void Add_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, float*
 
         C = func_map.Add_partial_dynamic(A, B)
         np.testing.assert_allclose(C, C_ref)
-
 
     def test_partial_dynamic_runtime_arrays_multi_output(self):
         impl_code = '''#include <stdint.h>
@@ -707,7 +705,10 @@ void Add_Sub_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, fl
             shape=[]
         )
         hat_function = hat.Function(
-            arguments=[param_A, param_A_dim0, param_B, param_C, param_C_dim0, param_C_dim1, param_C_dim2, param_D, param_D_dim0, param_D_dim1, param_D_dim2],
+            arguments=[
+                param_A, param_A_dim0, param_B, param_C, param_C_dim0, param_C_dim1, param_C_dim2, param_D,
+                param_D_dim0, param_D_dim1, param_D_dim2
+            ],
             calling_convention=hat.CallingConventionType.StdCall,
             name=func_name,
             return_info=hat.Parameter.void()
