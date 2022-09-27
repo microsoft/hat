@@ -110,8 +110,9 @@ class ArgInfo:
 
 
 def integer_like(s: Any):
-    # handle types such as tomlkit.items.Integer
+    # handle types that have an int conversion, such as tomlkit.items.Integer or str
     try:
-        return int(s) == s or type(s) == str and s.isdigit()
+        _ = int(s)
+        return True
     except:
         return False
