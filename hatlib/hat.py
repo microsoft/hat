@@ -30,19 +30,21 @@ from functools import reduce
 from . import hat_file
 from . import hat_package
 from .arg_value import generate_arg_values
+from .arg_info import integer_like
 from .function_info import FunctionInfo
 
+
+PLACEHOLDER_SIZE = 128 # arbitrary, to be replaced with a better way to estimate size for runtime arrays
 
 def generate_arg_sets_for_func(func: hat_file.Function, input_sets_minimum_size_MB: int = 0, num_additional: int = 0):
     func_info = FunctionInfo(func)
     parameters = func_info.arguments
 
-    # use constant-sized params to estimate the minimum set size
-    const_sized_parameters = list(filter(lambda p: p.is_constant_shaped, parameters))
-
-    shapes_to_sizes = [reduce(lambda x, y: x * y, p.shape) for p in const_sized_parameters]
+    # plug in values for non-constant dimensions in an attempt to estimate the minimum set size
+    numerical_shapes = [[int(d) if integer_like(d) else PLACEHOLDER_SIZE for d in p.shape] for p in parameters]
+    shapes_to_sizes = [reduce(lambda x, y: x * y, shape) for shape in numerical_shapes]
     set_size = reduce(
-        lambda x, y: x + y, map(lambda size, p: size * p.element_num_bytes, shapes_to_sizes, const_sized_parameters)
+        lambda x, y: x + y, map(lambda size, p: size * p.element_num_bytes, shapes_to_sizes, parameters)
     )
     num_input_sets = (input_sets_minimum_size_MB * 1024 * 1024 // set_size) + 1 + num_additional
 
@@ -73,8 +75,8 @@ def load(hat_path, try_dynamic_load=True) -> Tuple[hat_package.HATPackage, Union
     if try_dynamic_load:
         try:
             function_dict = hat_package.hat_package_to_func_dict(pkg)
-        except:
+        except Exception as e:
             # TODO: Figure out how to communicate failure better
-            pass
+            print(e)
 
     return pkg, function_dict
