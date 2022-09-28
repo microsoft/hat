@@ -69,15 +69,17 @@ class ArgValue:
 
             if desc.is_constant_shaped:
                 # confirm that the arg shape is correct (numpy represents shapes as tuples)
-                if tuple(desc.shape) != self.value.shape:
+                desc_shape = tuple(map(int, desc.shape))
+                if desc_shape != self.value.shape:
                     raise ValueError(
-                        f"expected argument to have shape={desc.shape} but received shape={self.value.shape}"
+                        f"expected argument to have shape={desc_shape} but received shape={self.value.shape}"
                     )
 
                 # confirm that the arg strides are correct (numpy represents strides as tuples)
-                if tuple(desc.numpy_strides) != self.value.strides:
+                desc_numpy_strides = desc_shape[1:-1] + (1,)
+                if desc_numpy_strides != self.value.strides:
                     raise ValueError(
-                        f"expected argument to have strides={desc.numpy_strides} but received strides={self.value.strides}"
+                        f"expected argument to have strides={desc_numpy_strides} but received strides={self.value.strides}"
                     )
         else:
             pass    # TODO - support other pointer levels
@@ -111,7 +113,7 @@ class ArgValue:
 def get_dimension_arg_indices(array_arg: ArgInfo, all_arguments: List[ArgInfo]) -> List[int]:
     # Returns the dimension argument indices in shape order for an array argument
     indices = []
-    for sym_name in filter(lambda x: not integer_like(x), array_arg.shape):
+    for sym_name in filter(lambda x: x and not integer_like(x), array_arg.shape):
         for i, info in enumerate(all_arguments):
             if info.name == sym_name:    # limitation: only string shapes are supported
                 indices.append(i)
@@ -130,7 +132,7 @@ def generate_arg_values(arguments: List[ArgInfo]) -> List[ArgValue]:
     """
 
     def generate_dim_value():
-        return random.choice([128, 256, 1234])    # example dimension values
+        return random.choice([2, 3, 4])    # example dimension values
 
     dim_names_to_values = {}
     values = []
@@ -145,16 +147,19 @@ def generate_arg_values(arguments: List[ArgInfo]) -> List[ArgValue]:
 
             # assign shape values to the corresponding dimension arguments
             shape = []
-            for d in arg.shape:
-                if integer_like(d):
-                    shape.append(int(d))
-                else:
-                    assert d in dim_args
-                    if d not in dim_names_to_values:
-                        shape.append(generate_dim_value())
-                        dim_names_to_values[d] = ArgValue(dim_args[d], shape[-1])
+            if len(arg.shape) == 1 and arg.shape[0] == '': # takes cares of shapes of type ['']
+                shape = [1]
+            else:
+                for d in arg.shape:
+                    if integer_like(d):
+                        shape.append(int(d))
                     else:
-                        shape.append(dim_names_to_values[d].value)
+                        assert d in dim_args
+                        if d not in dim_names_to_values:
+                            shape.append(generate_dim_value())
+                            dim_names_to_values[d] = ArgValue(dim_args[d], shape[-1])
+                        else:
+                            shape.append(dim_names_to_values[d].value)
 
             # materialize an array input using the generated shape
             runtime_array_inputs = np.random.random(tuple(shape)).astype(arg.numpy_dtype)
@@ -166,13 +171,17 @@ def generate_arg_values(arguments: List[ArgInfo]) -> List[ArgValue]:
             values.append(dim_names_to_values[arg.name])
         else:
             # everything else is known size or a pointer
+            if arg.is_constant_shaped:
+                arg.total_element_count = int(arg.total_element_count)
+                arg.shape = list(map(int, arg.shape))
+                arg.numpy_strides = arg.shape[1:-1] + [1]
+
             values.append(ArgValue(arg))
 
     # collect the dimension ArgValues for each output runtime_array ArgValue
     for value in values:
         if value.arg_info.usage == hat_file.UsageType.Output and not value.arg_info.is_constant_shaped:
             dim_values = [values[i] for i in get_dimension_arg_indices(value.arg_info, arguments)]
-            assert dim_values, f"Runtime array {value.arg_info.name} has no dimensions"
             value.dim_values = dim_values
 
     return values
