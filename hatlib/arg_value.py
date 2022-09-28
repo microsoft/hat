@@ -76,7 +76,7 @@ class ArgValue:
                     )
 
                 # confirm that the arg strides are correct (numpy represents strides as tuples)
-                desc_numpy_strides = desc_shape[1:-1] + (1,)
+                desc_numpy_strides = desc_shape[1:] + (1,)
                 if desc_numpy_strides != self.value.strides:
                     raise ValueError(
                         f"expected argument to have strides={desc_numpy_strides} but received strides={self.value.strides}"
@@ -174,7 +174,7 @@ def generate_arg_values(arguments: List[ArgInfo]) -> List[ArgValue]:
             if arg.is_constant_shaped:
                 arg.total_element_count = int(arg.total_element_count)
                 arg.shape = list(map(int, arg.shape))
-                arg.numpy_strides = arg.shape[1:-1] + [1]
+                arg.numpy_strides = arg.shape[1:] + [1]
 
             values.append(ArgValue(arg))
 
