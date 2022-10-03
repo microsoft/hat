@@ -26,7 +26,9 @@ def compile_rocm_program(rocm_src_path: pathlib.Path, func_name):
         header_sources=ROCM_HEADER_MAP.values()
     )
     device_properties = hipGetDeviceProperties(0)
-    hiprtcCompileProgram(prog, [f'--offload-arch={device_properties.gcnArchName}', '-D__HIP_PLATFORM_AMD__'])
+    hiprtcCompileProgram(prog, [f'--offload-arch={device_properties.gcnArchName}',
+                                 '-D__HIP_PLATFORM_AMD__',
+                                 '-I/home/ritdas/rocWMMA/library/include/rocwmma/'])
     code = hiprtcGetCode(prog)
 
     return code
