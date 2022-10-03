@@ -211,6 +211,7 @@ class Function(AuxiliarySupportedTable):
 
     # optional
     launch_parameters: list = field(default_factory=list)
+    dynamic_shared_mem_bytes: int = 0
     launches: str = ""
     provider: str = ""
     runtime: str = ""
@@ -230,6 +231,9 @@ class Function(AuxiliarySupportedTable):
 
         if self.launch_parameters:
             table.add("launch_parameters", self.launch_parameters)
+
+        if self.dynamic_shared_mem_bytes:
+            table.add("dynamic_shared_mem_bytes", self.dynamic_shared_mem_bytes)
 
         if self.launches:
             table.add("launches", self.launches)
@@ -254,6 +258,8 @@ class Function(AuxiliarySupportedTable):
 
         launch_parameters = function_table["launch_parameters"] if "launch_parameters" in function_table else []
 
+        dynamic_shared_mem_bytes = function_table["dynamic_shared_mem_bytes"] if "dynamic_shared_mem_bytes" in function_table else 0
+
         launches = function_table["launches"] if "launches" in function_table else ""
 
         provider = function_table["provider"] if "provider" in function_table else ""
@@ -269,6 +275,7 @@ class Function(AuxiliarySupportedTable):
             arguments=arguments,
             return_info=return_info,
             launch_parameters=launch_parameters,
+            dynamic_shared_mem_bytes=dynamic_shared_mem_bytes,
             launches=launches,
             provider=provider,
             runtime=runtime,
