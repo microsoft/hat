@@ -214,6 +214,10 @@ class CudaCallableFunc(CallableFunc):
 
         self.ptrs = device_args_to_ptr_list(self.device_mem)
 
+        if self.hat_func.dynamic_shared_mem_bytes > 0:
+            err, = cuda.cuFuncSetAttribute(self.kernel, cuda.CUfunction_attribute.CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, self.hat_func.dynamic_shared_mem_bytes)
+            ASSERT_DRV(err)
+
         err, self.start_event = cuda.cuEventCreate(cuda.CUevent_flags.CU_EVENT_DEFAULT)
         ASSERT_DRV(err)
         err, self.stop_event = cuda.cuEventCreate(cuda.CUevent_flags.CU_EVENT_DEFAULT)
