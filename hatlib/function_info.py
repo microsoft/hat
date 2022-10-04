@@ -49,6 +49,10 @@ class FunctionInfo:
                     # insert an output pointer for the C function
                     expanded_args[i] = ArgValue(info)
                     expanded_args[i].dim_values = []
+
+                    if len(info.shape) and info.shape[0] == '':
+                        info.shape = []
+
                     array_shape = info.shape
                     if has_full_array_args: # skip over the output arg
                         i_value = i_value + 1
