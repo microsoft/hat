@@ -21,10 +21,10 @@ class FunctionInfo:
 
     def preprocess(self, args: List[Any]) -> List[ArgValue]:
         if len(args) >= len(self.arguments):
-            return args # pass-through
+            return args  # pass-through
 
         if any(not isinstance(value, np.ndarray) for value in args):
-            return args # pass-through
+            return args  # pass-through
 
         # len(values) < len(self.arguments) and we have numpy arrays
         # do a best effort parameter expansion based on hat metadata
@@ -33,12 +33,15 @@ class FunctionInfo:
 
         # determine if the caller is passing in all arrays as arguments (including outputs)
         # (useful for automation scenarios)
-        num_array_args = len(list(
-            filter(
-                lambda x: x.logical_type == hat_file.ParameterType.RuntimeArray or \
-                     x.logical_type == hat_file.ParameterType.AffineArray, self.desc.arguments
+        num_array_args = len(
+            list(
+                filter(
+                    lambda x: x.logical_type == hat_file.ParameterType.RuntimeArray
+                    or x.logical_type == hat_file.ParameterType.AffineArray,
+                    self.desc.arguments,
+                )
             )
-        ))
+        )
         has_full_array_args = num_array_args == len(args)
 
         # maps argument names to indices
@@ -54,7 +57,7 @@ class FunctionInfo:
                         info.shape = []
 
                     array_shape = info.shape
-                    if has_full_array_args: # skip over the output arg
+                    if has_full_array_args:  # skip over the output arg
                         i_value = i_value + 1
                 else:
                     array = args[i_value]
@@ -80,14 +83,14 @@ class FunctionInfo:
 
                     if hat_desc.usage == hat_file.UsageType.Output:
                         assert dim_hat_desc.usage == hat_file.UsageType.Output
-                        if expanded_args[i_dim] is None: # arg not yet initialized
+                        if expanded_args[i_dim] is None:  # arg not yet initialized
                             expanded_args[i_dim] = ArgValue(dim_arg_info)
                         # add a cross reference so that we can resolve shapes for the output array
                         # after the function is called
                         expanded_args[i].dim_values.append(expanded_args[i_dim])
                     else:
                         assert dim_hat_desc.usage == hat_file.UsageType.Input
-                        if expanded_args[i_dim] is None: # arg not yet initialized
+                        if expanded_args[i_dim] is None:  # arg not yet initialized
                             expanded_args[i_dim] = ArgValue(dim_arg_info, dim_val)
             elif hat_desc.logical_type == hat_file.ParameterType.AffineArray:
                 expanded_args[i] = array
@@ -95,24 +98,32 @@ class FunctionInfo:
             # else hat_file.ParameterType.Element handled above
 
         if any(a is None for a in expanded_args):
-            raise RuntimeError(f"Could not resolve some arguments for {self.name} (see arguments marked 'None'): {expanded_args}")
+            raise RuntimeError(
+                f"Could not resolve some arguments for {self.name} (see arguments marked 'None'): {expanded_args}"
+            )
 
         return expanded_args
 
     def postprocess(self, expanded_args: List[Any], caller_args: List[Any]) -> None:
         if len(expanded_args) == len(caller_args):
-            return # pass-through
+            return  # pass-through
 
         if any(not isinstance(value, np.ndarray) for value in caller_args):
-            return # pass-through
+            return  # pass-through
 
         results = []
 
         # extract output arrays from the expanded args and override caller args
         for hat_desc, expanded_arg in zip(self.desc.arguments, expanded_args):
-            if hat_desc.logical_type == hat_file.ParameterType.RuntimeArray and hat_desc.usage == hat_file.UsageType.Output:
+            if (
+                hat_desc.logical_type == hat_file.ParameterType.RuntimeArray
+                and hat_desc.usage == hat_file.UsageType.Output
+            ):
                 # resolve shape using the output dimensions
-                shape = [d.value[0] if isinstance(d, ArgValue) else d for d in expanded_arg.dim_values]
+                shape = [
+                    d.value[0] if isinstance(d, ArgValue) else d
+                    for d in expanded_arg.dim_values
+                ]
                 # override the output array argument for the caller
                 results.append(np.ctypeslib.as_array(expanded_arg.value, shape))
 
@@ -127,17 +138,22 @@ class FunctionInfo:
 
         for i, (info, value) in enumerate(zip(self.arguments, args)):
             try:
-                if isinstance(value, np.ndarray) or isinstance(value, np.int64):
+                if isinstance(value, np.ndarray) or issubclass(type(value), np.integer):
                     value = ArgValue(info, value)
 
                 value.verify(info)
             except ValueError as v:
-                sys.exit(f"Error calling {self.name}(...): argument {i} failed verification: {v}")
+                sys.exit(
+                    f"Error calling {self.name}(...): argument {i} failed verification: {v}"
+                )
 
     def as_cargs(self, args: List[Any]):
         "Converts arguments to their C interfaces"
         arg_values = [
-            ArgValue(info, value) if isinstance(value, np.ndarray) or isinstance(value, np.int64) else value
+            ArgValue(info, value)
+            if isinstance(value, np.ndarray)
+            or issubclass(type(value), np.integer)
+            else value
             for info, value in zip(self.arguments, args)
         ]
 
