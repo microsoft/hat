@@ -95,7 +95,6 @@ class RocmCallableFunc(CallableFunc):
         self.hat_func = func
         self.func_info = FunctionInfo(func)
         self.kernel = None
-        self.launch_params = func.launch_parameters
         self.device_mem = None
         self.ptrs = None
         self.stream = None
@@ -142,8 +141,8 @@ class RocmCallableFunc(CallableFunc):
         for _ in range(warmup_iters):
             hipModuleLaunchKernel(
                 self.kernel,
-                *self.launch_params,    # [ grid[x-z], block[x-z] ]
-                0,    # dynamic shared memory
+                *self.hat_func.launch_parameters,    # [ grid[x-z], block[x-z] ]
+                self.hat_func.dynamic_shared_mem_bytes,
                 0,    # stream
                 self.data,    # data
             )
@@ -156,8 +155,8 @@ class RocmCallableFunc(CallableFunc):
             for _ in range(iters):
                 hipModuleLaunchKernel(
                     self.kernel,
-                    *self.launch_params,    # [ grid[x-z], block[x-z] ]
-                    0,    # dynamic shared memory
+                    *self.hat_func.launch_parameters,    # [ grid[x-z], block[x-z] ]
+                    self.hat_func.dynamic_shared_mem_bytes,    # dynamic shared memory
                     0,    # stream
                     self.data,    # data
                 )

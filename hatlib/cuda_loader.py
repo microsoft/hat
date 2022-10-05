@@ -185,7 +185,6 @@ class CudaCallableFunc(CallableFunc):
         self.hat_func = func
         self.func_info = FunctionInfo(func)
         self.kernel = None
-        self.launch_params = func.launch_parameters
         self.device_mem = None
         self.ptrs = None
         self.start_event = None
@@ -215,6 +214,10 @@ class CudaCallableFunc(CallableFunc):
 
         self.ptrs = device_args_to_ptr_list(self.device_mem)
 
+        if self.hat_func.dynamic_shared_mem_bytes > 0:
+            err, = cuda.cuFuncSetAttribute(self.kernel, cuda.CUfunction_attribute.CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, self.hat_func.dynamic_shared_mem_bytes)
+            ASSERT_DRV(err)
+
         err, self.start_event = cuda.cuEventCreate(cuda.CUevent_flags.CU_EVENT_DEFAULT)
         ASSERT_DRV(err)
         err, self.stop_event = cuda.cuEventCreate(cuda.CUevent_flags.CU_EVENT_DEFAULT)
@@ -223,8 +226,8 @@ class CudaCallableFunc(CallableFunc):
         for _ in range(warmup_iters):
             err, = cuda.cuLaunchKernel(
                 self.kernel,
-                *self.launch_params,    # [ grid[x-z], block[x-z] ]
-                0,    # dynamic shared memory
+                *self.hat_func.launch_parameters,    # [ grid[x-z], block[x-z] ]
+                self.hat_func.dynamic_shared_mem_bytes,
                 0,    # stream
                 self.ptrs.ctypes.data,    # kernel arguments
                 0,    # extra (ignore)
@@ -242,8 +245,8 @@ class CudaCallableFunc(CallableFunc):
             for _ in range(iters):
                 err, = cuda.cuLaunchKernel(
                     self.kernel,
-                    *self.launch_params,    # [ grid[x-z], block[x-z] ]
-                    0,    # dynamic shared memory
+                    *self.hat_func.launch_parameters,    # [ grid[x-z], block[x-z] ]
+                    self.hat_func.dynamic_shared_mem_bytes,
                     0,    # stream
                     self.ptrs.ctypes.data,    # kernel arguments
                     0,    # extra (ignore)

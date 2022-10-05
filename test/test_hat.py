@@ -6,6 +6,7 @@ from hatlib import load, create_dynamic_package
 
 
 class HAT_test(unittest.TestCase):
+
     def test_load(self):
 
         # Generate a HAT package
@@ -52,3 +53,7 @@ class HAT_test(unittest.TestCase):
 
             # check for correctness
             np.testing.assert_allclose(B, B_ref)
+
+
+if __name__ == '__main__':
+    unittest.main()

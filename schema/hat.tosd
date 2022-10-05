@@ -101,6 +101,11 @@ version = "0.0.0.3"
         type = "array"
         optional = true
 
+        # The dynamic shared memory size in bytes to be allocated for this device function
+        [types.functionType.dynamic_shared_mem_bytes]
+        type = "integer"
+        optional = true
+
         # The function that is launched by this function
         [types.functionType.launches]
         type = "string"
