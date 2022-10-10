@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import argparse
+from dataclasses import dataclass
+from typing import List
 import numpy as np
 import pandas as pd
 import sys
@@ -11,6 +13,15 @@ from .callable_func import CallableFunc
 from .hat_file import HATFile
 from .hat import load, generate_arg_sets_for_func
 
+
+@dataclass
+class Result:
+    function_name: str
+    mean: float
+    median_of_means: float
+    mean_of_small_means: float
+    robust_mean: float
+    min_of_means: float
 
 class Benchmark:
     """A basic python-based benchmark.
@@ -172,11 +183,12 @@ def run_benchmark(hat_path,
                   min_time_in_sec=10,
                   input_sets_minimum_size_MB=50,
                   gpu_id: int=0,
-                  verbose: bool=False):
+                  verbose: bool=False,
+                  functions:List[str]=None) -> List[Result]:
     results = []
 
     benchmark = Benchmark(hat_path)
-    functions = benchmark.hat_functions
+    functions = functions if functions is not None else benchmark.hat_functions
     for function_name in functions:
         if verbose:
             print(f"\nBenchmarking function: {function_name}")
@@ -207,14 +219,14 @@ def run_benchmark(hat_path,
             if store_in_hat:
                 write_runtime_to_hat_file(hat_path, function_name,
                                           mean_of_means)
-            results.append({
+            results.append(Result(**{
                 "function_name": function_name,
                 "mean": mean_of_means,
                 "median_of_means": median_of_means,
                 "mean_of_small_means": mean_of_small_means,
                 "robust_mean": robust_mean_of_means,
                 "min_of_means": min_of_means,
-            })
+            }))
         except Exception as e:
             if verbose:
                 exc_type, exc_val, exc_tb = sys.exc_info()
