@@ -24,7 +24,7 @@ For example:
     # call a package function named 'my_func_698b5e5c'
     package.my_func_698b5e5c(A, B, D, E)
 """
-from typing import Tuple, Union
+from typing import Callable, List, Tuple, Union
 from functools import reduce
 
 from . import hat_file
@@ -36,12 +36,19 @@ from .function_info import FunctionInfo
 
 PLACEHOLDER_SIZE = 128 # arbitrary, to be replaced with a better way to estimate size for runtime arrays
 
-def generate_arg_sets_for_func(func: hat_file.Function, input_sets_minimum_size_MB: int = 0, num_additional: int = 0):
+def generate_arg_sets_for_func(func: hat_file.Function, input_sets_minimum_size_MB: int = 0, num_additional: int = 0, dyn_func_shape_fn: Callable[[FunctionInfo], List[List[int]]]=None):
+    def default_dyn_func_shape_fn(func: hat_file.Function) -> List[List[int]]:
+        return [[int(d) if integer_like(d) else PLACEHOLDER_SIZE for d in p.shape] for p in func.arguments]
+
     func_info = FunctionInfo(func)
-    parameters = func_info.arguments
 
     # plug in values for non-constant dimensions in an attempt to estimate the minimum set size
-    numerical_shapes = [[int(d) if integer_like(d) else PLACEHOLDER_SIZE for d in p.shape] for p in parameters]
+    if dyn_func_shape_fn is None:
+        dyn_func_shape_fn = default_dyn_func_shape_fn
+    numerical_shapes = dyn_func_shape_fn(func_info)
+
+    parameters = func_info.arguments
+
     shapes_to_sizes = [reduce(lambda x, y: x * y, shape) for shape in numerical_shapes]
     set_size = reduce(
         lambda x, y: x + y, map(lambda size, p: size * p.element_num_bytes, shapes_to_sizes, parameters)
