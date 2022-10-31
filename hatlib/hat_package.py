@@ -48,12 +48,6 @@ class HATPackage:
 
         return list(filter(matches_target, all_functions))
 
-    def get_function(self, name: str) -> Function:
-        for f in self.get_functions():
-            if f.name == name:
-                return f
-        raise ModuleNotFoundError(f"Function {name} not found")
-
     def benchmark(
         self,
         functions: List[Function] = None,
