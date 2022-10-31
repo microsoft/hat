@@ -65,8 +65,10 @@ class BenchmarkHATPackage_test(unittest.TestCase):
             min_time_in_sec=1,
             input_sets_minimum_size_MB=1
         )
-        self.assertIn("test_function", results[0].function_name)
-        self.assertIn("test_function_dummy", results[1].function_name)
+
+        func_names = [r.function_name for r in results]
+        self.assertIn("test_function", func_names)
+        self.assertIn("test_function_dummy", func_names)
         for r in results:
             self.assertEqual(type(r.mean), np.float64)
 
