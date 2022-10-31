@@ -70,6 +70,7 @@ class BenchmarkHATPackage_test(unittest.TestCase):
         def drop_hash_suffix(name: str) -> str:
             return name[:name.rfind("_")]
 
+        # BUGBUG: shouldn't the order be based on package.add?
         func_names = [drop_hash_suffix(r.function_name) for r in results]
         self.assertIn("test_function", func_names)
         self.assertIn("test_function_dummy", func_names)
