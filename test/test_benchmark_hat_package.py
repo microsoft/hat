@@ -6,6 +6,7 @@ from hatlib import run_benchmark
 
 
 class BenchmarkHATPackage_test(unittest.TestCase):
+
     def test_benchmark(self):
         A = acc.Array(role=acc.Array.Role.INPUT, shape=(256, 256))
         B = acc.Array(role=acc.Array.Role.INPUT, shape=(256, 256))
@@ -73,7 +74,7 @@ class BenchmarkHATPackage_test(unittest.TestCase):
         self.assertIn("test_function", func_names)
         self.assertIn("test_function_dummy", func_names)
         for r in results:
-            self.assertEqual(type(r.mean), np.float64
+            self.assertEqual(type(r.mean), np.float64)
 
 
 if __name__ == '__main__':
