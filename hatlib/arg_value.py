@@ -68,18 +68,24 @@ class ArgValue:
                 )
 
             if desc.is_constant_shaped:
-                # confirm that the arg shape is correct (numpy represents shapes as tuples)
-                desc_shape = tuple(map(int, desc.shape))
-                if desc_shape != self.value.shape:
-                    raise ValueError(
-                        f"expected argument to have shape={desc_shape} but received shape={self.value.shape}"
-                    )
+                if self.value.size > 1:
+                    # confirm that the arg shape is correct (numpy represents shapes as tuples)
+                    desc_shape = tuple(map(int, desc.shape))
+                    if desc_shape != self.value.shape:
+                        raise ValueError(
+                            f"expected argument to have shape={desc_shape} but received shape={self.value.shape}"
+                        )
 
-                # confirm that the arg strides are correct (numpy represents strides as tuples)
-                desc_numpy_strides = tuple(desc.numpy_strides) if hasattr(desc, 'numpy_strides') else tuple(map(lambda x: x * desc.element_num_bytes, desc_shape[1:] + (1,))) 
-                if desc_numpy_strides != self.value.strides:
+                    # confirm that the arg strides are correct (numpy represents strides as tuples)
+                    desc_numpy_strides = tuple(desc.numpy_strides) if hasattr(desc, 'numpy_strides') else tuple(map(lambda x: x * desc.element_num_bytes, desc_shape[1:] + (1,))) 
+                    if desc_numpy_strides != self.value.strides:
+                        raise ValueError(
+                            f"expected argument to have strides={desc_numpy_strides} but received strides={self.value.strides}"
+                        )
+                elif self.value.size != desc.total_element_count:
+                    # special casing for size=1 arrays
                     raise ValueError(
-                        f"expected argument to have strides={desc_numpy_strides} but received strides={self.value.strides}"
+                        f"expected argument to have size={desc.total_element_count} but received shape={self.value.size}"
                     )
         else:
             pass    # TODO - support other pointer levels

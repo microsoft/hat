@@ -6,6 +6,7 @@ from hatlib import run_benchmark
 
 
 class BenchmarkHATPackage_test(unittest.TestCase):
+
     def test_benchmark(self):
         A = acc.Array(role=acc.Array.Role.INPUT, shape=(256, 256))
         B = acc.Array(role=acc.Array.Role.INPUT, shape=(256, 256))
@@ -65,8 +66,14 @@ class BenchmarkHATPackage_test(unittest.TestCase):
             min_time_in_sec=1,
             input_sets_minimum_size_MB=1
         )
-        self.assertIn("test_function", results[0].function_name)
-        self.assertIn("test_function_dummy", results[1].function_name)
+
+        def drop_hash_suffix(name: str) -> str:
+            return name[:name.rfind("_")]
+
+        # BUGBUG: shouldn't the order be based on package.add?
+        func_names = [drop_hash_suffix(r.function_name) for r in results]
+        self.assertIn("test_function", func_names)
+        self.assertIn("test_function_dummy", func_names)
         for r in results:
             self.assertEqual(type(r.mean), np.float64)
 
