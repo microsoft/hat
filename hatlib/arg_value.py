@@ -130,7 +130,7 @@ def get_dimension_arg_indices(array_arg: ArgInfo, all_arguments: List[ArgInfo]) 
     return indices
 
 
-def generate_arg_values(arguments: List[ArgInfo]) -> List[ArgValue]:
+def generate_arg_values(arguments: List[ArgInfo], dim_names_to_values = {}) -> List[ArgValue]:
     """Generate argument values from argument descriptions
     Input and input/output affine_arrays: initialized with random inputs
     Input and input/output runtime_arrays: initialized with arbitrary dimensions and random inputs
@@ -140,7 +140,6 @@ def generate_arg_values(arguments: List[ArgInfo]) -> List[ArgValue]:
     def generate_dim_value():
         return random.choice([2, 3, 4])    # example dimension values
 
-    dim_names_to_values = {}
     values = []
 
     for arg in arguments:
@@ -165,7 +164,8 @@ def generate_arg_values(arguments: List[ArgInfo]) -> List[ArgValue]:
                             shape.append(generate_dim_value())
                             dim_names_to_values[d] = ArgValue(dim_args[d], shape[-1])
                         else:
-                            shape.append(dim_names_to_values[d].value)
+                            v = dim_names_to_values[d].value
+                            shape.append(v if type(v) == int else v[0])
 
             # materialize an array input using the generated shape
             runtime_array_inputs = np.random.random(tuple(shape)).astype(arg.numpy_dtype)
