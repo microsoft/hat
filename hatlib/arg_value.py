@@ -82,11 +82,15 @@ class ArgValue:
                         raise ValueError(
                             f"expected argument to have strides={desc_numpy_strides} but received strides={self.value.strides}"
                         )
-                elif self.value.size != desc.total_element_count:
+                else:
+                    # Will raise ValueError if total_element_count can't be converted to int
+                    desc.total_element_count = int(desc.total_element_count)
+                    
                     # special casing for size=1 arrays
-                    raise ValueError(
-                        f"expected argument to have size={desc.total_element_count} but received shape={self.value.size}"
-                    )
+                    if self.value.size != desc.total_element_count:
+                        raise ValueError(
+                            f"expected argument to have size={desc.total_element_count} but received shape={self.value.size}"
+                        )
         else:
             pass    # TODO - support other pointer levels
 
