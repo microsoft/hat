@@ -79,8 +79,9 @@ def generate_arg_sets_for_func(
             # parameter is NOT constant shaped
             dyn_dimensions = filter(lambda idx_d: not integer_like(idx_d[1]), enumerate(p.shape))
             for dyn_dim_idx, dyn_dim in dyn_dimensions:
-                param_idx += 1
-                dim_names_to_values[dyn_dim] = ArgValue(parameters[param_idx], numerical_shape[dyn_dim_idx])
+                if dyn_dim not in dim_names_to_values:
+                    param_idx += 1
+                    dim_names_to_values[dyn_dim] = ArgValue(parameters[param_idx], numerical_shape[dyn_dim_idx])
 
             param_idx += 1
             shape_idx += 1
