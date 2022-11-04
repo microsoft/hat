@@ -105,7 +105,8 @@ class Benchmark:
 
             set_size = 0
             for i in input_sets[0]:
-                set_size += i.value.size * i.value.dtype.itemsize
+                if not i.dim_values:
+                    set_size += i.value.size * i.value.dtype.itemsize
 
             if verbose:
                 print(f"[Benchmarking] Using {len(input_sets)} input sets, each {set_size} bytes")

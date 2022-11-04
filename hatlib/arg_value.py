@@ -82,11 +82,15 @@ class ArgValue:
                         raise ValueError(
                             f"expected argument to have strides={desc_numpy_strides} but received strides={self.value.strides}"
                         )
-                elif self.value.size != desc.total_element_count:
+                else:
+                    # Will raise ValueError if total_element_count can't be converted to int
+                    desc.total_element_count = int(desc.total_element_count)
+                    
                     # special casing for size=1 arrays
-                    raise ValueError(
-                        f"expected argument to have size={desc.total_element_count} but received shape={self.value.size}"
-                    )
+                    if self.value.size != desc.total_element_count:
+                        raise ValueError(
+                            f"expected argument to have size={desc.total_element_count} but received shape={self.value.size}"
+                        )
         else:
             pass    # TODO - support other pointer levels
 
@@ -130,7 +134,7 @@ def get_dimension_arg_indices(array_arg: ArgInfo, all_arguments: List[ArgInfo]) 
     return indices
 
 
-def generate_arg_values(arguments: List[ArgInfo]) -> List[ArgValue]:
+def generate_arg_values(arguments: List[ArgInfo], dim_names_to_values = {}) -> List[ArgValue]:
     """Generate argument values from argument descriptions
     Input and input/output affine_arrays: initialized with random inputs
     Input and input/output runtime_arrays: initialized with arbitrary dimensions and random inputs
@@ -140,7 +144,6 @@ def generate_arg_values(arguments: List[ArgInfo]) -> List[ArgValue]:
     def generate_dim_value():
         return random.choice([2, 3, 4])    # example dimension values
 
-    dim_names_to_values = {}
     values = []
 
     for arg in arguments:
@@ -165,7 +168,8 @@ def generate_arg_values(arguments: List[ArgInfo]) -> List[ArgValue]:
                             shape.append(generate_dim_value())
                             dim_names_to_values[d] = ArgValue(dim_args[d], shape[-1])
                         else:
-                            shape.append(dim_names_to_values[d].value)
+                            v = dim_names_to_values[d].value
+                            shape.append(v if type(v) == int else v[0])
 
             # materialize an array input using the generated shape
             runtime_array_inputs = np.random.random(tuple(shape)).astype(arg.numpy_dtype)

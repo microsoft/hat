@@ -24,38 +24,76 @@ For example:
     # call a package function named 'my_func_698b5e5c'
     package.my_func_698b5e5c(A, B, D, E)
 """
+import numpy as np
+
 from typing import Callable, List, Tuple, Union
 from functools import reduce
 
 from . import hat_file
 from . import hat_package
-from .arg_value import generate_arg_values
+from .arg_value import generate_arg_values, ArgValue
 from .arg_info import integer_like
 from .function_info import FunctionInfo
 
+PLACEHOLDER_SIZE = 128    # arbitrary, to be replaced with a better way to estimate size for runtime arrays
 
-PLACEHOLDER_SIZE = 128 # arbitrary, to be replaced with a better way to estimate size for runtime arrays
 
-def generate_arg_sets_for_func(func: hat_file.Function, input_sets_minimum_size_MB: int = 0, num_additional: int = 0, dyn_func_shape_fn: Callable[[FunctionInfo], List[List[int]]]=None):
-    def default_dyn_func_shape_fn(func: hat_file.Function) -> List[List[int]]:
-        return [[int(d) if integer_like(d) else PLACEHOLDER_SIZE for d in p.shape] for p in func.arguments]
+def generate_arg_sets_for_func(
+    func: hat_file.Function,
+    input_sets_minimum_size_MB: int = 0,
+    num_additional: int = 0,
+    dyn_func_shape_fn: Callable[[FunctionInfo], List[List[int]]] = None
+):
+
+    def default_dyn_func_shape_fn(func_info: FunctionInfo) -> List[List[int]]:
+        return [[int(d) if integer_like(d) else PLACEHOLDER_SIZE for d in p.shape] for p in func_info.arguments
+                if p.pointer_level == 1 and p.usage != hat_file.UsageType.Output]
 
     func_info = FunctionInfo(func)
-
-    # plug in values for non-constant dimensions in an attempt to estimate the minimum set size
-    if dyn_func_shape_fn is None:
-        dyn_func_shape_fn = default_dyn_func_shape_fn
-    numerical_shapes = dyn_func_shape_fn(func_info)
-
     parameters = func_info.arguments
 
-    shapes_to_sizes = [reduce(lambda x, y: x * y, shape) for shape in numerical_shapes]
-    set_size = reduce(
-        lambda x, y: x + y, map(lambda size, p: size * p.element_num_bytes, shapes_to_sizes, parameters)
-    )
+    # plug in values for non-constant dimensions in an attempt to estimate the minimum set size
+    dim_names_to_values = {}
+    if any(map(lambda p: not p.is_constant_shaped, func_info.arguments)):
+        if dyn_func_shape_fn is None:
+            dyn_func_shape_fn = default_dyn_func_shape_fn
+        numerical_shapes = dyn_func_shape_fn(func_info)
+        # TODO: We really need to be able to distinguish between args that are dimensions vs. just scalars
+        shape_idx = 0
+        param_idx = 0
+        while param_idx < len(parameters):
+            p = parameters[param_idx]
+            if p.is_constant_shaped:
+                if p.pointer_level and p.usage != hat_file.UsageType.Output:
+                    shape_idx += 1
+
+                param_idx += 1
+                continue
+
+            if p.usage == hat_file.UsageType.Output:
+                param_idx += 1
+                continue
+
+            numerical_shape = numerical_shapes[shape_idx]
+
+            # parameter is NOT constant shaped
+            dyn_dimensions = filter(lambda idx_d: not integer_like(idx_d[1]), enumerate(p.shape))
+            for dyn_dim_idx, dyn_dim in dyn_dimensions:
+                if dyn_dim not in dim_names_to_values:
+                    param_idx += 1
+                    dim_names_to_values[dyn_dim] = ArgValue(parameters[param_idx], numerical_shape[dyn_dim_idx])
+
+            param_idx += 1
+            shape_idx += 1
+
+    else:
+        numerical_shapes = [p.shape if p.shape else [int(p.size)] for p in func.arguments]
+
+    shapes_to_sizes = [reduce(lambda x, y: x * y, shape, 1) for shape in numerical_shapes]
+    set_size = reduce(lambda x, y: x + y, map(lambda size, p: size * p.element_num_bytes, shapes_to_sizes, parameters))
     num_input_sets = (input_sets_minimum_size_MB * 1024 * 1024 // set_size) + 1 + num_additional
 
-    arg_sets = [generate_arg_values(parameters) for _ in range(num_input_sets)]
+    arg_sets = [generate_arg_values(parameters, dim_names_to_values) for _ in range(num_input_sets)]
 
     return arg_sets[0] if len(arg_sets) == 1 else arg_sets
 

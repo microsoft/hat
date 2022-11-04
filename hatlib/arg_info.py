@@ -81,7 +81,8 @@ class ArgInfo:
                 self.total_element_count = self.shape[major_dim] * self.element_strides[major_dim]
 
             else:
-                self.element_strides = self.numpy_strides = self.shape = [1]
+                self.shape = [1]
+                self.element_strides = self.numpy_strides = [self.element_num_bytes]
                 self.total_element_count = 1
             self.total_byte_size = self.element_num_bytes * self.total_element_count
 
@@ -97,7 +98,8 @@ class ArgInfo:
                 self.ctypes_type = ctypes_type
             else:
                 self.ctypes_type = ctypes.POINTER(ctypes_type)
-            self.element_strides = self.numpy_strides = self.shape = [1]
+            self.shape = [1]
+            self.element_strides = self.numpy_strides = [self.element_num_bytes]
             self.total_element_count = 1
             self.total_byte_size = self.element_num_bytes * self.total_element_count
 
