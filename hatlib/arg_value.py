@@ -171,7 +171,7 @@ def generate_arg_values(arguments: List[ArgInfo], dim_names_to_values = {}) -> L
                             dim_names_to_values[d] = ArgValue(dim_args[d], shape[-1])
                         else:
                             v = dim_names_to_values[d].value
-                            shape.append(v if isinstance(v, np.number) or type(v) == int else v[0])
+                            shape.append(v if isinstance(v, np.integer) or type(v) == int else v[0])
 
             # materialize an array input using the generated shape
             runtime_array_inputs = np.random.random(tuple(shape)).astype(arg.numpy_dtype)
