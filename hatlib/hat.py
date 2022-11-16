@@ -87,7 +87,7 @@ def generate_arg_sets_for_func(
             shape_idx += 1
 
     else:
-        numerical_shapes = [p.shape if p.shape else [int(p.size)] for p in func.arguments]
+        numerical_shapes = [p.shape if p.shape else ([int(p.size)] if p.size else [1]) for p in func.arguments]
 
     shapes_to_sizes = [reduce(lambda x, y: x * y, shape, 1) for shape in numerical_shapes]
     set_size = reduce(lambda x, y: x + y, map(lambda size, p: size * p.element_num_bytes, shapes_to_sizes, parameters))
