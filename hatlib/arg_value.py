@@ -27,11 +27,8 @@ class ArgValue:
             else:
                 # no value provided, allocate the pointer
                 self.allocate()
-        elif not isinstance(self.value, np.number) and not isinstance(self.value, np.ndarray):
-            if not self.arg_info.numpy_dtype.shape:
-                self.value = self.arg_info.numpy_dtype.type(self.value)
-            else:
-                self.value = np.array(self.value, dtype=self.arg_info.numpy_dtype)
+        elif type(self.value) in [int, float]:
+            self.value = self.arg_info.numpy_dtype.type(self.value)
         self.dim_values = None
 
     def allocate(self):
