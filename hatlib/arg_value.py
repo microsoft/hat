@@ -174,7 +174,12 @@ def generate_arg_values(arguments: List[ArgInfo], dim_names_to_values = {}) -> L
                             shape.append(v if isinstance(v, np.integer) or type(v) == int else v[0])
 
             # materialize an array input using the generated shape
-            runtime_array_inputs = np.random.random(tuple(shape)).astype(arg.numpy_dtype)
+            if issubclass(arg.numpy_dtype, np.integer):
+                min_num = np.iinfo(arg.numpy_dtype).min
+                max_num = np.iinfo(arg.numpy_dtype).max
+                runtime_array_inputs = np.random.randint(low=min_num, high=max_num, size=tuple(shape), dtype=arg.numpy_dtype)
+            else:
+                runtime_array_inputs = np.random.random(tuple(shape)).astype(arg.numpy_dtype)
             values.append(ArgValue(arg, runtime_array_inputs))
 
         elif arg.name in dim_names_to_values:
