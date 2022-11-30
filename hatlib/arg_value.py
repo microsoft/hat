@@ -206,6 +206,7 @@ def generate_arg_values(arguments: List[ArgInfo], dim_names_to_values={}) -> Lis
                 if not hasattr(arg, 'numpy_strides'):
                     arg.numpy_strides = list(map(lambda x: x * arg.element_num_bytes, arg.shape[1:] + [1]))
 
+            if arg.usage != hat_file.UsageType.Output:
                 arg_data = _gen_random_data(arg.numpy_dtype, arg.shape)
                 values.append(ArgValue(arg, arg_data))
             else:
