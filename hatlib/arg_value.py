@@ -79,7 +79,9 @@ class ArgValue:
                         )
 
                     # confirm that the arg strides are correct (numpy represents strides as tuples)
-                    desc_numpy_strides = tuple(desc.numpy_strides) if hasattr(desc, 'numpy_strides') else tuple(map(lambda x: x * desc.element_num_bytes, desc_shape[1:] + (1,))) 
+                    desc_numpy_strides = tuple(desc.numpy_strides) if hasattr(desc, 'numpy_strides') else tuple(
+                        map(lambda x: x * desc.element_num_bytes, desc_shape[1:] + (1, ))
+                    )
                     if desc_numpy_strides != self.value.strides:
                         raise ValueError(
                             f"expected argument to have strides={desc_numpy_strides} but received strides={self.value.strides}"
@@ -87,7 +89,7 @@ class ArgValue:
                 else:
                     # Will raise ValueError if total_element_count can't be converted to int
                     desc.total_element_count = int(desc.total_element_count)
-                    
+
                     # special casing for size=1 arrays
                     if self.value.size != desc.total_element_count:
                         raise ValueError(
@@ -136,7 +138,7 @@ def get_dimension_arg_indices(array_arg: ArgInfo, all_arguments: List[ArgInfo]) 
     return indices
 
 
-def generate_arg_values(arguments: List[ArgInfo], dim_names_to_values = {}) -> List[ArgValue]:
+def generate_arg_values(arguments: List[ArgInfo], dim_names_to_values={}) -> List[ArgValue]:
     """Generate argument values from argument descriptions
     Input and input/output affine_arrays: initialized with random inputs
     Input and input/output runtime_arrays: initialized with arbitrary dimensions and random inputs
@@ -153,12 +155,12 @@ def generate_arg_values(arguments: List[ArgInfo], dim_names_to_values = {}) -> L
             # input runtime arrays
             dim_args: Mapping[str, ArgInfo] = {
                 arguments[i].name: arguments[i]
-                    for i in get_dimension_arg_indices(arg, arguments)
+                for i in get_dimension_arg_indices(arg, arguments)
             }
 
             # assign shape values to the corresponding dimension arguments
             shape = []
-            if len(arg.shape) == 1 and arg.shape[0] == '': # takes cares of shapes of type ['']
+            if len(arg.shape) == 1 and arg.shape[0] == '':    # takes cares of shapes of type ['']
                 shape = [1]
             else:
                 for d in arg.shape:
@@ -174,7 +176,18 @@ def generate_arg_values(arguments: List[ArgInfo], dim_names_to_values = {}) -> L
                             shape.append(v if isinstance(v, np.integer) or type(v) == int else v[0])
 
             # materialize an array input using the generated shape
-            runtime_array_inputs = np.random.random(tuple(shape)).astype(arg.numpy_dtype)
+            numpy_dtype = np.uint16 if arg.numpy_dtype == "bfloat16" else arg.numpy_dtype
+            if (isinstance(numpy_dtype, np.dtype)
+                    and issubclass(numpy_dtype.type, np.integer)) or (isinstance(numpy_dtype, type)
+                                                                      and issubclass(numpy_dtype, np.integer)):
+                iinfo = np.iinfo(numpy_dtype)
+                min_num = iinfo.min
+                max_num = iinfo.max
+                runtime_array_inputs = np.random.randint(
+                    low=min_num, high=max_num, size=tuple(shape), dtype=numpy_dtype
+                )
+            else:
+                runtime_array_inputs = np.random.random(tuple(shape)).astype(numpy_dtype)
             values.append(ArgValue(arg, runtime_array_inputs))
 
         elif arg.name in dim_names_to_values:
