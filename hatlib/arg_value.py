@@ -138,6 +138,21 @@ def get_dimension_arg_indices(array_arg: ArgInfo, all_arguments: List[ArgInfo]) 
     return indices
 
 
+def _gen_random_data(dtype, shape):
+    dtype = np.uint16 if dtype == "bfloat16" else dtype
+    if isinstance(dtype, np.dtype):
+        dtype = dtype.type
+    if isinstance(dtype, type) and issubclass(dtype, np.integer):
+        iinfo = np.iinfo(dtype)
+        min_num = iinfo.min
+        max_num = iinfo.max
+        data = np.random.randint(low=min_num, high=max_num, size=tuple(shape), dtype=dtype)
+    else:
+        data = np.random.random(tuple(shape)).astype(dtype)
+
+    return data
+
+
 def generate_arg_values(arguments: List[ArgInfo], dim_names_to_values={}) -> List[ArgValue]:
     """Generate argument values from argument descriptions
     Input and input/output affine_arrays: initialized with random inputs
@@ -176,18 +191,7 @@ def generate_arg_values(arguments: List[ArgInfo], dim_names_to_values={}) -> Lis
                             shape.append(v if isinstance(v, np.integer) or type(v) == int else v[0])
 
             # materialize an array input using the generated shape
-            numpy_dtype = np.uint16 if arg.numpy_dtype == "bfloat16" else arg.numpy_dtype
-            if (isinstance(numpy_dtype, np.dtype)
-                    and issubclass(numpy_dtype.type, np.integer)) or (isinstance(numpy_dtype, type)
-                                                                      and issubclass(numpy_dtype, np.integer)):
-                iinfo = np.iinfo(numpy_dtype)
-                min_num = iinfo.min
-                max_num = iinfo.max
-                runtime_array_inputs = np.random.randint(
-                    low=min_num, high=max_num, size=tuple(shape), dtype=numpy_dtype
-                )
-            else:
-                runtime_array_inputs = np.random.random(tuple(shape)).astype(numpy_dtype)
+            runtime_array_inputs = _gen_random_data(arg.numpy_dtype, shape)
             values.append(ArgValue(arg, runtime_array_inputs))
 
         elif arg.name in dim_names_to_values:
@@ -202,7 +206,11 @@ def generate_arg_values(arguments: List[ArgInfo], dim_names_to_values={}) -> Lis
                 if not hasattr(arg, 'numpy_strides'):
                     arg.numpy_strides = list(map(lambda x: x * arg.element_num_bytes, arg.shape[1:] + [1]))
 
-            values.append(ArgValue(arg))
+            if arg.usage != hat_file.UsageType.Output:
+                arg_data = _gen_random_data(arg.numpy_dtype, arg.shape)
+                values.append(ArgValue(arg, arg_data))
+            else:
+                values.append(ArgValue(arg))
 
     # collect the dimension ArgValues for each output runtime_array ArgValue
     for value in values:
