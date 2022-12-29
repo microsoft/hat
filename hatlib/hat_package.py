@@ -3,6 +3,7 @@
 import ctypes
 from collections import OrderedDict
 import os
+from typing import List
 
 from .hat_file import HATFile, Function
 from .function_info import FunctionInfo
@@ -27,10 +28,13 @@ class HATPackage:
 
         self.functions = self.hat_file.functions
 
-    def get_functions(self):
+    def __iter__(self):
+        return iter(self.hat_file.functions)
+
+    def get_functions(self) -> List[Function]:
         return self.hat_file.functions
 
-    def get_functions_for_target(self, os: str, arch: str, required_extensions: list = []):
+    def get_functions_for_target(self, os: str, arch: str, required_extensions: list = []) -> List[Function]:
         all_functions = self.get_functions()
 
         def matches_target(hat_function):
@@ -43,6 +47,33 @@ class HATPackage:
             return True
 
         return list(filter(matches_target, all_functions))
+
+    def benchmark(
+        self,
+        functions: List[Function] = None,
+        store_in_hat=False,
+        batch_size=10,
+        min_time_in_sec=10,
+        input_sets_minimum_size_MB=50,
+        gpu_id: int = 0,
+        verbose: bool = False
+    ) -> List["hatlib.Result"]:
+        "Benchmarks the selected functions in the HAT package. If none are selected, all functions in the package are benchmarked."
+
+        functions = functions if functions is not None else self.functions
+
+        from benchmark_hat_package import run_benchmark
+
+        return run_benchmark(
+            self.hat_file_path,
+            store_in_hat=store_in_hat,
+            batch_size=batch_size,
+            min_time_in_sec=min_time_in_sec,
+            input_sets_minimum_size_MB=input_sets_minimum_size_MB,
+            gpu_id=gpu_id,
+            verbose=verbose,
+            functions=[f.name for f in functions]
+        )
 
 
 class AttributeDict(OrderedDict):

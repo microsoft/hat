@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import argparse
+from dataclasses import dataclass
+from typing import Callable, List
 import numpy as np
 import pandas as pd
 import sys
@@ -8,9 +10,19 @@ import time
 import traceback
 
 from .callable_func import CallableFunc
-from .hat_file import HATFile
+from .hat_file import Function, HATFile
+from .function_info import FunctionInfo
 from .hat import load, generate_arg_sets_for_func
 
+
+@dataclass
+class Result:
+    function_name: str
+    mean: float
+    median_of_means: float
+    mean_of_small_means: float
+    robust_mean: float
+    min_of_means: float
 
 class Benchmark:
     """A basic python-based benchmark.
@@ -35,7 +47,9 @@ class Benchmark:
             min_time_in_sec: int = 10,
             input_sets_minimum_size_MB=50,
             gpu_id: int=0,
-            verbose: bool=False) -> float:
+            verbose: bool=False,
+            dyn_func_shape_fn: Callable[[FunctionInfo], List[List[int]]]=None,
+            input_data_process_fn: Callable[[List], List]=None) -> float:
         """Runs benchmarking for a function.
            Multiple inputs are run through the function until both minimum time and minimum iterations have been reached.
            The mean duration is then calculated as mean_duration = total_time_elapsed / total_iterations_performed.
@@ -46,6 +60,7 @@ class Benchmark:
             min_time_in_sec: minimum amount of time to run the benchmark
             input_sets_minimum_size_MB: generate enough input sets to exceed this size to avoid cache hits
             gpu_id: the ID of the gpu device on which to run the benchmark
+            dyn_func_shape_fn: A callback function that's called for a function with dynamic arguments and returns the shape of arguments
         Returns:
             Mean duration in seconds,
             Vector of timings in seconds for each batch that was run
@@ -57,7 +72,7 @@ class Benchmark:
 
         mean_elapsed_time, batch_timings = self._profile(
             function_name, warmup_iterations, min_timing_iterations, batch_size,
-            min_time_in_sec, input_sets_minimum_size_MB, gpu_id, verbose)
+            min_time_in_sec, input_sets_minimum_size_MB, gpu_id, verbose, dyn_func_shape_fn, input_data_process_fn)
 
         if verbose:
             print(f"[Benchmarking] Mean duration per iteration: {mean_elapsed_time:.8f}s")
@@ -65,7 +80,7 @@ class Benchmark:
         return mean_elapsed_time, batch_timings
 
     def _profile(self, function_name, warmup_iterations, min_timing_iterations, batch_size,
-                 min_time_in_sec, input_sets_minimum_size_MB, gpu_id: int, verbose: bool):
+                 min_time_in_sec, input_sets_minimum_size_MB, gpu_id: int, verbose: bool, dyn_func_shape_fn: Callable[[FunctionInfo], List[List[int]]]=None, input_data_process_fn: Callable[[List], List]=None):
         def get_perf_counter():
             if hasattr(time, 'perf_counter_ns'):
                 _perf_counter = time.perf_counter_ns
@@ -86,11 +101,16 @@ class Benchmark:
             # we'll make a guess based on the minimum input set size
             input_sets = generate_arg_sets_for_func(func,
                                                     input_sets_minimum_size_MB,
-                                                    num_additional=10)
+                                                    num_additional=10,
+                                                    dyn_func_shape_fn=dyn_func_shape_fn)
+
+            if input_data_process_fn:
+                input_sets = input_data_process_fn(input_sets)
 
             set_size = 0
             for i in input_sets[0]:
-                set_size += i.value.size * i.value.dtype.itemsize
+                if not i.dim_values:
+                    set_size += i.value.size * i.value.dtype.itemsize
 
             if verbose:
                 print(f"[Benchmarking] Using {len(input_sets)} input sets, each {set_size} bytes")
@@ -129,7 +149,10 @@ class Benchmark:
         else:
             if verbose:
                 print(f"[Benchmarking] Benchmarking device function on gpu {gpu_id}. {batch_size} batches of warming up for {warmup_iterations} and then measuring with {min_timing_iterations} iterations.")
-            input_sets = generate_arg_sets_for_func(func)
+            input_sets = generate_arg_sets_for_func(func, dyn_func_shape_fn=dyn_func_shape_fn)
+
+            if input_data_process_fn:
+                input_sets = input_data_process_fn(input_sets)
 
             set_size = 0
             for i in input_sets:
@@ -172,11 +195,12 @@ def run_benchmark(hat_path,
                   min_time_in_sec=10,
                   input_sets_minimum_size_MB=50,
                   gpu_id: int=0,
-                  verbose: bool=False):
+                  verbose: bool=False,
+                  functions:List[str]=None) -> List[Result]:
     results = []
 
     benchmark = Benchmark(hat_path)
-    functions = benchmark.hat_functions
+    functions = functions if functions is not None else benchmark.hat_functions
     for function_name in functions:
         if verbose:
             print(f"\nBenchmarking function: {function_name}")
@@ -207,14 +231,14 @@ def run_benchmark(hat_path,
             if store_in_hat:
                 write_runtime_to_hat_file(hat_path, function_name,
                                           mean_of_means)
-            results.append({
+            results.append(Result(**{
                 "function_name": function_name,
                 "mean": mean_of_means,
                 "median_of_means": median_of_means,
                 "mean_of_small_means": mean_of_small_means,
                 "robust_mean": robust_mean_of_means,
                 "min_of_means": min_of_means,
-            })
+            }))
         except Exception as e:
             if verbose:
                 exc_type, exc_val, exc_tb = sys.exc_info()

@@ -93,7 +93,7 @@ class FunctionInfo:
                         if expanded_args[i_dim] is None:  # arg not yet initialized
                             expanded_args[i_dim] = ArgValue(dim_arg_info, dim_val)
             elif hat_desc.logical_type == hat_file.ParameterType.AffineArray:
-                expanded_args[i] = array
+                expanded_args[i] = args[i_value]
                 i_value = i_value + 1
             # else hat_file.ParameterType.Element handled above
 
