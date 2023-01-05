@@ -138,7 +138,7 @@ class FunctionInfo:
 
         for i, (info, value) in enumerate(zip(self.arguments, args)):
             try:
-                if isinstance(value, np.ndarray) or issubclass(type(value), np.integer):
+                if isinstance(value, np.ndarray) or issubclass(type(value), np.integer) or issubclass(type(value), np.floating):
                     value = ArgValue(info, value)
 
                 value.verify(info)
@@ -153,6 +153,7 @@ class FunctionInfo:
             ArgValue(info, value)
             if isinstance(value, np.ndarray)
             or issubclass(type(value), np.integer)
+            or issubclass(type(value), np.floating)
             else value
             for info, value in zip(self.arguments, args)
         ]
