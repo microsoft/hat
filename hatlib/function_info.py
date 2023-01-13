@@ -81,6 +81,16 @@ class FunctionInfo:
                     dim_hat_desc = self.desc.arguments[i_dim]
                     assert dim_hat_desc.logical_type == hat_file.ParameterType.Element
 
+                    # The two-pass alloc calling pattern:
+                    # 1. call the function with NULL array pointers to compute the shape of the runtime array
+                    # 2. allocate the runtime array with the computed shape
+                    # 3. call the function again with the allocated runtime array
+                    # The runtime array is therefore Input_Output, with Output dimensions
+                    # TODO: currently only supports calling the function with known array sizes
+                    # Add support for calling the function with NULL array pointers
+                    two_pass_alloc = hat_desc.usage == hat_file.UsageType.InputOutput \
+                        and dim_hat_desc.usage == hat_file.UsageType.Output
+
                     if hat_desc.usage == hat_file.UsageType.Output:
                         assert dim_hat_desc.usage == hat_file.UsageType.Output
                         if expanded_args[i_dim] is None:  # arg not yet initialized
@@ -89,7 +99,7 @@ class FunctionInfo:
                         # after the function is called
                         expanded_args[i].dim_values.append(expanded_args[i_dim])
                     else:
-                        assert dim_hat_desc.usage == hat_file.UsageType.Input
+                        assert two_pass_alloc or dim_hat_desc.usage == hat_file.UsageType.Input
                         if expanded_args[i_dim] is None:  # arg not yet initialized
                             expanded_args[i_dim] = ArgValue(dim_arg_info, dim_val)
             elif hat_desc.logical_type == hat_file.ParameterType.AffineArray:
