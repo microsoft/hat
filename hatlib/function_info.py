@@ -61,6 +61,9 @@ class FunctionInfo:
                         i_value = i_value + 1
                 else:
                     array = args[i_value]
+                    if hat_desc.usage == hat_file.UsageType.InputOutput:
+                        assert array is not None and "two-pass-alloc NULL arrays are not yet supported"
+
                     expanded_args[i] = array
                     array_shape = array.shape
                     i_value = i_value + 1
@@ -82,12 +85,10 @@ class FunctionInfo:
                     assert dim_hat_desc.logical_type == hat_file.ParameterType.Element
 
                     # The two-pass alloc calling pattern:
-                    # 1. call the function with NULL array pointers to compute the shape of the runtime array
+                    # 1. call the function with NULL arrays to compute the shape of the runtime array
                     # 2. allocate the runtime array with the computed shape
                     # 3. call the function again with the allocated runtime array
                     # The runtime array is therefore Input_Output, with Output dimensions
-                    # TODO: currently only supports calling the function with known array sizes
-                    # Add support for calling the function with NULL array pointers
                     two_pass_alloc = hat_desc.usage == hat_file.UsageType.InputOutput \
                         and dim_hat_desc.usage == hat_file.UsageType.Output
 
