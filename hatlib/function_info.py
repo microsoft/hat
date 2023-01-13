@@ -85,9 +85,9 @@ class FunctionInfo:
                     assert dim_hat_desc.logical_type == hat_file.ParameterType.Element
 
                     # The two-pass alloc calling pattern:
-                    # 1. call the function with NULL arrays to compute the shape of the runtime array
+                    # 1. call the function with NULL arrays (i.e. 1st pass) to compute the shape of the runtime array
                     # 2. allocate the runtime array with the computed shape
-                    # 3. call the function again with the allocated runtime array
+                    # 3. call the function again (i.e. 2nd pass) with the allocated runtime array
                     # The runtime array is therefore Input_Output, with Output dimensions
                     two_pass_alloc = hat_desc.usage == hat_file.UsageType.InputOutput \
                         and dim_hat_desc.usage == hat_file.UsageType.Output
@@ -99,8 +99,11 @@ class FunctionInfo:
                         # add a cross reference so that we can resolve shapes for the output array
                         # after the function is called
                         expanded_args[i].dim_values.append(expanded_args[i_dim])
+                    elif two_pass_alloc:
+                        if expanded_args[i_dim] is None:  # arg not yet initialized
+                            expanded_args[i_dim] = ArgValue(dim_arg_info)
+                        # a cross reference is not needed because we know the shapes in the 2nd pass
                     else:
-                        assert two_pass_alloc or dim_hat_desc.usage == hat_file.UsageType.Input
                         if expanded_args[i_dim] is None:  # arg not yet initialized
                             expanded_args[i_dim] = ArgValue(dim_arg_info, dim_val)
             elif hat_desc.logical_type == hat_file.ParameterType.AffineArray:
