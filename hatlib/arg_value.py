@@ -78,10 +78,17 @@ class ArgValue:
                             f"expected argument to have shape={desc_shape} but received shape={self.value.shape}"
                         )
 
-                    # confirm that the arg strides are correct (numpy represents strides as tuples)
+                    # desc.numpy_strides may not be specified for runtime arrays
+                    # compute the stride elements per axis, so that we can determine the stride sizes
+                    # for example, if shape = (3, 10, 5) and element_num_bytes = 4
+                    #   then stride_elements = (10, 5, 4)
+                    #   and therefore strides = (10*5*4, 5*4, 4)
+                    stride_elements = list(desc_shape[1:]) + [desc.element_num_bytes]
+
                     desc_numpy_strides = tuple(desc.numpy_strides) if hasattr(desc, 'numpy_strides') else tuple(
-                        map(lambda x: x * desc.element_num_bytes, desc_shape[1:] + (1, ))
+                        map(lambda x: np.prod(stride_elements[x:]), np.arange(len(stride_elements)))
                     )
+                    # confirm that the arg strides are correct (numpy represents strides as tuples)
                     if desc_numpy_strides != self.value.strides:
                         raise ValueError(
                             f"expected argument to have strides={desc_numpy_strides} but received strides={self.value.strides}"

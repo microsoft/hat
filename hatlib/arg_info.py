@@ -8,6 +8,7 @@ from . import hat_file
 
 # element_type : [ ctype, dtype_str ]
 ARG_TYPES = {
+    "bool": [ctypes.c_bool, "bool"],
     "int8_t": [ctypes.c_int8, "int8"],
     "int16_t": [ctypes.c_int16, "int16"],
     "int32_t": [ctypes.c_int32, "int32"],
