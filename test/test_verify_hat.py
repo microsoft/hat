@@ -184,10 +184,10 @@ DLL_EXPORT void Range(const int32_t start[1], const int32_t limit[1], const int3
     int32_t delta0;
     if (limit[0] < start[0]) {
         delta0 = delta[0] <= 0 ? delta[0] : -delta[0];
-        delta0 = delta0 == 0 ? -1 : delta[0];
+        delta0 = delta0 == 0 ? -1 : delta0;
     } else {
         delta0 = delta[0] >= 0 ? delta[0] : -delta[0];
-        delta0 = delta0 == 0 ? 1 : delta[0];
+        delta0 = delta0 == 0 ? 1 : delta0;
     }
     int32_t start0 = start[0];
     int32_t limit0 = limit[0];
