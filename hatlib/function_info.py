@@ -62,7 +62,11 @@ class FunctionInfo:
                 else:
                     array = args[i_value]
                     if hat_desc.usage == hat_file.UsageType.InputOutput:
-                        assert array is not None and "two-pass-alloc NULL arrays are not yet supported"
+                        # TODO: support the first pass of the two-pass-alloc pattern where the caller
+                        # passes NULL for the dynamic InputOutput arrays to determine the shapes
+                        # to allocate. Currently we assume that the caller knows the shape through
+                        # some out-of-band means (such as model shape inference)
+                        assert array is not None, "two-pass-alloc NULL arrays are not yet supported"
 
                     expanded_args[i] = array
                     array_shape = array.shape
