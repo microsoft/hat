@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import copy
 import hatlib as hat
 import numpy as np
 import os
@@ -531,7 +532,8 @@ void Add_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, float*
         C_ref = A + B
 
         C = func_map.Add_partial_dynamic(A, B)
-        np.testing.assert_allclose(C, C_ref)
+        C_copy = copy.deepcopy(C)
+        np.testing.assert_allclose(C_copy, C_ref)
 
     def test_partial_dynamic_runtime_arrays_multi_output(self):
         impl_code = '''#include <stdint.h>
@@ -668,8 +670,10 @@ void Add_Sub_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, fl
         D_ref = A - B
 
         C, D = func_map.Add_Sub_partial_dynamic(A, B)
-        np.testing.assert_allclose(C, C_ref)
-        np.testing.assert_allclose(D, D_ref)
+        C_copy = copy.deepcopy(C)
+        D_copy = copy.deepcopy(D)
+        np.testing.assert_allclose(C_copy, C_ref)
+        np.testing.assert_allclose(D_copy, D_ref)
 
 
 if __name__ == '__main__':
