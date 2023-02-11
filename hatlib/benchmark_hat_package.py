@@ -31,9 +31,9 @@ class Benchmark:
     Requirements:
         A compilation toolchain in your PATH: cl.exe & link.exe (Windows), gcc (Linux), or clang (macOS)
     """
-    def __init__(self, hat_path: str):
+    def __init__(self, hat_path: str, native_profiling: bool):
         self.hat_path = hat_path
-        self.hat_package, self.func_dict = load(self.hat_path)
+        self.hat_package, self.func_dict = load(self.hat_path, enable_native_profiling=native_profiling)
         self.hat_functions = self.func_dict.names
 
         # create dictionary of function descriptions defined in the hat file
@@ -46,7 +46,7 @@ class Benchmark:
             batch_size: int = 10,
             min_time_in_sec: int = 10,
             input_sets_minimum_size_MB=50,
-            gpu_id: int=0,
+            device_id: int=0,
             verbose: bool=False,
             dyn_func_shape_fn: Callable[[FunctionInfo], List[List[int]]]=None,
             input_data_process_fn: Callable[[List], List]=None) -> float:
@@ -59,7 +59,7 @@ class Benchmark:
             min_timing_iterations: minimum number of timing iterations
             min_time_in_sec: minimum amount of time to run the benchmark
             input_sets_minimum_size_MB: generate enough input sets to exceed this size to avoid cache hits
-            gpu_id: the ID of the gpu device on which to run the benchmark
+            device_id: the ID of the device on which to run the benchmark
             dyn_func_shape_fn: A callback function that's called for a function with dynamic arguments and returns the shape of arguments
         Returns:
             Mean duration in seconds,
@@ -72,7 +72,7 @@ class Benchmark:
 
         mean_elapsed_time, batch_timings = self._profile(
             function_name, warmup_iterations, min_timing_iterations, batch_size,
-            min_time_in_sec, input_sets_minimum_size_MB, gpu_id, verbose, dyn_func_shape_fn, input_data_process_fn)
+            min_time_in_sec, input_sets_minimum_size_MB, device_id, verbose, dyn_func_shape_fn, input_data_process_fn)
 
         if verbose:
             print(f"[Benchmarking] Mean duration per iteration: {mean_elapsed_time:.8f}s")
@@ -80,7 +80,7 @@ class Benchmark:
         return mean_elapsed_time, batch_timings
 
     def _profile(self, function_name, warmup_iterations, min_timing_iterations, batch_size,
-                 min_time_in_sec, input_sets_minimum_size_MB, gpu_id: int, verbose: bool, dyn_func_shape_fn: Callable[[FunctionInfo], List[List[int]]]=None, input_data_process_fn: Callable[[List], List]=None):
+                 min_time_in_sec, input_sets_minimum_size_MB, device_id: int, verbose: bool, dyn_func_shape_fn: Callable[[FunctionInfo], List[List[int]]]=None, input_data_process_fn: Callable[[List], List]=None):
         def get_perf_counter():
             if hasattr(time, 'perf_counter_ns'):
                 _perf_counter = time.perf_counter_ns
@@ -121,7 +121,7 @@ class Benchmark:
 
             for _ in range(warmup_iterations):
                 for calling_args in input_sets:
-                    self.func_dict[function_name](*calling_args)
+                    benchmark_func(*calling_args)
 
             if verbose:
                 print(f"[Benchmarking] Timing for at least {min_time_in_sec}s and at least {min_timing_iterations} iterations...")
@@ -136,7 +136,7 @@ class Benchmark:
             while ((end_time_secs - start_time_secs)) < min_time_in_sec and len(batch_timings) < batch_size:
                 batch_start_time_secs = perf_counter()
                 for _ in range(min_timing_iterations):
-                    self.func_dict[function_name](*input_sets[i])
+                    benchmark_func(*input_sets[i])
                     i = iterations % i_max
                     iterations += 1
                 end_time_secs = perf_counter()
@@ -148,7 +148,7 @@ class Benchmark:
             return mean_elapsed_time_secs, batch_timings
         else:
             if verbose:
-                print(f"[Benchmarking] Benchmarking device function on gpu {gpu_id}. {batch_size} batches of warming up for {warmup_iterations} and then measuring with {min_timing_iterations} iterations.")
+                print(f"[Benchmarking] Benchmarking device function on device {device_id}. {batch_size} batches of warming up for {warmup_iterations} and then measuring with {min_timing_iterations} iterations.")
             input_sets = generate_arg_sets_for_func(func, dyn_func_shape_fn=dyn_func_shape_fn)
 
             if input_data_process_fn:
@@ -161,9 +161,9 @@ class Benchmark:
             if verbose:
                 print(f"[Benchmarking] Using input of {set_size} bytes")
 
-            batch_timings_ms = benchmark_func.benchmark(warmup_iters=warmup_iterations, iters=min_timing_iterations, batch_size=batch_size, args=input_sets, gpu_id=gpu_id)
+            batch_timings_ms = benchmark_func.benchmark(warmup_iters=warmup_iterations, iters=min_timing_iterations, batch_size=batch_size, min_time_in_sec=min_time_in_sec, args=input_sets, device_id=device_id)
             batch_timings_secs = list(map(lambda t: t / 1000, batch_timings_ms))
-            mean_timings = sum(batch_timings_secs) / (min_timing_iterations * batch_size)
+            mean_timings = sum(batch_timings_secs) / (min_timing_iterations * len(batch_timings_secs))
             return mean_timings, batch_timings_secs
 
 
@@ -194,12 +194,13 @@ def run_benchmark(hat_path,
                   batch_size=10,
                   min_time_in_sec=10,
                   input_sets_minimum_size_MB=50,
-                  gpu_id: int=0,
+                  device_id: int=0,
                   verbose: bool=False,
+                  native_profiling: bool=False,
                   functions:List[str]=None) -> List[Result]:
     results = []
 
-    benchmark = Benchmark(hat_path)
+    benchmark = Benchmark(hat_path, native_profiling)
     functions = functions if functions is not None else benchmark.hat_functions
     for function_name in functions:
         if verbose:
@@ -215,11 +216,11 @@ def run_benchmark(hat_path,
                 batch_size=batch_size,
                 min_time_in_sec=min_time_in_sec,
                 input_sets_minimum_size_MB=input_sets_minimum_size_MB,
-                gpu_id=gpu_id,
+                device_id=device_id,
                 verbose=verbose)
 
-            sorted_batch_means = np.array(sorted(batch_timings)) / batch_size
             num_batches = len(batch_timings)
+            sorted_batch_means = np.array(sorted(batch_timings)) / num_batches
 
             mean_of_means = sorted_batch_means.mean()
             median_of_means = sorted_batch_means[num_batches // 2]
@@ -289,6 +290,14 @@ def main(argv):
         "--verbose",
         help="Enable verbose logging",
         default=False)
+    arg_parser.add_argument(
+        "--cpp",
+        help="If set, timings with be measured in native code instead of in python",
+        action='store_true')
+    arg_parser.add_argument(
+        "--functions",
+        type=str, nargs="+",
+        help="Functions to benchmark")
 
     args = vars(arg_parser.parse_args(argv))
 
@@ -297,7 +306,9 @@ def main(argv):
                             batch_size=int(args["batch_size"]),
                             min_time_in_sec=int(args["min_time_in_sec"]),
                             input_sets_minimum_size_MB=int(args["input_sets_minimum_size_MB"]),
-                            verbose=bool(args["verbose"]))
+                            verbose=bool(args["verbose"]),
+                            native_profiling=args["cpp"],
+                            functions=args["functions"])
     df = pd.DataFrame(results)
     df.to_csv(args["results_file"], index=False)
     pd.options.display.float_format = '{:8.8f}'.format

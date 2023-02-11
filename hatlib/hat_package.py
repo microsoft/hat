@@ -61,7 +61,7 @@ class HATPackage:
         batch_size=10,
         min_time_in_sec=10,
         input_sets_minimum_size_MB=50,
-        gpu_id: int = 0,
+        device_id: int = 0,
         verbose: bool = False
     ) -> List["hatlib.Result"]:
         "Benchmarks the selected functions in the HAT package. If none are selected, all functions in the package are benchmarked."
@@ -76,7 +76,7 @@ class HATPackage:
             batch_size=batch_size,
             min_time_in_sec=min_time_in_sec,
             input_sets_minimum_size_MB=input_sets_minimum_size_MB,
-            gpu_id=gpu_id,
+            device_id=device_id,
             verbose=verbose,
             functions=[f.name for f in functions]
         )
@@ -120,38 +120,35 @@ def _make_cpu_func(shared_lib: ctypes.CDLL, func: Function):
     return f
 
 
-def _make_device_func(func_runtime: str, hat_dir_path: str, func: Function):
+def _make_callable_func(func_runtime: str, hat_dir_path: str, func: Function):
     if func_runtime == "CUDA":
         from . import cuda_loader
         return cuda_loader.create_loader_for_device_function(func, hat_dir_path)
     elif func_runtime == "ROCM":
         from . import rocm_loader
         return rocm_loader.create_loader_for_device_function(func, hat_dir_path)
+    else:
+        from . import host_loader
+        return host_loader.create_loader_for_host_function(func, hat_dir_path)
 
 
 def _load_pkg_binary_module(hat_pkg: HATPackage):
     shared_lib = None
     if os.path.isfile(hat_pkg.link_target_path):
-
         supported_extensions = [".dll", ".so", ".dylib"]
         _, extension = os.path.splitext(hat_pkg.link_target_path)
 
-        if extension and extension not in supported_extensions:
-            # TODO: Should this be an error? Maybe just move on to the
-            # device function section?
-            raise RuntimeError(f"Unsupported HAT library extension: {extension}")
+        if extension and extension in supported_extensions:
+            hat_binary_path = os.path.abspath(hat_pkg.link_target_path)
 
-        hat_binary_path = os.path.abspath(hat_pkg.link_target_path)
-
-        # load the hat_library:
-        hat_library = ctypes.cdll.LoadLibrary(hat_binary_path) if extension else None
-        shared_lib = hat_library
+            # load the hat_library:
+            hat_library = ctypes.cdll.LoadLibrary(hat_binary_path) if extension else None
+            shared_lib = hat_library
 
     return shared_lib
 
 
-def hat_package_to_func_dict(hat_pkg: HATPackage) -> AttributeDict:
-
+def hat_package_to_func_dict(hat_pkg: HATPackage, enable_native_profiling: bool) -> AttributeDict:
     try:
         try:
             from . import cuda_loader
@@ -181,40 +178,39 @@ def hat_package_to_func_dict(hat_pkg: HATPackage) -> AttributeDict:
     hat_dir_path, _ = os.path.split(hat_pkg.hat_file_path)
 
     for func_name, func_desc in hat_pkg.hat_file.function_map.items():
-
         launches = func_desc.launches
-        if not launches and shared_lib:
-
+        if not enable_native_profiling and not launches and shared_lib:
             func_dict[func_name] = _make_cpu_func(shared_lib, func_desc)
         else:
             device_func = hat_pkg.hat_file.device_function_map.get(launches)
-
             func_runtime = func_desc.runtime
-            if not device_func:
-                raise RuntimeError(f"Couldn't find device function for loader: " + launches)
-            if not func_runtime:
-                raise RuntimeError(f"Couldn't find runtime for loader: " + launches)
 
-            # TODO: Generalize this concept to work so it's not CUDA/ROCM specific
-            if func_runtime == "CUDA" and not CUDA_AVAILABLE:
+            if device_func:
+                if not func_runtime:
+                    raise RuntimeError(f"Couldn't find runtime for loader: " + launches)
 
-                # TODO: printing to stdout only makes sense in tool mode
-                if NOTIFY_ABOUT_CUDA:
-                    print("CUDA functionality not available on this machine. Please install the cuda python modules")
-                    NOTIFY_ABOUT_CUDA = False
+                # TODO: Generalize this concept to work so it's not CUDA/ROCM specific
+                if func_runtime == "CUDA" and not CUDA_AVAILABLE:
 
-                continue
+                    # TODO: printing to stdout only makes sense in tool mode
+                    if NOTIFY_ABOUT_CUDA:
+                        print("CUDA functionality not available on this machine. Please install the cuda python modules")
+                        NOTIFY_ABOUT_CUDA = False
 
-            elif func_runtime == "ROCM" and not ROCM_AVAILABLE:
+                    continue
 
-                # TODO: printing to stdout only makes sense in tool mode
-                if NOTIFY_ABOUT_ROCM:
-                    print("ROCm functionality not available on this machine. Please install ROCm 4.2 or higher")
-                    NOTIFY_ABOUT_ROCM = False
+                elif func_runtime == "ROCM" and not ROCM_AVAILABLE:
 
-                continue
+                    # TODO: printing to stdout only makes sense in tool mode
+                    if NOTIFY_ABOUT_ROCM:
+                        print("ROCm functionality not available on this machine. Please install ROCm 4.2 or higher")
+                        NOTIFY_ABOUT_ROCM = False
 
-            func_dict[func_name] = _make_device_func(
+                    continue
+            else:
+                device_func = hat_pkg.hat_file.function_map.get(func_name)
+
+            func_dict[func_name] = _make_callable_func(
                 func_runtime=func_runtime, hat_dir_path=hat_dir_path, func=device_func
             )
 

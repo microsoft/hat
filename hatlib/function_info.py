@@ -177,3 +177,9 @@ class FunctionInfo:
         ]
 
         return [value.as_carg() for value in arg_values]
+
+    def as_arg_type_decl(self):
+        return ", ".join([f"{arg.hat_declared_type} arg_{i}" for i, arg in enumerate(self.arguments)])
+
+    def as_arg_names(self):
+        return ", ".join([f"arg_{i}" for i in range(len(self.arguments))])
