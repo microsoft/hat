@@ -95,7 +95,7 @@ class ArgInfo:
             self.shape = re.split(r"\s?\*\s?", param_description.size)
 
         elif param_description.logical_type == hat_file.ParameterType.Element:
-            if param_description.usage == hat_file.UsageType.Input or (element_type == 'int64_t' and param_description.usage == hat_file.UsageType.InputOutput):
+            if param_description.usage == hat_file.UsageType.Input:
                 self.ctypes_type = ctypes_type
             else:
                 self.ctypes_type = ctypes.POINTER(ctypes_type)

@@ -147,7 +147,7 @@ def generate_and_run_cmake_file(
     profile=False
 ) -> Mapping[BUILD_TARGET, str]:
 
-    template_cmake_filename = os.path.join(src_dir, 'CMakeLists.txt.e2e.in')
+    template_cmake_filename = os.path.join(src_dir, 'CMakeLists.txt.in')
     generated_cmake_filename = 'CMakeLists.txt'
 
     # Verify that the template cmake file exists
