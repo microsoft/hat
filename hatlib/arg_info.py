@@ -48,7 +48,6 @@ class ArgInfo:
     ctypes_type: Any
     pointer_level: int
     usage: hat_file.UsageType = None
-    logical_type: hat_file.ParameterType = None
 
     def _get_pointer_level(self):
         pos = self.hat_declared_type.find("*")
@@ -61,7 +60,6 @@ class ArgInfo:
         self.hat_declared_type = param_description.declared_type
         self.shape = tuple(param_description.shape)
         self.usage = param_description.usage
-        self.logical_type = param_description.logical_type
         self.pointer_level = self._get_pointer_level()
         element_type = self.hat_declared_type[:(-1 * self.pointer_level)] \
             if self.pointer_level else self.hat_declared_type
