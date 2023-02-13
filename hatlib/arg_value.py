@@ -201,7 +201,7 @@ def generate_arg_values(arguments: List[ArgInfo], dim_names_to_values={}) -> Lis
             runtime_array_inputs = _gen_random_data(arg.numpy_dtype, shape)
             values.append(ArgValue(arg, runtime_array_inputs))
 
-        elif arg.name in dim_names_to_values:
+        elif arg.name in dim_names_to_values and arg.usage == hat_file.UsageType.Input:
             # input element that is a dimension value (populated when its input runtime array is created)
             # BUGBUG / TODO: this assumes dimension values are ordered *after* their arrays
             values.append(dim_names_to_values[arg.name])

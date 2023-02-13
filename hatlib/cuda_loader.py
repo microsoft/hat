@@ -40,17 +40,17 @@ def _find_cuda_incl_path() -> pathlib.Path:
     return cuda_path
 
 
-def _get_compute_capability(gpu_id) -> int:
-    err, major = cuda.cuDeviceGetAttribute(cuda.CUdevice_attribute.CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, gpu_id)
+def _get_compute_capability(device_id) -> int:
+    err, major = cuda.cuDeviceGetAttribute(cuda.CUdevice_attribute.CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device_id)
     ASSERT_DRV(err)
 
-    err, minor = cuda.cuDeviceGetAttribute(cuda.CUdevice_attribute.CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, gpu_id)
+    err, minor = cuda.cuDeviceGetAttribute(cuda.CUdevice_attribute.CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device_id)
     ASSERT_DRV(err)
 
     return (major * 10) + minor
 
 
-def compile_cuda_program(cuda_src_path: pathlib.Path, func_name, gpu_id):
+def compile_cuda_program(cuda_src_path: pathlib.Path, func_name, device_id):
     src = cuda_src_path.read_text()
 
     cuda_incl_path = _find_cuda_incl_path()
@@ -59,7 +59,7 @@ def compile_cuda_program(cuda_src_path: pathlib.Path, func_name, gpu_id):
 
     opts = [
     # https://docs.nvidia.com/cuda/nvrtc/index.html#group__options
-        f'--gpu-architecture=compute_{_get_compute_capability(gpu_id)}'.encode(),
+        f'--gpu-architecture=compute_{_get_compute_capability(device_id)}'.encode(),
         b'--ptxas-options=--warn-on-spills',    # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#options-for-passing-specific-phase-options-ptxas-options
         b'-use_fast_math',
         b'--include-path=' + str(cuda_incl_path).encode(),
@@ -93,12 +93,12 @@ def compile_cuda_program(cuda_src_path: pathlib.Path, func_name, gpu_id):
     return ptx
 
 
-def initialize_cuda(gpu_id):
+def initialize_cuda(device_id):
     # Initialize CUDA Driver API
     err, = cuda.cuInit(0)
     ASSERT_DRV(err)
 
-    err, cuDevice = cuda.cuDeviceGet(gpu_id)
+    err, cuDevice = cuda.cuDeviceGet(device_id)
     ASSERT_DRV(err)
 
     # Create context
@@ -189,23 +189,22 @@ class CudaCallableFunc(CallableFunc):
         self.ptrs = None
         self.start_event = None
         self.stop_event = None
-        self.exec_time = 0.
         self.cuda_src_path = cuda_src_path
         self.context = None
 
-    def init_runtime(self, benchmark: bool, gpu_id: int):
-        self.context = initialize_cuda(gpu_id)
+    def init_runtime(self, benchmark: bool, device_id: int):
+        self.context = initialize_cuda(device_id)
 
         ptx = _PTX_CACHE.get(self.cuda_src_path)
         if not ptx:
-            _PTX_CACHE[self.cuda_src_path] = ptx = compile_cuda_program(self.cuda_src_path, self.func_info.name, gpu_id)
+            _PTX_CACHE[self.cuda_src_path] = ptx = compile_cuda_program(self.cuda_src_path, self.func_info.name, device_id)
 
         self.kernel = get_func_from_ptx(ptx, self.func_info.name)
 
     def cleanup_runtime(self, benchmark: bool):
         cuda.cuCtxDestroy(self.context)
 
-    def init_main(self, benchmark: bool, warmup_iters=0, args=[], gpu_id: int = 0):
+    def init_main(self, benchmark: bool, warmup_iters=0, device_id: int = 0, args=[]):
         self.func_info.verify(args)
         self.device_mem = allocate_cuda_mem(self.func_info.arguments)
 
@@ -236,39 +235,38 @@ class CudaCallableFunc(CallableFunc):
             if not benchmark:
                 ASSERT_DRV(err)
 
-    def main(self, benchmark: bool, iters=1, batch_size=1, args=[]) -> float:
+    def main(self, benchmark: bool, iters=1, batch_size=1, min_time_in_sec=0, args=[]) -> float:
         batch_timings: List[float] = []
-        for _ in range(batch_size):
-            err, = cuda.cuEventRecord(self.start_event, 0)
-            ASSERT_DRV(err)
-
-            for _ in range(iters):
-                err, = cuda.cuLaunchKernel(
-                    self.kernel,
-                    *self.hat_func.launch_parameters,    # [ grid[x-z], block[x-z] ]
-                    self.hat_func.dynamic_shared_mem_bytes,
-                    0,    # stream
-                    self.ptrs.ctypes.data,    # kernel arguments
-                    0,    # extra (ignore)
-                )
-
-                if not benchmark:
-                    ASSERT_DRV(err)
-
-            err, = cuda.cuEventRecord(self.stop_event, 0)
-            ASSERT_DRV(err)
-            err, = cuda.cuEventSynchronize(self.stop_event)
-            ASSERT_DRV(err)
-            err, batch_time = cuda.cuEventElapsedTime(self.start_event, self.stop_event)
-            ASSERT_DRV(err)
-            batch_timings.append(batch_time)
-            self.exec_time += batch_time
-
-            if not benchmark:
-                err, = cuda.cuCtxSynchronize()
+        while sum(batch_timings) < (min_time_in_sec * 1000):
+            for _ in range(batch_size):
+                err, = cuda.cuEventRecord(self.start_event, 0)
                 ASSERT_DRV(err)
 
-        self.exec_time /= (iters * batch_size)
+                for _ in range(iters):
+                    err, = cuda.cuLaunchKernel(
+                        self.kernel,
+                        *self.hat_func.launch_parameters,    # [ grid[x-z], block[x-z] ]
+                        self.hat_func.dynamic_shared_mem_bytes,
+                        0,    # stream
+                        self.ptrs.ctypes.data,    # kernel arguments
+                        0,    # extra (ignore)
+                    )
+
+                    if not benchmark:
+                        ASSERT_DRV(err)
+
+                err, = cuda.cuEventRecord(self.stop_event, 0)
+                ASSERT_DRV(err)
+                err, = cuda.cuEventSynchronize(self.stop_event)
+                ASSERT_DRV(err)
+                err, batch_time = cuda.cuEventElapsedTime(self.start_event, self.stop_event)
+                ASSERT_DRV(err)
+                batch_timings.append(batch_time)
+
+                if not benchmark:
+                    err, = cuda.cuCtxSynchronize()
+                    ASSERT_DRV(err)
+
         return batch_timings
 
     def cleanup_main(self, benchmark: bool, args=[]):

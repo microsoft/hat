@@ -104,7 +104,7 @@ def generate_arg_sets_for_hat_file(hat_path):
             for func_name, func_desc in t.function_map.items()}
 
 
-def load(hat_path, try_dynamic_load=True) -> Tuple[hat_package.HATPackage, Union[hat_package.AttributeDict, None]]:
+def load(hat_path, try_dynamic_load=True, enable_native_profiling=False) -> Tuple[hat_package.HATPackage, Union[hat_package.AttributeDict, None]]:
     """
     Returns a HATPackage object loaded from the path provided. If
     `try_dynamic_load` is True, a non-empty dictionary object that can be used
@@ -119,7 +119,7 @@ def load(hat_path, try_dynamic_load=True) -> Tuple[hat_package.HATPackage, Union
 
     if try_dynamic_load:
         try:
-            function_dict = hat_package.hat_package_to_func_dict(pkg)
+            function_dict = hat_package.hat_package_to_func_dict(pkg, enable_native_profiling)
         except Exception as e:
             # TODO: Figure out how to communicate failure better
             print(e)

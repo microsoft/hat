@@ -25,6 +25,13 @@ ARG_TYPES = {
 CTYPE_ENTRY = 0
 DTYPE_ENTRY = 1
 
+def _get_type(type_str):
+    if type_str == "bfloat16":
+        from bfloat16 import bfloat16
+        return bfloat16
+
+    return np.dtype(type_str)
+
 
 @dataclass
 class ArgInfo:
@@ -42,25 +49,18 @@ class ArgInfo:
     pointer_level: int
     usage: hat_file.UsageType = None
 
-    def _get_type(self, type_str):
-        if type_str == "bfloat16":
-            from bfloat16 import bfloat16
-            return bfloat16
-
-        return np.dtype(type_str)
-
-    def _get_pointer_level(self, declared_type: str):
-        pos = declared_type.find("*")
+    def _get_pointer_level(self):
+        pos = self.hat_declared_type.find("*")
         if pos == -1:
             return 0
-        return declared_type[pos:].count("*")
+        return self.hat_declared_type[pos:].count("*")
 
     def __init__(self, param_description: hat_file.Parameter):
         self.name = param_description.name
         self.hat_declared_type = param_description.declared_type
         self.shape = tuple(param_description.shape)
         self.usage = param_description.usage
-        self.pointer_level = self._get_pointer_level(self.hat_declared_type)
+        self.pointer_level = self._get_pointer_level()
         element_type = self.hat_declared_type[:(-1 * self.pointer_level)] \
             if self.pointer_level else self.hat_declared_type
 
@@ -69,7 +69,7 @@ class ArgInfo:
 
         ctypes_type = ARG_TYPES[element_type][CTYPE_ENTRY]
         dtype_entry = ARG_TYPES[element_type][DTYPE_ENTRY]
-        self.numpy_dtype = self._get_type(dtype_entry)
+        self.numpy_dtype = _get_type(dtype_entry)
         self.element_num_bytes = 2 if dtype_entry == "bfloat16" else self.numpy_dtype.itemsize
 
         if param_description.logical_type == hat_file.ParameterType.AffineArray:
@@ -95,7 +95,7 @@ class ArgInfo:
             self.shape = re.split(r"\s?\*\s?", param_description.size)
 
         elif param_description.logical_type == hat_file.ParameterType.Element:
-            if param_description.usage == hat_file.UsageType.Input or (element_type == 'int64_t' and param_description.usage == hat_file.UsageType.InputOutput):
+            if param_description.usage == hat_file.UsageType.Input:
                 self.ctypes_type = ctypes_type
             else:
                 self.ctypes_type = ctypes.POINTER(ctypes_type)

@@ -1,0 +1,120 @@
+####################################################################################################
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License. See LICENSE in the project root for license information.
+####################################################################################################
+
+cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
+
+# Error on non-existent dependency in add_dependencies.
+cmake_policy(SET CMP0046 NEW)
+
+project(NATIVE_PROFILER CXX)
+
+option(STRICT_MODE "Build with 'warnings as errors'" OFF)
+option(USE_LIBCXX "Build with libc++ if using the Clang compiler" OFF)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL Clang)
+    add_compile_options(-stdlib=libc++)
+    link_libraries(-lc++ -lc++abi)
+endif(CMAKE_CXX_COMPILER_ID STREQUAL Clang)
+
+# Try to create a compilation database, which is useful to have when working
+# with clang tooling
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Turn on ability to create folders to organize projects
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+# Set C++ version
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Apply -fPIC where applicable to the platform
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# Find the platform-specific way of working with threads
+if(NOT MSVC)
+  set(THREADS_PREFER_PTHREAD_FLAG ON)
+  set(CMAKE_THREAD_PREFER_PTHREAD ON)
+endif(NOT MSVC)
+find_package(Threads REQUIRED)
+
+if(STRICT_MODE)
+  message("-- Turning on strict mode with warnings as errors.")
+endif()
+
+if(MSVC)
+  # Set Visual Studio-specific options
+  add_definitions(-DUNICODE -D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
+  add_definitions(-DBUILD_DLL)
+  add_compile_options(/utf-8)
+  add_compile_options(/MP)
+  add_compile_options(/bigobj)
+  add_compile_options(/W4)
+  add_compile_options(/permissive-)
+  if(STRICT_MODE)
+    add_compile_options(/WX)
+  endif()
+  # the debug linker needs to match how LLVM was built (either /MD or /MDd)
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${LLVM_MD_OPTION}")
+  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${LLVM_MD_OPTION}")
+else()
+  # Set Clang/GCC-specific options
+  add_compile_options(-Wall)
+  if(STRICT_MODE)
+    add_compile_options(-Werror)
+  endif()
+  if(PROFILING_MODE)
+    # enable call graphs in perf
+    add_compile_options(-fno-omit-frame-pointer)
+  endif()
+  add_compile_options(-Wsign-compare)
+  add_compile_options(-Wno-missing-braces)
+  add_compile_options(-Wmissing-field-initializers)
+  add_compile_options(-fvisibility-inlines-hidden)
+  add_compile_options(-Wno-unknown-pragmas)
+  add_compile_options(-Wno-comment)
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb3 -O0")
+  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -ggdb3 -O0")
+  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -ggdb3")
+  set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -ggdb3")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Ofast -flto")
+  set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Ofast -flto")
+  set(LINK_FLAGS_RELEASE "-Ofast -flto")
+  if(${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
+    add_compile_options(-Wno-backslash-newline-escape)
+    add_compile_options(-Wno-self-assign)
+    add_compile_options(-fno-color-diagnostics) # we are dumping to a file, so we do not want color output
+  else() # GCC
+    add_compile_options(-Wno-ignored-attributes)
+    add_compile_options(-fdiagnostics-color=never)
+  endif()
+endif()
+
+# compile project that calls generated code
+set(src @GENERATED_SOURCE_FILES@)
+
+source_group("src" FILES ${src})
+
+set(static_lib_name @GEN_STATIC_LIB@)
+set(dynamic_lib_name @GEN_DYNAMIC_LIB@)
+set(executable_name @GEN_EXECUTABLE_NAME@)
+
+add_executable(${executable_name} ${src})
+add_library(${static_lib_name} ${src})
+add_library(${dynamic_lib_name} SHARED ${src})
+
+# Set the include dirs for dependencies
+target_include_directories(${dynamic_lib_name} PUBLIC @GEN_INCLUDE_PATHS@)
+target_include_directories(${static_lib_name} PUBLIC @GEN_INCLUDE_PATHS@)
+target_include_directories(${executable_name} PUBLIC @GEN_INCLUDE_PATHS@)
+
+# Link the libs of the included hat files and other dependencies
+target_link_libraries(${dynamic_lib_name} @GEN_LINK_LIBS@)
+target_link_libraries(${executable_name} @GEN_LINK_LIBS@)
+
+IF (NOT WIN32)
+  # Link the standard math lib
+  target_link_libraries(${dynamic_lib_name} m)
+  target_link_libraries(${executable_name} m)
+ENDIF()
