@@ -8,9 +8,9 @@ from hatlib import run_benchmark
 class BenchmarkHATPackage_test(unittest.TestCase):
 
     def test_benchmark(self):
-        A = acc.Array(role=acc.Array.Role.INPUT, shape=(256, 256))
-        B = acc.Array(role=acc.Array.Role.INPUT, shape=(256, 256))
-        C = acc.Array(role=acc.Array.Role.INPUT_OUTPUT, shape=(256, 256))
+        A = acc.Array(role=acc.Role.INPUT, shape=(256, 256))
+        B = acc.Array(role=acc.Role.INPUT, shape=(256, 256))
+        C = acc.Array(role=acc.Role.INPUT_OUTPUT, shape=(256, 256))
 
         nest = acc.Nest(shape=(256, 256, 256))
         i, j, k = nest.get_indices()
@@ -36,10 +36,10 @@ class BenchmarkHATPackage_test(unittest.TestCase):
         self.assertEqual(type(results[0].mean), np.float64)
 
     def test_benchmark_multiple_functions(self):
-        A = acc.Array(role=acc.Array.Role.INPUT, shape=(256, 256))
-        B = acc.Array(role=acc.Array.Role.INPUT, shape=(256, 256))
-        C = acc.Array(role=acc.Array.Role.INPUT_OUTPUT, shape=(256, 256))
-        D = acc.Array(role=acc.Array.Role.INPUT, shape=(256, 256))    # dummy argument
+        A = acc.Array(role=acc.Role.INPUT, shape=(256, 256))
+        B = acc.Array(role=acc.Role.INPUT, shape=(256, 256))
+        C = acc.Array(role=acc.Role.INPUT_OUTPUT, shape=(256, 256))
+        D = acc.Array(role=acc.Role.INPUT, shape=(256, 256))    # dummy argument
 
         nest = acc.Nest(shape=(256, 256, 256))
         i, j, k = nest.get_indices()

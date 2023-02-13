@@ -10,8 +10,8 @@ class HAT_test(unittest.TestCase):
     def test_load(self):
 
         # Generate a HAT package
-        A = acc.Array(role=acc.Array.Role.INPUT, shape=(16, 16))
-        B = acc.Array(role=acc.Array.Role.INPUT_OUTPUT, shape=(16, 16))
+        A = acc.Array(role=acc.Role.INPUT, shape=(16, 16))
+        B = acc.Array(role=acc.Role.INPUT_OUTPUT, shape=(16, 16))
 
         nest = acc.Nest(shape=(16, 16))
         i, j = nest.get_indices()

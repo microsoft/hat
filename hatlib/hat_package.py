@@ -98,7 +98,7 @@ class AttributeDict(OrderedDict):
         return OrderedDict.__getitem__(key)
 
 
-def _make_cpu_func(shared_lib: ctypes.CDLL, func: Function):
+def _make_unprofiled_cpu_func(shared_lib: ctypes.CDLL, func: Function):
     func_info = FunctionInfo(func)
     fn = shared_lib[func_info.name]
 
@@ -180,7 +180,7 @@ def hat_package_to_func_dict(hat_pkg: HATPackage, enable_native_profiling: bool)
     for func_name, func_desc in hat_pkg.hat_file.function_map.items():
         launches = func_desc.launches
         if not enable_native_profiling and not launches and shared_lib:
-            func_dict[func_name] = _make_cpu_func(shared_lib, func_desc)
+            func_dict[func_name] = _make_unprofiled_cpu_func(shared_lib, func_desc)
         else:
             device_func = hat_pkg.hat_file.device_function_map.get(launches)
             func_runtime = func_desc.runtime

@@ -48,6 +48,7 @@ class Benchmark:
             input_sets_minimum_size_MB=50,
             device_id: int=0,
             verbose: bool=False,
+            time_in_ms: bool=False,
             dyn_func_shape_fn: Callable[[FunctionInfo], List[List[int]]]=None,
             input_data_process_fn: Callable[[List], List]=None) -> float:
         """Runs benchmarking for a function.
@@ -63,7 +64,7 @@ class Benchmark:
             dyn_func_shape_fn: A callback function that's called for a function with dynamic arguments and returns the shape of arguments
         Returns:
             Mean duration in seconds,
-            Vector of timings in seconds for each batch that was run
+            Vector of timings in seconds/milliseconds for each batch that was run
         """
         if function_name not in self.hat_functions:
             raise ValueError(f"{function_name} is not found")
@@ -72,15 +73,19 @@ class Benchmark:
 
         mean_elapsed_time, batch_timings = self._profile(
             function_name, warmup_iterations, min_timing_iterations, batch_size,
-            min_time_in_sec, input_sets_minimum_size_MB, device_id, verbose, dyn_func_shape_fn, input_data_process_fn)
+            min_time_in_sec, input_sets_minimum_size_MB, device_id, verbose, time_in_ms,
+            dyn_func_shape_fn, input_data_process_fn)
 
         if verbose:
-            print(f"[Benchmarking] Mean duration per iteration: {mean_elapsed_time:.8f}s")
+            time_unit = "ms" if time_in_ms else "s"
+            print(f"[Benchmarking] Mean duration per iteration: {mean_elapsed_time:.8f} {time_unit}")
 
         return mean_elapsed_time, batch_timings
 
     def _profile(self, function_name, warmup_iterations, min_timing_iterations, batch_size,
-                 min_time_in_sec, input_sets_minimum_size_MB, device_id: int, verbose: bool, dyn_func_shape_fn: Callable[[FunctionInfo], List[List[int]]]=None, input_data_process_fn: Callable[[List], List]=None):
+                 min_time_in_sec, input_sets_minimum_size_MB, device_id: int, verbose: bool,
+                 time_in_ms: bool, dyn_func_shape_fn: Callable[[FunctionInfo],
+                 List[List[int]]]=None, input_data_process_fn: Callable[[List], List]=None):
         def get_perf_counter():
             if hasattr(time, 'perf_counter_ns'):
                 _perf_counter = time.perf_counter_ns
@@ -144,8 +149,10 @@ class Benchmark:
                     (end_time_secs - batch_start_time_secs))
 
             elapsed_time_secs = ((end_time_secs - start_time_secs))
-            mean_elapsed_time_secs = elapsed_time_secs / iterations
-            return mean_elapsed_time_secs, batch_timings
+            elapsed_time = elapsed_time_secs * (1000.0 if time_in_ms else 1.0)
+            mean_elapsed_time = elapsed_time / iterations
+            batch_timings = list(map(lambda t: t * 1000, batch_timings)) if time_in_ms else batch_timings
+            return mean_elapsed_time, batch_timings
         else:
             if verbose:
                 print(f"[Benchmarking] Benchmarking device function on device {device_id}. {batch_size} batches of warming up for {warmup_iterations} and then measuring with {min_timing_iterations} iterations.")
@@ -162,9 +169,9 @@ class Benchmark:
                 print(f"[Benchmarking] Using input of {set_size} bytes")
 
             batch_timings_ms = benchmark_func.benchmark(warmup_iters=warmup_iterations, iters=min_timing_iterations, batch_size=batch_size, min_time_in_sec=min_time_in_sec, args=input_sets, device_id=device_id)
-            batch_timings_secs = list(map(lambda t: t / 1000, batch_timings_ms))
-            mean_timings = sum(batch_timings_secs) / (min_timing_iterations * len(batch_timings_secs))
-            return mean_timings, batch_timings_secs
+            batch_timings = batch_timings_ms if time_in_ms else list(map(lambda t: t / 1000, batch_timings_ms))
+            mean_timings = sum(batch_timings) / (min_timing_iterations * len(batch_timings))
+            return mean_timings, batch_timings
 
 
 def write_runtime_to_hat_file(hat_path, function_name, mean_time_secs):
@@ -197,6 +204,7 @@ def run_benchmark(hat_path,
                   device_id: int=0,
                   verbose: bool=False,
                   native_profiling: bool=False,
+                  time_in_ms: bool=False,
                   functions:List[str]=None) -> List[Result]:
     results = []
 
@@ -217,6 +225,7 @@ def run_benchmark(hat_path,
                 min_time_in_sec=min_time_in_sec,
                 input_sets_minimum_size_MB=input_sets_minimum_size_MB,
                 device_id=device_id,
+                time_in_ms=time_in_ms,
                 verbose=verbose)
 
             num_batches = len(batch_timings)
@@ -295,6 +304,10 @@ def main(argv):
         help="If set, timings with be measured in native code instead of in python",
         action='store_true')
     arg_parser.add_argument(
+        "--time_in_ms",
+        help="If set, timings with be measured in milliseconds instead of seconds",
+        action='store_true')
+    arg_parser.add_argument(
         "--functions",
         type=str, nargs="+",
         help="Functions to benchmark")
@@ -308,6 +321,7 @@ def main(argv):
                             input_sets_minimum_size_MB=int(args["input_sets_minimum_size_MB"]),
                             verbose=bool(args["verbose"]),
                             native_profiling=args["cpp"],
+                            time_in_ms=args["time_in_ms"],
                             functions=args["functions"])
     df = pd.DataFrame(results)
     df.to_csv(args["results_file"], index=False)
