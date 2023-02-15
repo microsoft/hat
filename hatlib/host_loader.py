@@ -51,12 +51,13 @@ class HostCallableFunc(CallableFunc):
                 .replace("{func_to_profile}", f"{self.func_info.name}({self.func_info.as_arg_names()});"))
 
         # Build the timer code
+        static_lib = self.hat_func.hat_file.dependencies.auxiliary["static"]
         target_binaries = generate_and_run_cmake_file(
             target_name=native_profiler_name,
             src_dir=src_dir,
             #build_type="Debug",
             additional_include_filepaths=[self.host_src_path],
-            additional_link_filepaths=[self.hat_func.link_target],
+            additional_link_filepaths=[os.path.join(os.path.dirname(self.hat_func.hat_file.path), static_lib)],
             profile=benchmark
         )
 
