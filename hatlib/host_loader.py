@@ -2,12 +2,12 @@ import os
 import numpy as np
 from typing import List
 from .callable_func import CallableFunc
-from .hat_file import Function, HATFile, Declaration, Dependencies, CallingConventionType, Parameter, ParameterType, UsageType
+from .hat_file import Function, HATFile, Declaration, Dependencies, CallingConventionType, Parameter, ParameterType, OperatingSystem, UsageType
 from .hat import load
 from .function_info import FunctionInfo
 from .arg_info import ArgInfo
 from .arg_value import generate_arg_values
-from .platform_utilities import generate_and_run_cmake_file
+from .platform_utilities import generate_and_run_cmake_file, get_platform
 
 profiler_code = """
 #undef TOML
@@ -99,7 +99,7 @@ class HostCallableFunc(CallableFunc):
         if os.path.exists(cmake_file):
             os.remove(cmake_file)
 
-        if self.target:
+        if self.target and get_platform() != OperatingSystem.Windows: # Windows won't let you remove the dll until the process is dead
             target_file = os.path.join(os.path.dirname(__file__), self.target)
             if os.path.exists(target_file):
                 os.remove(target_file)
