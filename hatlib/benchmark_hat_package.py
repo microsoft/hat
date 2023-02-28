@@ -78,7 +78,7 @@ class Benchmark:
 
         if verbose:
             time_unit = "ms" if time_in_ms else "s"
-            print(f"[Benchmarking] Mean duration per iteration: {mean_elapsed_time:.8f} {time_unit}")
+            print(f"[Benchmarking] Mean duration per iteration: {mean_elapsed_time[0]:.8f} {time_unit}")
 
         return mean_elapsed_time, batch_timings
 
