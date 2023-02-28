@@ -78,7 +78,7 @@ class Benchmark:
 
         if verbose:
             time_unit = "ms" if time_in_ms else "s"
-            print(f"[Benchmarking] Mean duration per iteration: {mean_elapsed_time:.8f} {time_unit}")
+            print(f"[Benchmarking] Mean duration per iteration: {mean_elapsed_time} {time_unit}")
 
         return mean_elapsed_time, batch_timings
 
@@ -138,7 +138,7 @@ class Benchmark:
             i_max = len(input_sets)
             iterations = 1
             batch_timings = []
-            while ((end_time_secs - start_time_secs)) < min_time_in_sec and len(batch_timings) < batch_size:
+            while True:
                 batch_start_time_secs = perf_counter()
                 for _ in range(min_timing_iterations):
                     benchmark_func(*input_sets[i])
@@ -147,6 +147,9 @@ class Benchmark:
                 end_time_secs = perf_counter()
                 batch_timings.append(
                     (end_time_secs - batch_start_time_secs))
+                
+                if ((end_time_secs - start_time_secs)) >= min_time_in_sec or len(batch_timings) >= batch_size:
+                    break
 
             elapsed_time_secs = ((end_time_secs - start_time_secs))
             elapsed_time = elapsed_time_secs * (1000.0 if time_in_ms else 1.0)
