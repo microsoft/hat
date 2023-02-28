@@ -61,10 +61,11 @@ class Benchmark:
             min_time_in_sec: minimum amount of time to run the benchmark
             input_sets_minimum_size_MB: generate enough input sets to exceed this size to avoid cache hits
             device_id: the ID of the device on which to run the benchmark
+            time_in_ms: report timings in units of milliseconds if True, else report in seconds
             dyn_func_shape_fn: A callback function that's called for a function with dynamic arguments and returns the shape of arguments
         Returns:
-            Mean duration in seconds,
-            Vector of timings in seconds/milliseconds for each batch that was run
+            Mean duration in seconds or milliseconds
+            Vector of timings in seconds or milliseconds for each batch that was run
         """
         if function_name not in self.hat_functions:
             raise ValueError(f"{function_name} is not found")
