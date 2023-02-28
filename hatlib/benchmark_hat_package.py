@@ -10,7 +10,7 @@ import time
 import traceback
 
 from .callable_func import CallableFunc
-from .hat_file import Function, HATFile
+from .hat_file import HATFile
 from .function_info import FunctionInfo
 from .hat import load, generate_arg_sets_for_func
 
