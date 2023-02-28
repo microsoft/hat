@@ -113,7 +113,7 @@ class HostCallableFunc(CallableFunc):
 
     def main(self, benchmark: bool, iters=1, batch_size=1, min_time_in_sec=0, args=[]) -> float:
         batch_timings: List[float] = []
-        while sum(batch_timings) < (min_time_in_sec * 1000):
+        while True:
             for _ in range(batch_size):
                 self.timing_arg_val.value = np.zeros((1,))
 
@@ -122,6 +122,9 @@ class HostCallableFunc(CallableFunc):
 
                 batch_time = self.timing_arg_val.value
                 batch_timings.append(batch_time)
+
+            if sum(batch_timings) >= (min_time_in_sec * 1000):
+                break
 
         return batch_timings
 

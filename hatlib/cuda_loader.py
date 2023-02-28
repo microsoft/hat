@@ -237,7 +237,7 @@ class CudaCallableFunc(CallableFunc):
 
     def main(self, benchmark: bool, iters=1, batch_size=1, min_time_in_sec=0, args=[]) -> float:
         batch_timings: List[float] = []
-        while sum(batch_timings) < (min_time_in_sec * 1000):
+        while True:
             for _ in range(batch_size):
                 err, = cuda.cuEventRecord(self.start_event, 0)
                 ASSERT_DRV(err)
@@ -266,6 +266,9 @@ class CudaCallableFunc(CallableFunc):
                 if not benchmark:
                     err, = cuda.cuCtxSynchronize()
                     ASSERT_DRV(err)
+
+            if sum(batch_timings) >= (min_time_in_sec * 1000):
+                break
 
         return batch_timings
 
