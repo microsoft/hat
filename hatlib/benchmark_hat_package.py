@@ -79,7 +79,8 @@ class Benchmark:
 
         if verbose:
             time_unit = "ms" if time_in_ms else "s"
-            print(f"[Benchmarking] Mean duration per iteration: {mean_elapsed_time[0]:.8f} {time_unit}")
+            mean_elapsed_time_val = mean_elapsed_time[0] if isinstance(np.ndarray, mean_elapsed_time) else mean_elapsed_time
+            print(f"[Benchmarking] Mean duration per iteration: {mean_elapsed_time_val:.8f} {time_unit}")
 
         return mean_elapsed_time, batch_timings
 
