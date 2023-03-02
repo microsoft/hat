@@ -123,11 +123,11 @@ class RocmCallableFunc(CallableFunc):
         pass
 
     def init_main(self, benchmark: bool, warmup_iters=0, device_id: int = 0, args=[]):
-        self.func_info.verify(args)
+        self.func_info.verify(args[0])
         self.device_mem = allocate_rocm_mem(benchmark, self.func_info.arguments, device_id)
 
         if not benchmark:
-            transfer_mem_host_to_rocm(device_args=self.device_mem, host_args=args, arg_infos=self.func_info.arguments)
+            transfer_mem_host_to_rocm(device_args=self.device_mem, host_args=args[0], arg_infos=self.func_info.arguments)
 
         class DataStruct(ctypes.Structure):
             _fields_ = [(f"arg{i}", ctypes.c_void_p) for i in range(len(self.func_info.arguments))]
@@ -147,32 +147,32 @@ class RocmCallableFunc(CallableFunc):
             )
 
     def main(self, benchmark: bool, iters=1, batch_size=1, min_time_in_sec=0, args=[]) -> float:
-        batch_timings: List[float] = []
-        while True:
-            for _ in range(batch_size):
-                hipEventRecord(self.start_event)
+        batch_timings_ms: List[float] = []
+        iterations = 1
+        min_time_in_ms = min_time_in_sec * 1000
+        while sum(batch_timings_ms) < min_time_in_ms or len(batch_timings_ms) >= batch_size:
+            hipEventRecord(self.start_event)
 
-                for _ in range(iters):
-                    hipModuleLaunchKernel(
-                        self.kernel,
-                        *self.hat_func.launch_parameters,    # [ grid[x-z], block[x-z] ]
-                        self.hat_func.dynamic_shared_mem_bytes,    # dynamic shared memory
-                        0,    # stream
-                        self.data,    # data
-                    )
+            for _ in range(iters):
+                hipModuleLaunchKernel(
+                    self.kernel,
+                    *self.hat_func.launch_parameters,    # [ grid[x-z], block[x-z] ]
+                    self.hat_func.dynamic_shared_mem_bytes,    # dynamic shared memory
+                    0,    # stream
+                    self.data,    # data
+                )
+                iterations += 1
 
-                hipEventRecord(self.stop_event)
-                hipEventSynchronize(self.stop_event)
-                batch_time = hipEventElapsedTime(self.start_event, self.stop_event)
-                batch_timings.append(batch_time)
+            hipEventRecord(self.stop_event)
+            hipEventSynchronize(self.stop_event)
+            batch_time_ms = hipEventElapsedTime(self.start_event, self.stop_event)
+            batch_timings_ms.append(batch_time_ms)
 
-                if not benchmark:
-                    hipDeviceSynchronize()
+            if not benchmark:
+                hipDeviceSynchronize()
 
-            if sum(batch_timings) >= (min_time_in_sec * 1000):
-                break
-
-        return batch_timings
+        mean_elapsed_time_ms = sum(batch_timings_ms) / iterations
+        return mean_elapsed_time_ms, batch_timings_ms
 
     def cleanup_main(self, benchmark: bool, args=[]):
         # If there's no device mem, that means allocation during initialization failed, which means nothing else needs to be cleaned up either
@@ -186,6 +186,9 @@ class RocmCallableFunc(CallableFunc):
 
         if self.stop_event:
             hipEventDestroy(self.stop_event)
+
+    def should_flush_cache(self) -> bool:
+        return False
 
 
 def create_loader_for_device_function(device_func: Function, hat_dir_path: str):
