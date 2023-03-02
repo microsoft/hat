@@ -24,11 +24,9 @@ profiler_code = """
 DLL_EXPORT void timer({intput_args_decl}, double* timing)
 {
     auto start = std::chrono::high_resolution_clock::now();
-    // for (unsigned i = 0; i < 1000; ++i)
-        {func_to_profile}
+    {func_to_profile}
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed_ms = end - start;
-    // printf("%lf ms\\n", elapsed_ms.count());
     *timing += elapsed_ms.count(); 
 }
 """
