@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from typing import List
+from typing import List, Tuple
 from .callable_func import CallableFunc
 from .hat_file import Function, HATFile, Declaration, Dependencies, CallingConventionType, Parameter, ParameterType, OperatingSystem, UsageType
 from .hat import load
@@ -13,6 +13,7 @@ profiler_code = """
 #undef TOML
 #include "{src_include}"
 #include <chrono>
+#include <cstdio>
 
 #ifdef _MSC_VER
 #define DLL_EXPORT extern "C" __declspec( dllexport )
@@ -25,8 +26,8 @@ DLL_EXPORT void timer({intput_args_decl}, double* timing)
     auto start = std::chrono::high_resolution_clock::now();
     {func_to_profile}
     auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end - start;
-    *timing += elapsed_seconds.count() * 1000.0; // Time in milliseconds
+    std::chrono::duration<double, std::milli> elapsed_ms = end - start;
+    *timing += elapsed_ms.count(); 
 }
 """
 
@@ -106,30 +107,38 @@ class HostCallableFunc(CallableFunc):
 
 
     def init_main(self, benchmark: bool, warmup_iters=0, device_id: int = 0, args=[]):
-        self.func_info.verify(args)
+        self.func_info.verify(args[0])
 
         for _ in range(warmup_iters):
-            self.timer_func(*args, self.timing_arg_val)
+            for arg in args:
+                self.timer_func(*arg, self.timing_arg_val)
 
-    def main(self, benchmark: bool, iters=1, batch_size=1, min_time_in_sec=0, args=[]) -> float:
-        batch_timings: List[float] = []
-        while True:
-            for _ in range(batch_size):
-                self.timing_arg_val.value = np.zeros((1,))
+    def main(self, benchmark: bool, iters=1, batch_size=1, min_time_in_sec=0, args=[]) -> Tuple[float, float]:
+        batch_timings_ms: List[float] = []
+        i = 0
+        i_max = len(args)
+        iterations = 1
+        min_time_in_ms = min_time_in_sec * 1000
 
-                for _ in range(iters):
-                    self.timer_func(*args, self.timing_arg_val)
+        while sum(batch_timings_ms) < min_time_in_ms and len(batch_timings_ms) < batch_size:
+            self.timing_arg_val.value = np.zeros((1,))
 
-                batch_time = self.timing_arg_val.value
-                batch_timings.append(batch_time)
+            for _ in range(iters):
+                self.timer_func(*args[i], self.timing_arg_val)
+                i = iterations % i_max
+                iterations += 1
 
-            if sum(batch_timings) >= (min_time_in_sec * 1000):
-                break
+            batch_time_ms = float(self.timing_arg_val.value)
+            batch_timings_ms.append(batch_time_ms)
 
-        return batch_timings
+        mean_elapsed_time_ms = sum(batch_timings_ms) / (iterations * 1)
+        return mean_elapsed_time_ms, batch_timings_ms
 
     def cleanup_main(self, benchmark: bool, args=[]):
         pass
+
+    def should_flush_cache(self) -> bool:
+        return True
 
 
 def create_loader_for_host_function(host_func: Function, hat_dir_path: str):

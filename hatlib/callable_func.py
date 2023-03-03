@@ -48,3 +48,7 @@ class CallableFunc(ABC):
     @abstractmethod
     def cleanup_runtime(self, benchmark: bool):
         ...
+
+    @abstractmethod
+    def should_flush_cache(self) -> bool:
+        ...
