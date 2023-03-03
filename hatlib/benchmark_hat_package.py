@@ -2,6 +2,7 @@
 
 import argparse
 from dataclasses import dataclass
+import os
 from typing import Callable, List
 import numpy as np
 import pandas as pd
@@ -354,7 +355,7 @@ def main(argv):
         functions=args["functions"]
     )
     df = pd.DataFrame(results)
-    df.to_csv(args["results_file"], index=False)
+    df.to_csv(args["results_file"], index=False, mode='a', header=not os.path.exists(args["results_file"]))
     pd.options.display.float_format = '{:8.8f}'.format
     print(df)
 
