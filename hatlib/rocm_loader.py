@@ -150,7 +150,7 @@ class RocmCallableFunc(CallableFunc):
         batch_timings_ms: List[float] = []
         iterations = 1
         min_time_in_ms = min_time_in_sec * 1000
-        while sum(batch_timings_ms) < min_time_in_ms or len(batch_timings_ms) >= batch_size:
+        while sum(batch_timings_ms) < min_time_in_ms or len(batch_timings_ms) < batch_size:
             hipEventRecord(self.start_event)
 
             for _ in range(iters):

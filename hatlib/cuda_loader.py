@@ -239,7 +239,7 @@ class CudaCallableFunc(CallableFunc):
         batch_timings_ms: List[float] = []
         iterations = 1
         min_time_in_ms = min_time_in_sec * 1000
-        while sum(batch_timings_ms) < min_time_in_ms or len(batch_timings_ms) >= batch_size:
+        while sum(batch_timings_ms) < min_time_in_ms or len(batch_timings_ms) < batch_size:
             err, = cuda.cuEventRecord(self.start_event, 0)
             ASSERT_DRV(err)
 
