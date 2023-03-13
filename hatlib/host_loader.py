@@ -54,6 +54,7 @@ class HostCallableFunc(CallableFunc):
 
         # Build the timer code
         static_lib = self.hat_func.hat_file.dependencies.auxiliary["static"]
+
         target_binaries = generate_and_run_cmake_file(
             target_name=native_profiler_name,
             src_dir=src_dir,

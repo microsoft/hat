@@ -162,6 +162,14 @@ def generate_and_run_cmake_file(
     lib_files = [normalize_path(path) for path in additional_link_filepaths]
     include_paths = [normalize_path(path) for path in additional_include_filepaths]
 
+    if profile:
+        if get_platform() == OperatingSystem.Windows:
+            # prinf is inlined in stdio.h but not included in the generated hat binaries,
+            # legacy_stdio_definitions.lib provides the missing symbol definitions
+            # cf. https://learn.microsoft.com/en-us/cpp/error-messages/tool-errors/linker-tools-error-lnk2019?view=msvc-170#you-get-errors-for-printf-and-scanf-functions-when-you-link-a-legacy-static-library
+            # TODO: specify this dependency in the hat package and remove this patch
+            lib_files += ["legacy_stdio_definitions.lib"]
+
     for src_file in os.listdir(src_dir):
         extension = get_file_extension(src_file)
         if extension in [".h", ".hat", ".c", ".cpp"]:
