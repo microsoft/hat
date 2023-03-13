@@ -102,7 +102,7 @@ class RocmCallableFunc(CallableFunc):
         self.stop_event = None
         self.rocm_src_path = rocm_src_path
 
-    def init_runtime(self, benchmark: bool, device_id: int):
+    def init_runtime(self, benchmark: bool, device_id: int, working_dir: str):
         if not benchmark:
             initialize_rocm()
 
@@ -119,7 +119,7 @@ class RocmCallableFunc(CallableFunc):
 
         self.kernel = get_func_from_rocm_program(rocm_program, self.func_info.name)
 
-    def cleanup_runtime(self, benchmark: bool):
+    def cleanup_runtime(self, benchmark: bool, working_dir: str):
         pass
 
     def init_main(self, benchmark: bool, warmup_iters=0, device_id: int = 0, args=[]):

@@ -192,7 +192,7 @@ class CudaCallableFunc(CallableFunc):
         self.cuda_src_path = cuda_src_path
         self.context = None
 
-    def init_runtime(self, benchmark: bool, device_id: int):
+    def init_runtime(self, benchmark: bool, device_id: int, working_dir: str):
         self.context = initialize_cuda(device_id)
 
         ptx = _PTX_CACHE.get(self.cuda_src_path)
@@ -201,7 +201,7 @@ class CudaCallableFunc(CallableFunc):
 
         self.kernel = get_func_from_ptx(ptx, self.func_info.name)
 
-    def cleanup_runtime(self, benchmark: bool):
+    def cleanup_runtime(self, benchmark: bool, working_dir: str):
         cuda.cuCtxDestroy(self.context)
 
     def init_main(self, benchmark: bool, warmup_iters=0, device_id: int = 0, args=[]):
