@@ -140,10 +140,12 @@ def get_file_extension(file_name):
 def generate_and_run_cmake_file(
     target_name,
     src_dir,
+    dest_dir,
     build_targets=[BUILD_TARGET.DYNAMIC_LIB],
     build_type="RelWithDebInfo",
     additional_include_filepaths=[],
     additional_link_filepaths=[],
+    additional_src_filepaths=[],
     profile=False
 ) -> Mapping[BUILD_TARGET, str]:
 
@@ -156,9 +158,18 @@ def generate_and_run_cmake_file(
             f"Template CMake file not found! Please add {template_cmake_filename} template file to current project directory and re-run."
         )
 
-    src_files = []
+    src_files = [normalize_path(path) for path in additional_src_filepaths]
     lib_files = [normalize_path(path) for path in additional_link_filepaths]
     include_paths = [normalize_path(path) for path in additional_include_filepaths]
+
+    if profile:
+        if get_platform() == OperatingSystem.Windows:
+            # printf is inlined in stdio.h but stdio.h may not always be included
+            # in pre-compiled hat binaries,
+            # legacy_stdio_definitions.lib provides the missing symbol definitions
+            # cf. https://learn.microsoft.com/en-us/cpp/error-messages/tool-errors/linker-tools-error-lnk2019?view=msvc-170#you-get-errors-for-printf-and-scanf-functions-when-you-link-a-legacy-static-library
+            # TODO: specify this dependency in the hat package and remove this patch
+            lib_files += ["legacy_stdio_definitions.lib"]
 
     for src_file in os.listdir(src_dir):
         extension = get_file_extension(src_file)
@@ -170,7 +181,7 @@ def generate_and_run_cmake_file(
     with open(template_cmake_filename) as f:
         template_lines = f.readlines()
 
-    with open(os.path.join(src_dir, generated_cmake_filename), mode="wt") as f:
+    with open(os.path.join(dest_dir, generated_cmake_filename), mode="wt") as f:
         delimiter = "@"
         mappings = {
             "GEN_EXECUTABLE_NAME": target_name,
@@ -185,16 +196,13 @@ def generate_and_run_cmake_file(
                 line = line.replace(f"{delimiter}{template}{delimiter}", mappings[template])
             f.write(line)
 
-    build_dir = os.path.join(src_dir, f"build_{target_name}")
+    build_dir = os.path.join(dest_dir, f"build_{target_name}")
     if not os.path.exists(build_dir):
         os.mkdir(build_dir)
 
     if get_platform() == OperatingSystem.Windows:
         import vswhere
-        vs_path = vswhere.get_latest_path()
-        if not vs_path:
-            raise RuntimeError("Could not find Visual Studio, please ensure that you have Visual Studio installed")
-
+        windows_ensure_compiler_in_path()
         run_command(
             f'cmake -G "Visual Studio {vswhere.get_latest_major_version()}" -Ax64 ..', working_directory=build_dir
         )
@@ -221,7 +229,7 @@ def generate_and_run_cmake_file(
 
     # copy source files to source directory
     for file in src_files:
-        shutil.copy(os.path.join(config_build_dir, file), src_dir)
+        shutil.copy(src=os.path.join(config_build_dir, file), dst=dest_dir)
 
     # clean the build directory except when debugging
     if build_type != BUILD_TYPE.DEBUG.value:

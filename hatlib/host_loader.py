@@ -38,11 +38,12 @@ class HostCallableFunc(CallableFunc):
         self.hat_func = func
         self.func_info = FunctionInfo(func)
 
-    def init_runtime(self, benchmark: bool, device_id: int):
+    def init_runtime(self, benchmark: bool, device_id: int, working_dir: str):
         # create the timer code
         src_dir = os.path.dirname(__file__)
+        dest_dir = working_dir or os.getcwd()
         native_profiler_name = self.func_info.name + "_timer"
-        native_profiler_prefix = os.path.join(src_dir, native_profiler_name)
+        native_profiler_prefix = os.path.join(dest_dir, native_profiler_name)
         self.native_profiler_srcfile = native_profiler_prefix + ".cpp"
         self.native_profiler_hatfile = native_profiler_prefix + ".hat"
         with open(self.native_profiler_srcfile, "w") as timer_file:
@@ -53,12 +54,15 @@ class HostCallableFunc(CallableFunc):
 
         # Build the timer code
         static_lib = self.hat_func.hat_file.dependencies.auxiliary["static"]
+
         target_binaries = generate_and_run_cmake_file(
             target_name=native_profiler_name,
             src_dir=src_dir,
+            dest_dir=dest_dir,
             #build_type="Debug",
             additional_include_filepaths=[self.host_src_path],
             additional_link_filepaths=[os.path.join(os.path.dirname(self.hat_func.hat_file.path), static_lib)],
+            additional_src_filepaths=[self.native_profiler_srcfile],
             profile=benchmark
         )
 
@@ -89,19 +93,20 @@ class HostCallableFunc(CallableFunc):
         self.timer_func = timer_func_dict["timer"]
 
 
-    def cleanup_runtime(self, benchmark: bool):
+    def cleanup_runtime(self, benchmark: bool, working_dir: str):
+        working_dir = working_dir or os.getcwd()
         if self.native_profiler_srcfile and os.path.exists(self.native_profiler_srcfile):
             os.remove(self.native_profiler_srcfile)
 
         if self.native_profiler_hatfile and os.path.exists(self.native_profiler_hatfile):
             os.remove(self.native_profiler_hatfile)
 
-        cmake_file = os.path.join(os.path.dirname(__file__), 'CMakeLists.txt')
+        cmake_file = os.path.join(working_dir, 'CMakeLists.txt')
         if os.path.exists(cmake_file):
             os.remove(cmake_file)
 
         if self.target and get_platform() != OperatingSystem.Windows: # Windows won't let you remove the dll until the process is dead
-            target_file = os.path.join(os.path.dirname(__file__), self.target)
+            target_file = os.path.join(working_dir, self.target)
             if os.path.exists(target_file):
                 os.remove(target_file)
 

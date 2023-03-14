@@ -34,10 +34,11 @@ class Benchmark:
         A compilation toolchain in your PATH: cl.exe & link.exe (Windows), gcc (Linux), or clang (macOS)
     """
 
-    def __init__(self, hat_path: str, native_profiling: bool):
+    def __init__(self, hat_path: str, native_profiling: bool, working_dir: str):
         self.hat_path = hat_path
         self.hat_package, self.func_dict = load(self.hat_path, enable_native_profiling=native_profiling)
         self.hat_functions = self.func_dict.names
+        self.working_dir = working_dir
 
         # create dictionary of function descriptions defined in the hat file
         self.function_descriptions = self.hat_package.hat_file.function_map
@@ -203,7 +204,8 @@ class Benchmark:
                 batch_size=batch_size,
                 min_time_in_sec=min_time_in_sec,
                 args=input_sets,
-                device_id=device_id
+                device_id=device_id,
+                working_dir=self.working_dir
             )
             batch_timings = batch_timings_ms if time_in_ms else list(map(lambda t: t / 1000, batch_timings_ms))
             mean_timings = mean_elapsed_time_ms if time_in_ms else mean_elapsed_time_ms / 1000
@@ -242,11 +244,12 @@ def run_benchmark(
     verbose: bool = False,
     native_profiling: bool = False,
     time_in_ms: bool = False,
-    functions: List[str] = None
+    functions: List[str] = None,
+    working_dir: str = None
 ) -> List[Result]:
     results = []
 
-    benchmark = Benchmark(hat_path, native_profiling)
+    benchmark = Benchmark(hat_path, native_profiling, working_dir)
     functions = functions if functions is not None else benchmark.hat_functions
     for function_name in functions:
         if "Initialize" in function_name or "_debug_check_allclose" in function_name:    # Skip init and debug functions
@@ -339,6 +342,7 @@ def main(argv):
         "--time_in_ms", help="If set, timings with be measured in milliseconds instead of seconds", action='store_true'
     )
     arg_parser.add_argument("--functions", type=str, nargs="+", help="Functions to benchmark")
+    arg_parser.add_argument("--working_dir", help="Path to a working directory. Defaults to the current directory", default=None)
 
     args = vars(arg_parser.parse_args(argv))
 
@@ -352,7 +356,8 @@ def main(argv):
         verbose=bool(args["verbose"]),
         native_profiling=args["cpp"],
         time_in_ms=args["time_in_ms"],
-        functions=args["functions"]
+        functions=args["functions"],
+        working_dir=args["working_dir"] or os.getcwd()
     )
     df = pd.DataFrame(results)
     df.to_csv(args["results_file"], index=False, mode='a', header=not os.path.exists(args["results_file"]))

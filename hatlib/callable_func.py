@@ -4,33 +4,33 @@ from typing import Any, List
 
 class CallableFunc(ABC):
 
-    def __call__(self, *args: Any, device_id: int = 0) -> float:
+    def __call__(self, *args: Any, device_id: int = 0, working_dir: str=None) -> float:
         try:
-            self.init_runtime(benchmark=False, device_id=device_id)
+            self.init_runtime(benchmark=False, device_id=device_id, working_dir=working_dir)
             try:
                 self.init_main(benchmark=False, args=args, device_id=device_id)
                 timings: List[float] = self.main(benchmark=False, args=args)
             finally:
                 self.cleanup_main(benchmark=False, args=args)
         finally:
-            self.cleanup_runtime(benchmark=False)
+            self.cleanup_runtime(benchmark=False, working_dir=working_dir)
 
         return timings[0]
 
-    def benchmark(self, warmup_iters, iters, batch_size, min_time_in_sec: int, args, device_id: int) -> List[float]:
+    def benchmark(self, warmup_iters, iters, batch_size, min_time_in_sec: int, args, device_id: int, working_dir: str) -> List[float]:
         try:
-            self.init_runtime(benchmark=True, device_id=device_id)
+            self.init_runtime(benchmark=True, device_id=device_id, working_dir=working_dir)
             try:
                 self.init_main(benchmark=True, warmup_iters=warmup_iters, args=args, device_id=device_id)
                 timings = self.main(benchmark=True, iters=iters, batch_size=batch_size, min_time_in_sec=min_time_in_sec, args=args)
             finally:
                 self.cleanup_main(benchmark=True, args=args)
         finally:
-            self.cleanup_runtime(benchmark=True)
+            self.cleanup_runtime(benchmark=True, working_dir=working_dir)
         return timings
 
     @abstractmethod
-    def init_runtime(self, benchmark: bool, device_id: int):
+    def init_runtime(self, benchmark: bool, device_id: int, working_dir: str):
         ...
 
     @abstractmethod
@@ -46,7 +46,7 @@ class CallableFunc(ABC):
         ...
 
     @abstractmethod
-    def cleanup_runtime(self, benchmark: bool):
+    def cleanup_runtime(self, benchmark: bool, working_dir: str):
         ...
 
     @abstractmethod
