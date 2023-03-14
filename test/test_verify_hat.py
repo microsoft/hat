@@ -177,28 +177,14 @@ void (*Softmax)(float*, float*) = Softmax;
 #define DLL_EXPORT
 #endif
 
-DLL_EXPORT void Range(const int32_t start[1], const int32_t limit[1], const int32_t delta[1], int32_t** output, uint32_t* output_dim)
+DLL_EXPORT void AllocAndFill(const int32_t input[1], int32_t** output, uint32_t* output_dim)
 {
-    /* Range */
-    /* Ensure we don't crash with random inputs */
-    int32_t delta0;
-    if (limit[0] < start[0]) {
-        delta0 = delta[0] <= 0 ? delta[0] : -delta[0];
-        delta0 = delta0 == 0 ? -1 : delta0;
-    } else {
-        delta0 = delta[0] >= 0 ? delta[0] : -delta[0];
-        delta0 = delta0 == 0 ? 1 : delta0;
-    }
-    int32_t start0 = start[0];
-    int32_t limit0 = limit[0];
-
-    *output_dim = (limit0 - start0) / delta0;
+    *output_dim = 100;
     *output = (int32_t*)ALLOC(*output_dim * sizeof(int32_t));
     printf(\"Allocated %u output elements\\n\", *output_dim);
-    printf(\"start=%d, limit=%d, delta=%d\\n\", start0, limit0, delta0);
 
     for (uint32_t i = 0; i < *output_dim; ++i) {
-        (*output)[i] = start0 + (i * delta0);
+        (*output)[i] = input[0];
     }
 }
 '''
@@ -212,11 +198,11 @@ extern "C"
 {
 #endif // defined(__cplusplus)
 
-void Range(const int32_t start[1], const int32_t limit[1], const int32_t delta[1], int32_t** output, uint32_t* output_dim);
+void AllocAndFill(const int32_t value[1], int32_t** output, uint32_t* output_dim);
 
-#ifndef __Range_DEFINED__
-#define __Range_DEFINED__
-void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
+#ifndef __AllocAndFill_DEFINED__
+#define __AllocAndFill_DEFINED__
+void (*AllocAndFill)(int32_t*, int32_t**, uint32_t*) = Range;
 #endif
 
 #if defined(__cplusplus)
@@ -227,35 +213,20 @@ void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
 '''
         workdir = "test_output/verify_hat_runtime_array"
         name = "range"
-        func_name = "Range"
+        func_name = "AllocAndFill"
         lib_path = self.build(impl_code, workdir, name, func_name)
         hat_path = f"{workdir}/{name}.hat"
 
         # create the hat file
-        param_start = hat.Parameter(
-            name="start",
+        param_input = hat.Parameter(
+            name="input",
             logical_type=hat.ParameterType.AffineArray,
             declared_type="int32_t*",
             element_type="int32_t",
             usage=hat.UsageType.Input,
             shape=[],
         )
-        param_limit = hat.Parameter(
-            name="limit",
-            logical_type=hat.ParameterType.AffineArray,
-            declared_type="int32_t*",
-            element_type="int32_t",
-            usage=hat.UsageType.Input,
-            shape=[],
-        )
-        param_delta = hat.Parameter(
-            name="delta",
-            logical_type=hat.ParameterType.AffineArray,
-            declared_type="int32_t*",
-            element_type="int32_t",
-            usage=hat.UsageType.Input,
-            shape=[],
-        )
+
         param_output = hat.Parameter(
             name="output",
             logical_type=hat.ParameterType.RuntimeArray,
@@ -273,7 +244,7 @@ void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
             shape=[]
         )
         hat_function = hat.Function(
-            arguments=[param_start, param_limit, param_delta, param_output, param_output_dim],
+            arguments=[param_input, param_output, param_output_dim],
             calling_convention=hat.CallingConventionType.StdCall,
             name=func_name,
             return_info=hat.Parameter.void()
@@ -404,6 +375,6 @@ void (*Unsqueeze_)(float*, int64_t, float**, int64_t*, int64_t*) = Unsqueeze;
             self.create_hat_file(hat_input)
             hat.verify_hat_package(hat_path)
 
-            
+
 if __name__ == '__main__':
     unittest.main()
