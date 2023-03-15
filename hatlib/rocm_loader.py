@@ -123,11 +123,11 @@ class RocmCallableFunc(CallableFunc):
         pass
 
     def init_main(self, benchmark: bool, warmup_iters=0, device_id: int = 0, args=[]):
-        self.func_info.verify(args[0])
+        self.func_info.verify(args[0] if benchmark else args)
         self.device_mem = allocate_rocm_mem(benchmark, self.func_info.arguments, device_id)
 
         if not benchmark:
-            transfer_mem_host_to_rocm(device_args=self.device_mem, host_args=args[0], arg_infos=self.func_info.arguments)
+            transfer_mem_host_to_rocm(device_args=self.device_mem, host_args=args, arg_infos=self.func_info.arguments)
 
         class DataStruct(ctypes.Structure):
             _fields_ = [(f"arg{i}", ctypes.c_void_p) for i in range(len(self.func_info.arguments))]

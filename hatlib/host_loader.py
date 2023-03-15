@@ -112,16 +112,19 @@ class HostCallableFunc(CallableFunc):
 
 
     def init_main(self, benchmark: bool, warmup_iters=0, device_id: int = 0, args=[]):
-        self.func_info.verify(args[0])
+        self.func_info.verify(args[0] if benchmark else args)
 
         for _ in range(warmup_iters):
-            for arg in args:
-                self.timer_func(*arg, self.timing_arg_val)
+            if benchmark:
+                for arg in args:
+                    self.timer_func(*arg, self.timing_arg_val)
+            else:
+                self.timer_func(*args, self.timing_arg_val)
 
     def main(self, benchmark: bool, iters=1, batch_size=1, min_time_in_sec=0, args=[]) -> Tuple[float, float]:
         batch_timings_ms: List[float] = []
         i = 0
-        i_max = len(args)
+        i_max = len(args) if benchmark else 1
         iterations = 1
         min_time_in_ms = min_time_in_sec * 1000
 
@@ -129,7 +132,8 @@ class HostCallableFunc(CallableFunc):
             self.timing_arg_val.value = np.zeros((1,))
 
             for _ in range(iters):
-                self.timer_func(*args[i], self.timing_arg_val)
+                func_args = args[i] if benchmark else args
+                self.timer_func(*func_args, self.timing_arg_val)
                 i = iterations % i_max
                 iterations += 1
 
