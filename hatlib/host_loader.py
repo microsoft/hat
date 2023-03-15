@@ -115,8 +115,11 @@ class HostCallableFunc(CallableFunc):
         self.func_info.verify(args[0] if benchmark else args)
 
         for _ in range(warmup_iters):
-            for arg in args:
-                self.timer_func(*arg, self.timing_arg_val)
+            if benchmark:
+                for arg in args:
+                    self.timer_func(*arg, self.timing_arg_val)
+            else:
+                self.timer_func(*args, self.timing_arg_val)
 
     def main(self, benchmark: bool, iters=1, batch_size=1, min_time_in_sec=0, args=[]) -> Tuple[float, float]:
         batch_timings_ms: List[float] = []
