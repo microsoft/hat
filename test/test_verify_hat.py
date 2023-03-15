@@ -177,28 +177,14 @@ void (*Softmax)(float*, float*) = Softmax;
 #define DLL_EXPORT
 #endif
 
-DLL_EXPORT void Range(const int32_t start[1], const int32_t limit[1], const int32_t delta[1], int32_t** output, uint32_t* output_dim)
+DLL_EXPORT void AllocAndFill(const int32_t input[1], int32_t** output, uint32_t* output_dim)
 {
-    /* Range */
-    /* Ensure we don't crash with random inputs */
-    int32_t delta0;
-    if (limit[0] < start[0]) {
-        delta0 = delta[0] <= 0 ? delta[0] : -delta[0];
-        delta0 = delta0 == 0 ? -1 : delta0;
-    } else {
-        delta0 = delta[0] >= 0 ? delta[0] : -delta[0];
-        delta0 = delta0 == 0 ? 1 : delta0;
-    }
-    int32_t start0 = start[0];
-    int32_t limit0 = limit[0];
-
-    *output_dim = (limit0 - start0) / delta0;
+    *output_dim = 100;
     *output = (int32_t*)ALLOC(*output_dim * sizeof(int32_t));
     printf(\"Allocated %u output elements\\n\", *output_dim);
-    printf(\"start=%d, limit=%d, delta=%d\\n\", start0, limit0, delta0);
 
     for (uint32_t i = 0; i < *output_dim; ++i) {
-        (*output)[i] = start0 + (i * delta0);
+        (*output)[i] = input[0];
     }
 }
 '''
@@ -212,11 +198,11 @@ extern "C"
 {
 #endif // defined(__cplusplus)
 
-void Range(const int32_t start[1], const int32_t limit[1], const int32_t delta[1], int32_t** output, uint32_t* output_dim);
+void AllocAndFill(const int32_t value[1], int32_t** output, uint32_t* output_dim);
 
-#ifndef __Range_DEFINED__
-#define __Range_DEFINED__
-void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
+#ifndef __AllocAndFill_DEFINED__
+#define __AllocAndFill_DEFINED__
+void (*AllocAndFill)(int32_t*, int32_t**, uint32_t*) = Range;
 #endif
 
 #if defined(__cplusplus)
@@ -227,35 +213,20 @@ void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
 '''
         workdir = "test_output/verify_hat_runtime_array"
         name = "range"
-        func_name = "Range"
+        func_name = "AllocAndFill"
         lib_path = self.build(impl_code, workdir, name, func_name)
         hat_path = f"{workdir}/{name}.hat"
 
         # create the hat file
-        param_start = hat.Parameter(
-            name="start",
+        param_input = hat.Parameter(
+            name="input",
             logical_type=hat.ParameterType.AffineArray,
             declared_type="int32_t*",
             element_type="int32_t",
             usage=hat.UsageType.Input,
             shape=[],
         )
-        param_limit = hat.Parameter(
-            name="limit",
-            logical_type=hat.ParameterType.AffineArray,
-            declared_type="int32_t*",
-            element_type="int32_t",
-            usage=hat.UsageType.Input,
-            shape=[],
-        )
-        param_delta = hat.Parameter(
-            name="delta",
-            logical_type=hat.ParameterType.AffineArray,
-            declared_type="int32_t*",
-            element_type="int32_t",
-            usage=hat.UsageType.Input,
-            shape=[],
-        )
+
         param_output = hat.Parameter(
             name="output",
             logical_type=hat.ParameterType.RuntimeArray,
@@ -273,7 +244,7 @@ void (*Range)(int32_t*, int32_t*, int32_t*, int32_t**, uint32_t*) = Range;
             shape=[]
         )
         hat_function = hat.Function(
-            arguments=[param_start, param_limit, param_delta, param_output, param_output_dim],
+            arguments=[param_input, param_output, param_output_dim],
             calling_convention=hat.CallingConventionType.StdCall,
             name=func_name,
             return_info=hat.Parameter.void()
@@ -407,60 +378,53 @@ void (*Unsqueeze_)(float*, int64_t, float**, int64_t*, int64_t*) = Unsqueeze;
     def test_partial_dynamic_runtime_arrays_multi_output(self):
         impl_code = '''#include <stdint.h>
 #include <stdlib.h>
-
 #ifndef ALLOC
 #define ALLOC(size) ( malloc(size) )
 #endif
 #ifndef DEALLOC
 #define DEALLOC(X) ( free(X) )
 #endif
-
 #ifdef _MSC_VER
 #define DLL_EXPORT  __declspec( dllexport )
 #else
 #define DLL_EXPORT
 #endif
-
 #define DIM1 100
 #define DIM2 16
-
-DLL_EXPORT void Add_Sub_partial_dynamic( const float* A, uint32_t A_dim0, const float* B, float** C, uint32_t* C_dim0, float** D )
+DLL_EXPORT void Test_partial_dynamic( const float* A, uint32_t A_dim0, const float* B, float** C, uint32_t* C_dim0, float** D )
 {
-    (*C_dim0) = A_dim0;
+    // clamp the input size
+    (*C_dim0) = A_dim0 < DIM1*DIM2 ? A_dim0 : DIM1*DIM2;
+    (*C_dim0) = (*C_dim0) == 0 ? 1 : (*C_dim0);
+
     (*C) = (float*)ALLOC((*C_dim0)*DIM1*DIM2*4);
     (*D) = (float*)ALLOC((*C_dim0)*DIM1*DIM2*4);
     for (unsigned i0 = 0; i0 < (*C_dim0); ++i0) {
     for (unsigned i1 = 0; i1 < DIM1; ++i1) {
     for (unsigned i2 = 0; i2 < DIM2; ++i2) {
-        *(*C + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) = *(A + (A_dim0 == 1 ? 0 : i0)*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) + *(B + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1);
-        *(*D + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) = *(A + (A_dim0 == 1 ? 0 : i0)*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) - *(B + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1);
+        *(*C + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) = *(A + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) + *(B + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1);
+        *(*D + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) = *(A + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1) - *(B + i0*DIM1*DIM2*1 + i1*DIM2*1 + i2*1);
     }
     }
     }
 }
-
 '''
         decl_code = '''#endif // TOML
 #pragma once
-
 #include <stdint.h>
-
 #if defined(__cplusplus)
 extern "C"
 {
 #endif // defined(__cplusplus)
-
-void Add_Sub_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, float** C, uint32_t* C_dim0, float** D, uint32_t* D_dim0 );
-
+void Test_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, float** C, uint32_t* C_dim0, float** D, uint32_t* D_dim0 );
 #if defined(__cplusplus)
 } // extern "C"
 #endif // defined(__cplusplus)
-
 #ifdef TOML
 '''
         workdir = "test_output/test_partial_dynamic_runtime_arrays_multi_output"
         name = f"add"
-        func_name = "Add_Sub_partial_dynamic"
+        func_name = "Test_partial_dynamic"
         lib_path = self.build(impl_code, workdir, name, func_name)
         hat_path = f"{workdir}/{name}.hat"
         DIM1 = 100
@@ -538,7 +502,7 @@ void Add_Sub_partial_dynamic(const float* A, uint32_t A_dim0, const float* B, fl
         C_ref = A + B
         D_ref = A - B
 
-        C, D = func_map.Add_Sub_partial_dynamic(A, B)
+        C, D = func_map.Test_partial_dynamic(A, B)
         C_copy = copy.deepcopy(C)
         D_copy = copy.deepcopy(D)
         np.testing.assert_allclose(C_copy, C_ref)
