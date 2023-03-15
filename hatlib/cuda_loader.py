@@ -209,7 +209,7 @@ class CudaCallableFunc(CallableFunc):
         self.device_mem = allocate_cuda_mem(self.func_info.arguments)
 
         if not benchmark:
-            transfer_mem_host_to_cuda(device_args=self.device_mem, host_args=args[0], arg_infos=self.func_info.arguments)
+            transfer_mem_host_to_cuda(device_args=self.device_mem, host_args=args, arg_infos=self.func_info.arguments)
 
         self.ptrs = device_args_to_ptr_list(self.device_mem)
 
