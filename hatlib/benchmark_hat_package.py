@@ -16,6 +16,11 @@ from .function_info import FunctionInfo
 from .hat import load, generate_arg_sets_for_func
 
 
+def print_verbose(verbose: bool, message: str):
+    if verbose:
+        print(message)
+
+
 @dataclass
 class Result:
     function_name: str
@@ -82,9 +87,8 @@ class Benchmark:
             input_sets_minimum_size_MB, device_id, verbose, time_in_ms, dyn_func_shape_fn, input_data_process_fn
         )
 
-        if verbose:
-            time_unit = "ms" if time_in_ms else "s"
-            print(f"[Benchmarking] Mean duration per iteration: {mean_elapsed_time} {time_unit}")
+        time_unit = "ms" if time_in_ms else "s"
+        print_verbose(verbose, f"[Benchmarking] Mean duration per iteration: {mean_elapsed_time} {time_unit}")
 
         return mean_elapsed_time, batch_timings
 
@@ -134,21 +138,16 @@ class Benchmark:
                 if not i.dim_values:
                     set_size += i.value.size * i.value.dtype.itemsize
 
-            if verbose:
-                print(f"[Benchmarking] Using {len(input_sets)} input sets, each {set_size} bytes")
+            print_verbose(verbose, f"[Benchmarking] Using {len(input_sets)} input sets, each {set_size} bytes")
 
             perf_counter = get_perf_counter()
-            if verbose:
-                print(f"[Benchmarking] Warming up for {warmup_iterations} iterations...")
+            print_verbose(verbose, f"[Benchmarking] Warming up for {warmup_iterations} iterations...")
 
             for _ in range(warmup_iterations):
                 for calling_args in input_sets:
                     benchmark_func(*calling_args)
 
-            if verbose:
-                print(
-                    f"[Benchmarking] Timing for at least {min_time_in_sec}s and at least {min_timing_iterations} iterations..."
-                )
+            print_verbose(verbose, f"[Benchmarking] Timing for at least {min_time_in_sec}s and at least {min_timing_iterations} iterations...")
 
             i = 0
             i_max = len(input_sets)
@@ -174,18 +173,16 @@ class Benchmark:
             batch_timings = list(map(lambda t: t * 1000, batch_timings)) if time_in_ms else batch_timings
             return mean_elapsed_time, batch_timings
         else:
-            if verbose:
-                print(
-                    f"[Benchmarking] Benchmarking device function on device {device_id}. {batch_size} batches of warming up for {warmup_iterations} and then measuring with {min_timing_iterations} iterations."
-                )
+            print_verbose(
+                verbose, f"[Benchmarking] Benchmarking device function on device {device_id}. {batch_size} batches of warming up for {warmup_iterations} and then measuring with {min_timing_iterations} iterations."
+            )
 
             if benchmark_func.should_flush_cache():
                 input_sets = generate_arg_sets_for_func(
                     func, input_sets_minimum_size_MB, num_additional=10, dyn_func_shape_fn=dyn_func_shape_fn
                 )
             else:
-                if verbose:
-                    print("[Benchmarking] Benchmarking device that does not need cache flushing, skipping generation of multiple datasets")
+                print_verbose(verbose, "[Benchmarking] Benchmarking device that does not need cache flushing, skipping generation of multiple datasets")
 
                 input_sets = [generate_arg_sets_for_func(func, dyn_func_shape_fn=dyn_func_shape_fn)]
 
@@ -197,8 +194,7 @@ class Benchmark:
                 if not i.dim_values:
                     set_size += i.value.size * i.value.dtype.itemsize
 
-            if verbose:
-                print(f"[Benchmarking] Using input of {set_size} bytes")
+            print_verbose(verbose, f"[Benchmarking] Using input of {set_size} bytes")
 
             mean_elapsed_time_ms, batch_timings_ms = benchmark_func.benchmark(
                 warmup_iters=warmup_iterations,
@@ -258,8 +254,7 @@ def run_benchmark(
             print(f"\nSkipping function: {function_name}")
             continue
 
-        if verbose:
-            print(f"\nBenchmarking function: {function_name}")
+        print_verbose(verbose, f"\nBenchmarking function: {function_name}")
 
         try:
             _, batch_timings = benchmark.run(
