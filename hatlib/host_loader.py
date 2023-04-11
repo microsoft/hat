@@ -1,6 +1,5 @@
 import os
 import numpy as np
-from typing import List, Tuple
 from .callable_func import CallableFunc
 from .hat_file import Function, HATFile, Declaration, Dependencies, CallingConventionType, Parameter, ParameterType, OperatingSystem, UsageType
 from .hat import load
@@ -121,27 +120,15 @@ class HostCallableFunc(CallableFunc):
             else:
                 self.timer_func(*args, self.timing_arg_val)
 
-    def main(self, benchmark: bool, iters=1, batch_size=1, min_time_in_sec=0, args=[]) -> Tuple[float, float]:
-        batch_timings_ms: List[float] = []
-        i = 0
+    def run_batch(self, benchmark: bool, iters, args=[]) -> float:
         i_max = len(args) if benchmark else 1
-        iterations = 1
-        min_time_in_ms = min_time_in_sec * 1000
+        self.timing_arg_val.value = np.zeros((1,))
 
-        while sum(batch_timings_ms) < min_time_in_ms and len(batch_timings_ms) < batch_size:
-            self.timing_arg_val.value = np.zeros((1,))
+        for iter in range(iters):
+            func_args = args[iter % i_max] if benchmark else args
+            self.timer_func(*func_args, self.timing_arg_val)
 
-            for _ in range(iters):
-                func_args = args[i] if benchmark else args
-                self.timer_func(*func_args, self.timing_arg_val)
-                i = iterations % i_max
-                iterations += 1
-
-            batch_time_ms = float(self.timing_arg_val.value)
-            batch_timings_ms.append(batch_time_ms)
-
-        mean_elapsed_time_ms = sum(batch_timings_ms) / (iterations * 1)
-        return mean_elapsed_time_ms, batch_timings_ms
+        return float(self.timing_arg_val.value)
 
     def cleanup_main(self, benchmark: bool, args=[]):
         pass

@@ -146,33 +146,26 @@ class RocmCallableFunc(CallableFunc):
                 self.data,    # data
             )
 
-    def main(self, benchmark: bool, iters=1, batch_size=1, min_time_in_sec=0, args=[]) -> float:
-        batch_timings_ms: List[float] = []
-        iterations = 1
-        min_time_in_ms = min_time_in_sec * 1000
-        while sum(batch_timings_ms) < min_time_in_ms or len(batch_timings_ms) < batch_size:
-            hipEventRecord(self.start_event)
+    def run_batch(self, benchmark: bool, iters, args=[]) -> float:
+        hipEventRecord(self.start_event)
 
-            for _ in range(iters):
-                hipModuleLaunchKernel(
-                    self.kernel,
-                    *self.hat_func.launch_parameters,    # [ grid[x-z], block[x-z] ]
-                    self.hat_func.dynamic_shared_mem_bytes,    # dynamic shared memory
-                    0,    # stream
-                    self.data,    # data
-                )
-                iterations += 1
+        for _ in range(iters):
+            hipModuleLaunchKernel(
+                self.kernel,
+                *self.hat_func.launch_parameters,    # [ grid[x-z], block[x-z] ]
+                self.hat_func.dynamic_shared_mem_bytes,    # dynamic shared memory
+                0,    # stream
+                self.data,    # data
+            )
 
-            hipEventRecord(self.stop_event)
-            hipEventSynchronize(self.stop_event)
-            batch_time_ms = hipEventElapsedTime(self.start_event, self.stop_event)
-            batch_timings_ms.append(batch_time_ms)
+        hipEventRecord(self.stop_event)
+        hipEventSynchronize(self.stop_event)
+        batch_time_ms = hipEventElapsedTime(self.start_event, self.stop_event)
 
-            if not benchmark:
-                hipDeviceSynchronize()
+        if not benchmark:
+            hipDeviceSynchronize()
 
-        mean_elapsed_time_ms = sum(batch_timings_ms) / iterations
-        return mean_elapsed_time_ms, batch_timings_ms
+        return batch_time_ms
 
     def cleanup_main(self, benchmark: bool, args=[]):
         # If there's no device mem, that means allocation during initialization failed, which means nothing else needs to be cleaned up either

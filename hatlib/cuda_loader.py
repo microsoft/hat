@@ -235,42 +235,35 @@ class CudaCallableFunc(CallableFunc):
             if not benchmark:
                 ASSERT_DRV(err)
 
-    def main(self, benchmark: bool, iters=1, batch_size=1, min_time_in_sec=0, args=[]) -> float:
-        batch_timings_ms: List[float] = []
-        iterations = 1
-        min_time_in_ms = min_time_in_sec * 1000
-        while sum(batch_timings_ms) < min_time_in_ms or len(batch_timings_ms) < batch_size:
-            err, = cuda.cuEventRecord(self.start_event, 0)
-            ASSERT_DRV(err)
+    def run_batch(self, benchmark: bool, iters, args=[]) -> float:
+        err, = cuda.cuEventRecord(self.start_event, 0)
+        ASSERT_DRV(err)
 
-            for _ in range(iters):
-                err, = cuda.cuLaunchKernel(
-                    self.kernel,
-                    *self.hat_func.launch_parameters,    # [ grid[x-z], block[x-z] ]
-                    self.hat_func.dynamic_shared_mem_bytes,
-                    0,    # stream
-                    self.ptrs.ctypes.data,    # kernel arguments
-                    0,    # extra (ignore)
-                )
-                iterations += 1
-
-                if not benchmark:
-                    ASSERT_DRV(err)
-
-            err, = cuda.cuEventRecord(self.stop_event, 0)
-            ASSERT_DRV(err)
-            err, = cuda.cuEventSynchronize(self.stop_event)
-            ASSERT_DRV(err)
-            err, batch_time_ms = cuda.cuEventElapsedTime(self.start_event, self.stop_event)
-            ASSERT_DRV(err)
-            batch_timings_ms.append(batch_time_ms)
+        for _ in range(iters):
+            err, = cuda.cuLaunchKernel(
+                self.kernel,
+                *self.hat_func.launch_parameters,    # [ grid[x-z], block[x-z] ]
+                self.hat_func.dynamic_shared_mem_bytes,
+                0,    # stream
+                self.ptrs.ctypes.data,    # kernel arguments
+                0,    # extra (ignore)
+            )
 
             if not benchmark:
-                err, = cuda.cuCtxSynchronize()
                 ASSERT_DRV(err)
 
-        mean_elapsed_time_ms = sum(batch_timings_ms) / iterations
-        return mean_elapsed_time_ms, batch_timings_ms
+        err, = cuda.cuEventRecord(self.stop_event, 0)
+        ASSERT_DRV(err)
+        err, = cuda.cuEventSynchronize(self.stop_event)
+        ASSERT_DRV(err)
+        err, batch_time_ms = cuda.cuEventElapsedTime(self.start_event, self.stop_event)
+        ASSERT_DRV(err)
+
+        if not benchmark:
+            err, = cuda.cuCtxSynchronize()
+            ASSERT_DRV(err)
+
+        return batch_time_ms
 
     def cleanup_main(self, benchmark: bool, args=[]):
         # If there's no device mem, that means allocation during initialization failed, which means nothing else needs to be cleaned up either

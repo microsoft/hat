@@ -9,36 +9,49 @@ class CallableFunc(ABC):
             self.init_runtime(benchmark=False, device_id=device_id, working_dir=working_dir)
             try:
                 self.init_main(benchmark=False, args=args, device_id=device_id)
-                timings: List[float] = self.main(benchmark=False, args=args)
+                timing = self.run_batch(benchmark=False, iters=1, args=args)
             finally:
                 self.cleanup_main(benchmark=False, args=args)
         finally:
             self.cleanup_runtime(benchmark=False, working_dir=working_dir)
 
-        return timings[0]
+        return timing
 
     def benchmark(self, warmup_iters, iters, batch_size, min_time_in_sec: int, args, device_id: int, working_dir: str) -> List[float]:
         try:
             self.init_runtime(benchmark=True, device_id=device_id, working_dir=working_dir)
             try:
                 self.init_main(benchmark=True, warmup_iters=warmup_iters, args=args, device_id=device_id)
-                timings = self.main(benchmark=True, iters=iters, batch_size=batch_size, min_time_in_sec=min_time_in_sec, args=args)
+
+                # Run multiple batches
+                batch_timings_ms: List[float] = []
+                min_time_in_ms = min_time_in_sec * 1000
+                iterations = 0
+                while True:
+                    batch_time_ms = self.run_batch(benchmark=True, iters=iters, args=args)
+                    batch_timings_ms.append(batch_time_ms)
+                    iterations += iters
+
+                    if sum(batch_timings_ms) >= min_time_in_ms and len(batch_timings_ms) >= batch_size:
+                        break
+
+                mean_elapsed_time_ms = sum(batch_timings_ms) / iterations
             finally:
                 self.cleanup_main(benchmark=True, args=args)
         finally:
             self.cleanup_runtime(benchmark=True, working_dir=working_dir)
-        return timings
+        return mean_elapsed_time_ms, batch_timings_ms
 
     @abstractmethod
     def init_runtime(self, benchmark: bool, device_id: int, working_dir: str):
         ...
 
     @abstractmethod
-    def init_main(self, benchmark: bool, warmup_iters=0, device_id: int=0, *args) -> float:
+    def init_main(self, benchmark: bool, warmup_iters=0, device_id: int=0, *args):
         ...
 
     @abstractmethod
-    def main(self, benchmark: bool, iters=1, batch_size=1, min_time_in_sec=0, *args: Any):
+    def run_batch(self, benchmark: bool, iters: int, *args: Any) -> float:
         ...
 
     @abstractmethod
