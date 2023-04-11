@@ -184,7 +184,9 @@ class Benchmark:
                     func, input_sets_minimum_size_MB, num_additional=10, dyn_func_shape_fn=dyn_func_shape_fn
                 )
             else:
-                print("[Benchmarking] Benchmarking device that does not need cache flushing, skipping generation of multiple datasets")
+                if verbose:
+                    print("[Benchmarking] Benchmarking device that does not need cache flushing, skipping generation of multiple datasets")
+
                 input_sets = [generate_arg_sets_for_func(func, dyn_func_shape_fn=dyn_func_shape_fn)]
 
             if input_data_process_fn:
