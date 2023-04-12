@@ -122,7 +122,7 @@ class RocmCallableFunc(CallableFunc):
     def cleanup_runtime(self, benchmark: bool, working_dir: str):
         pass
 
-    def init_main(self, benchmark: bool, warmup_iters=0, device_id: int = 0, args=[]):
+    def init_batch(self, benchmark: bool, warmup_iters=0, device_id: int = 0, args=[]):
         self.func_info.verify(args[0] if benchmark else args)
         self.device_mem = allocate_rocm_mem(benchmark, self.func_info.arguments, device_id)
 
@@ -167,7 +167,7 @@ class RocmCallableFunc(CallableFunc):
 
         return batch_time_ms
 
-    def cleanup_main(self, benchmark: bool, args=[]):
+    def cleanup_batch(self, benchmark: bool, args=[]):
         # If there's no device mem, that means allocation during initialization failed, which means nothing else needs to be cleaned up either
         if not benchmark and self.device_mem:
             transfer_mem_rocm_to_host(device_args=self.device_mem, host_args=args, arg_infos=self.func_info.arguments)

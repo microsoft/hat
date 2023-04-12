@@ -110,7 +110,7 @@ class HostCallableFunc(CallableFunc):
                 os.remove(target_file)
 
 
-    def init_main(self, benchmark: bool, warmup_iters=0, device_id: int = 0, args=[]):
+    def init_batch(self, benchmark: bool, warmup_iters=0, device_id: int = 0, args=[]):
         self.func_info.verify(args[0] if benchmark else args)
 
         for _ in range(warmup_iters):
@@ -130,7 +130,7 @@ class HostCallableFunc(CallableFunc):
 
         return float(self.timing_arg_val.value)
 
-    def cleanup_main(self, benchmark: bool, args=[]):
+    def cleanup_batch(self, benchmark: bool, args=[]):
         pass
 
     def should_flush_cache(self) -> bool:

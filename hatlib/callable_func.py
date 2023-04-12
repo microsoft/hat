@@ -8,10 +8,10 @@ class CallableFunc(ABC):
         try:
             self.init_runtime(benchmark=False, device_id=device_id, working_dir=working_dir)
             try:
-                self.init_main(benchmark=False, args=args, device_id=device_id)
+                self.init_batch(benchmark=False, args=args, device_id=device_id)
                 timing = self.run_batch(benchmark=False, iters=1, args=args)
             finally:
-                self.cleanup_main(benchmark=False, args=args)
+                self.cleanup_batch(benchmark=False, args=args)
         finally:
             self.cleanup_runtime(benchmark=False, working_dir=working_dir)
 
@@ -21,7 +21,7 @@ class CallableFunc(ABC):
         try:
             self.init_runtime(benchmark=True, device_id=device_id, working_dir=working_dir)
             try:
-                self.init_main(benchmark=True, warmup_iters=warmup_iters, args=args, device_id=device_id)
+                self.init_batch(benchmark=True, warmup_iters=warmup_iters, args=args, device_id=device_id)
 
                 # Run multiple batches
                 batch_timings_ms: List[float] = []
@@ -37,7 +37,7 @@ class CallableFunc(ABC):
 
                 mean_elapsed_time_ms = sum(batch_timings_ms) / iterations
             finally:
-                self.cleanup_main(benchmark=True, args=args)
+                self.cleanup_batch(benchmark=True, args=args)
         finally:
             self.cleanup_runtime(benchmark=True, working_dir=working_dir)
         return mean_elapsed_time_ms, batch_timings_ms
@@ -47,7 +47,7 @@ class CallableFunc(ABC):
         ...
 
     @abstractmethod
-    def init_main(self, benchmark: bool, warmup_iters=0, device_id: int=0, *args):
+    def init_batch(self, benchmark: bool, warmup_iters=0, device_id: int=0, *args):
         ...
 
     @abstractmethod
@@ -55,7 +55,7 @@ class CallableFunc(ABC):
         ...
 
     @abstractmethod
-    def cleanup_main(self, benchmark: bool, *args):
+    def cleanup_batch(self, benchmark: bool, *args):
         ...
 
     @abstractmethod
