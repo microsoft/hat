@@ -95,7 +95,7 @@ def generate_arg_sets_for_func(
 
     arg_sets = [generate_arg_values(parameters, dim_names_to_values) for _ in range(num_input_sets)]
 
-    return arg_sets[0] if len(arg_sets) == 1 else arg_sets
+    return arg_sets
 
 
 def generate_arg_sets_for_hat_file(hat_path):
