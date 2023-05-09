@@ -184,7 +184,7 @@ class Benchmark:
             else:
                 print_verbose(verbose, "[Benchmarking] Benchmarking device that does not need cache flushing, skipping generation of multiple datasets")
 
-                input_sets = generate_arg_sets_for_func(func, dyn_func_shape_fn=dyn_func_shape_fn)
+                input_sets = [generate_arg_sets_for_func(func, dyn_func_shape_fn=dyn_func_shape_fn)]
 
             if input_data_process_fn:
                 input_sets = input_data_process_fn(input_sets)
