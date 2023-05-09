@@ -123,7 +123,7 @@ class RocmCallableFunc(CallableFunc):
         pass
 
     def init_batch(self, benchmark: bool, warmup_iters=0, device_id: int = 0, args=[]):
-        self.func_info.verify(args)
+        self.func_info.verify(args[0] if benchmark else args)
         self.device_mem = allocate_rocm_mem(benchmark, self.func_info.arguments, device_id)
 
         if not benchmark:
